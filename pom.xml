@@ -7,7 +7,7 @@
     <version>1.4.3-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Delivery Pipeline Plugin</name>
-    <url>https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin</url>
+    <url>https://plugins.jenkins.io/delivery-pipeline-plugin/</url>
 
     <licenses>
         <license>
@@ -15,11 +15,6 @@
             <url>http://www.gnu.org/licenses/gpl.txt</url>
         </license>
     </licenses>
-
-    <organization>
-        <name>Diabol AB</name>
-        <url>http://www.diabol.se</url>
-    </organization>
 
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
@@ -41,18 +36,6 @@
         </pluginRepository>
     </pluginRepositories>
 
-    <distributionManagement>
-        <repository>
-            <uniqueVersion>false</uniqueVersion>
-            <id>maven.jenkins-ci.org</id>
-            <url>https://repo.jenkins-ci.org/releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>maven.jenkins-ci.org</id>
-            <url>https://repo.jenkins-ci.org/snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <properties>
         <jenkins.version>2.164</jenkins.version>
         <java.level>8</java.level>
@@ -63,43 +46,11 @@
     </properties>
 
     <scm>
-        <connection>scm:git:https://github.com/Diabol/delivery-pipeline-plugin.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/Diabol/delivery-pipeline-plugin.git</developerConnection>
-        <url>https://github.com/Diabol/delivery-pipeline-plugin/</url>
+        <connection>scm:git:https://github.com/jenkinsci/delivery-pipeline-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/delivery-pipeline-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/delivery-pipeline-plugin/</url>
         <tag>HEAD</tag>
     </scm>
-
-    <developers>
-        <developer>
-            <id>patbos</id>
-            <name>Patrik Bostrom</name>
-            <organization>Diabol AB</organization>
-        </developer>
-        <developer>
-            <id>mrfatstrat</id>
-            <name>Andreas Rehn</name>
-            <organization>Diabol AB</organization>
-        </developer>
-        <developer>
-            <id>rickard_v_essen</id>
-            <name>Rickard von Essen</name>
-            <organization>Diabol AB</organization>
-        </developer>
-        <developer>
-            <id>tommysdk</id>
-            <name>Tommy Tynjä</name>
-            <organization>Diabol AB</organization>
-        </developer>
-    </developers>
-
-    <contributors>
-        <contributor>
-            <name>Per Huss</name>
-        </contributor>
-        <contributor>
-            <name>Gustav Ranby</name>
-        </contributor>
-    </contributors>
 
     <build>
         <pluginManagement>
