@@ -22,18 +22,15 @@ import au.com.centrumsystems.hudson.plugin.buildpipeline.DownstreamProjectGridBu
 import au.com.centrumsystems.hudson.plugin.buildpipeline.extension.StandardBuildCard;
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import hudson.model.Cause;
-import hudson.model.Descriptor;
 import hudson.model.FreeStyleProject;
 import hudson.model.ItemGroup;
 import hudson.model.Saveable;
-import hudson.plugins.parameterizedtrigger.AbstractBuildParameterFactory;
 import hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig;
 import hudson.plugins.parameterizedtrigger.BlockingBehaviour;
 import hudson.plugins.parameterizedtrigger.BuildTriggerConfig;
 import hudson.plugins.parameterizedtrigger.ResultCondition;
 import hudson.plugins.parameterizedtrigger.TriggerBuilder;
 import hudson.tasks.BuildTrigger;
-import hudson.tasks.Publisher;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 import join.JoinTrigger;
@@ -461,7 +458,7 @@ public class PipelineTest {
         projectB.getPublishersList().add(new BuildTrigger("D", false));
         projectC.getPublishersList().add(new BuildTrigger("D", false));
         projectD.getPublishersList().add(
-                new JoinTrigger(new DescribableList<>(Saveable.NOOP), "", false));
+                new JoinTrigger(new DescribableList<>(Saveable.NOOP), "", Boolean.FALSE.toString()));
         jenkins.getInstance().rebuildDependencyGraph();
         Pipeline prototype = Pipeline.extractPipeline("ForkJoin", projectA);
         assertNotNull(prototype);
