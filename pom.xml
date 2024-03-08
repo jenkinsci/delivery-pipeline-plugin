@@ -37,7 +37,7 @@
     </pluginRepositories>
 
     <properties>
-        <jenkins.version>2.164</jenkins.version>
+        <jenkins.version>2.414.3</jenkins.version>
         <findbugs.failOnError>false</findbugs.failOnError>
         <selenium.version>2.53.1</selenium.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
