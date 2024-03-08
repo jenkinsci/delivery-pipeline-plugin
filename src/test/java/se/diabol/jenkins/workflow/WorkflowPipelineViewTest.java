@@ -45,14 +45,13 @@ import org.jvnet.hudson.test.WithoutJenkins;
 import org.kohsuke.stapler.StaplerRequest;
 import org.mockito.Mockito;
 
-import com.gargoylesoftware.htmlunit.Page;
+import org.htmlunit.Page;
 
 import hudson.cli.BuildCommand;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.security.Permission;
 import hudson.util.FormValidation;
 import net.sf.json.JSONObject;
-import se.diabol.jenkins.pipeline.DeliveryPipelineView;
 import se.diabol.jenkins.workflow.model.Component;
 
 public class WorkflowPipelineViewTest {
