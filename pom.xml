@@ -283,6 +283,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.414.x</artifactId>
+                <version>2746.vb_79a_1d3e7b_c8</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
                 <version>3.1.0</version>
