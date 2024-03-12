@@ -171,7 +171,7 @@ public class GuiFunctionalIT {
         FreeStyleProject start = jenkins.createFreeStyleProject("Start");
         start.addProperty(new ParametersDefinitionProperty(
                 new StringParameterDefinition("key2", "value2")
-                ));
+        ));
         jenkins.createFreeStyleProject("End");
         start.getPublishersList().add(new BuildTrigger("End", true));
 

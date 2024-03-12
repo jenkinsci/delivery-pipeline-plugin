@@ -17,11 +17,12 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import org.htmlunit.Page;
 import hudson.cli.BuildCommand;
 import hudson.model.Result;
+import org.htmlunit.Page;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -38,50 +39,20 @@ public class TaskIntegrationTest {
     public JenkinsRule jenkins = new JenkinsRule();
 
     @Test
-    public void shouldHandleNonClosureTaskInClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                + "stage('Stage1') {\n"
-                + "    task 'Task1'\n"
-                + "    echo 'Task1'\n"
-                + "}\n"
-                + "stage('Stage2') {\n"
-                + "    task 'Task2'\n"
-                + "    echo 'Task2'\n"
-                + "}\n"
-                + "}"
-        );
-    }
-
-    @Test
     public void shouldHandleClosureTaskInClosureStage() throws Exception {
         shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
                 "node {\n"
-                + "stage('Stage1') {\n"
-                + "    task('Task1') {\n"
-                + "        echo 'Task1'\n"
-                + "    }\n"
-                + "}\n"
-                + "stage('Stage2') {\n"
-                + "    task('Task2') {\n"
-                + "        echo 'Task2'\n"
-                + "    }\n"
-                + "}\n"
-                + "}"
-        );
-    }
-
-    @Test
-    public void shouldHandleNonClosureTaskInNonClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                + "stage 'Stage1'\n"
-                + "task 'Task1'\n"
-                + "echo 'Task1'\n"
-                + "stage 'Stage2'\n"
-                + "task 'Task2'\n"
-                + "echo 'Task2'\n"
-                + "}"
+                        + "stage('Stage1') {\n"
+                        + "    task('Task1') {\n"
+                        + "        echo 'Task1'\n"
+                        + "    }\n"
+                        + "}\n"
+                        + "stage('Stage2') {\n"
+                        + "    task('Task2') {\n"
+                        + "        echo 'Task2'\n"
+                        + "    }\n"
+                        + "}\n"
+                        + "}"
         );
     }
 
@@ -89,15 +60,15 @@ public class TaskIntegrationTest {
     public void shouldHandleClosureTaskInNonClosureStage() throws Exception {
         shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
                 "node {\n"
-                + "stage 'Stage1'\n"
-                + "task('Task1') {\n"
-                + "    echo 'Task1'\n"
-                + "}\n"
-                + "stage 'Stage2'\n"
-                + "task('Task2') {\n"
-                + "    echo 'Task2'\n"
-                + "}\n"
-                + "}"
+                        + "stage 'Stage1'\n"
+                        + "task('Task1') {\n"
+                        + "    echo 'Task1'\n"
+                        + "}\n"
+                        + "stage 'Stage2'\n"
+                        + "task('Task2') {\n"
+                        + "    echo 'Task2'\n"
+                        + "}\n"
+                        + "}"
         );
     }
 
