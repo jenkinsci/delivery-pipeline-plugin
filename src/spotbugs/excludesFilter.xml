@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!--
+    Exclusions in this section have been triaged and determined to be
+    false positives.
+  -->
+
+  <!--
+    Here lies technical debt. Exclusions in this section have not yet
+    been triaged. When working on this section, pick an exclusion to
+    triage, then:
+
+    - Add a @SuppressFBWarnings(value = "[...]", justification = "[...]")
+      annotation if it is a false positive.  Indicate the reason why
+      it is a false positive, then remove the exclusion from this
+      section.
+
+    - If it is not a false positive, fix the bug, then remove the
+      exclusion from this section.
+   -->
+  <Match>
+    <Bug pattern="STCAL_INVOKE_ON_STATIC_DATE_FORMAT_INSTANCE" />
+    <Class name="se.diabol.jenkins.core.TimestampFormat" />
+    <Method name="formatTimestamp" />
+  </Match>
+  <Match>
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE" />
+    <Class name="se.diabol.jenkins.pipeline.PipelineProperty$DescriptorImpl" />
+    <Parameter name="sr" />
+  </Match>
+  <Match>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+    <Class name="se.diabol.jenkins.pipeline.domain.Stage" />
+    <Method name="getFirstUpstreamBuild" />
+  </Match>
+  <Match>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NULL_VALUE" />
+    <Class name="se.diabol.jenkins.pipeline.portlet.DeliveryPipelineViewPortlet" />
+  </Match>
+  <Match>
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+    <Class name="se.diabol.jenkins.pipeline.sort.BuildStartTimeComparator" />
+  </Match>
+  <Match>
+    <Bug pattern="NP_NULL_PARAM_DEREF" />
+    <Class name="se.diabol.jenkins.pipeline.util.ProjectUtil" />
+    <Method name="getProjects" />
+  </Match>
+  <Match>
+    <Bug pattern="URF_UNREAD_FIELD" />
+    <Class name="se.diabol.jenkins.workflow.model.Pipeline" />
+    <Field name="allTasks" />
+  </Match>
+  <Match>
+    <Bug pattern="UWF_UNWRITTEN_FIELD" />
+    <Class name="se.diabol.jenkins.workflow.model.Pipeline" />
+    <Field name="contributors" />
+  </Match>
+  <Match>
+    <Bug pattern="UWF_UNWRITTEN_FIELD" />
+    <Class name="se.diabol.jenkins.workflow.model.Stage" />
+    <Field name="version" />
+  </Match>
+  <Match>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+    <Class name="se.diabol.jenkins.workflow.model.Task" />
+    <Method name="getTaskFinishedTime" />
+  </Match>
+  <Match>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+    <Class name="se.diabol.jenkins.workflow.model.Task" />
+    <Method name="getTaskStartTime" />
+  </Match>
+  <Match>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+    <Class name="se.diabol.jenkins.workflow.model.Task" />
+    <Method name="resolveTask" />
+  </Match>
+  <Match>
+    <Bug pattern="SE_NO_SERIALVERSIONID" />
+    <Class name="se.diabol.jenkins.workflow.step.TaskStepExecution" />
+  </Match>
+  <Match>
+    <Bug pattern="SE_NO_SERIALVERSIONID" />
+    <Class name="se.diabol.jenkins.workflow.step.TaskStepExecution$TaskActionImpl" />
+  </Match>
+
+</FindBugsFilter>

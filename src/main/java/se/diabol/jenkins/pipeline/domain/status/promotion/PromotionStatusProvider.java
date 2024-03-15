@@ -126,7 +126,7 @@ public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
         }
 
         public String getIcon(Object status, String size) {
-            return ((hudson.plugins.promoted_builds.Status) status).getIcon(size);
+            return ((hudson.plugins.promoted_builds.Status) status).getIcon();
         }
 
         public long getStartTime(Object status) {
