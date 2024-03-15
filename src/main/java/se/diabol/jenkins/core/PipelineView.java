@@ -27,7 +27,7 @@ import java.util.List;
  * Note that Jenkins does <b>NOT</b> support the following:
  * <ul>
  *   <li>Java 8 interface default methods</li>
- *   <li><code>@Exported</code> annotations on interface methods - these needs to be set on the method in the
+ *   <li>{@code @Exported} annotations on interface methods - these needs to be set on the method in the
  *   implementing class</li>
  * </ul>
  */
@@ -42,7 +42,7 @@ public interface PipelineView {
 
     /**
      * Whether to allow a new pipeline to be started from the pipeline view.
-     * Expected to be annotated with <code>@Exported</code> for consumption from the view page.
+     * Expected to be annotated with {@code @Exported} for consumption from the view page.
      *
      * @return whether to allow a new pipeline to be started from the pipeline view.
      */
@@ -50,7 +50,7 @@ public interface PipelineView {
 
     /**
      * Whether to allow running pipelines to be aborted from the pipeline view.
-     * Expected to be annotated with <code>@Exported</code> for consumption from the view page.
+     * Expected to be annotated with {@code @Exported} for consumption from the view page.
      *
      * @return whether to allow pipelines to be aborted from the pipeline view.
      */
@@ -58,7 +58,7 @@ public interface PipelineView {
 
     /**
      * A date time string representing when the pipeline view was last updated.
-     * Expected to be annotated with <code>@Exported</code> for consumption from the view page.
+     * Expected to be annotated with {@code @Exported} for consumption from the view page.
      *
      * @return a string representation on when the pipeline view was last updated.
      */
@@ -73,7 +73,7 @@ public interface PipelineView {
 
     /**
      * Resolve the pipelines associated with this view.
-     * Expected to be annotated with <code>@Exported</code> for consumption from the view page.
+     * Expected to be annotated with {@code @Exported} for consumption from the view page.
      *
      * @return a list of components associated with this pipeline view.
      */
