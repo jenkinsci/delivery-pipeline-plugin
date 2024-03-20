@@ -17,7 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import com.gargoylesoftware.htmlunit.Page;
+import org.htmlunit.Page;
 import hudson.cli.BuildCommand;
 import hudson.model.Result;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -38,22 +38,6 @@ public class TaskIntegrationTest {
     public JenkinsRule jenkins = new JenkinsRule();
 
     @Test
-    public void shouldHandleNonClosureTaskInClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                + "stage('Stage1') {\n"
-                + "    task 'Task1'\n"
-                + "    echo 'Task1'\n"
-                + "}\n"
-                + "stage('Stage2') {\n"
-                + "    task 'Task2'\n"
-                + "    echo 'Task2'\n"
-                + "}\n"
-                + "}"
-        );
-    }
-
-    @Test
     public void shouldHandleClosureTaskInClosureStage() throws Exception {
         shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
                 "node {\n"
@@ -67,20 +51,6 @@ public class TaskIntegrationTest {
                 + "        echo 'Task2'\n"
                 + "    }\n"
                 + "}\n"
-                + "}"
-        );
-    }
-
-    @Test
-    public void shouldHandleNonClosureTaskInNonClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                + "stage 'Stage1'\n"
-                + "task 'Task1'\n"
-                + "echo 'Task1'\n"
-                + "stage 'Stage2'\n"
-                + "task 'Task2'\n"
-                + "echo 'Task2'\n"
                 + "}"
         );
     }

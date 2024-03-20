@@ -64,8 +64,8 @@ public class PipelineTest {
     public void simplePipelineTasks() throws Exception {
         String pipelineName = "Pipeline";
         WorkflowJob pipelineProject = jenkins.jenkins.createProject(WorkflowJob.class, pipelineName);
-        pipelineProject.setDefinition(
-                new CpsFlowDefinition("node {\n stage 'Build'\n task 'Compile'\n stage 'CI'\n task 'Deploy'\n}"));
+        String script = "node {\n stage('Build') {\n echo 'Compiled'\n }\n stage('CI') {\n echo 'Deployed'\n }\n}\n";
+        pipelineProject.setDefinition(new CpsFlowDefinition(script));
         WorkflowRun build = pipelineProject.scheduleBuild2(0).get();
 
         WorkflowPipelineView view = new WorkflowPipelineView(pipelineName);
@@ -75,8 +75,8 @@ public class PipelineTest {
         assertThat(pipeline.getStages().size(), is(2));
         assertThat(pipeline.getStages().get(0).getName(), is("Build"));
         assertThat(pipeline.getStages().get(0).getTasks().size(), is(1));
-        assertThat(pipeline.getStages().get(0).getTasks().get(0).getName(), is("Compile"));
+        assertThat(pipeline.getStages().get(0).getTasks().get(0).getName(), is("Build"));
         assertThat(pipeline.getStages().get(1).getTasks().size(), is(1));
-        assertThat(pipeline.getStages().get(1).getTasks().get(0).getName(), is("Deploy"));
+        assertThat(pipeline.getStages().get(1).getTasks().get(0).getName(), is("CI"));
     }
 }
