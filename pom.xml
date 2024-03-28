@@ -7,7 +7,7 @@
     <version>1.4.3-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Delivery Pipeline Plugin</name>
-    <url>https://plugins.jenkins.io/delivery-pipeline-plugin/</url>
+    <url>https://github.com/jenkinsci/delivery-pipeline-plugin</url>
 
     <licenses>
         <license>
