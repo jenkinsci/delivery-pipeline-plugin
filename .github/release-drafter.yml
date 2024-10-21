@@ -1,2 +1,5 @@
+# https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
+---
 _extends: .github
-tag-template: ${artifactId}-$NEXT_MINOR_VERSION
+tag-template: delivery-pipeline-plugin-$NEXT_MINOR_VERSION
+version-template: $MAJOR.$MINOR.$PATCH
