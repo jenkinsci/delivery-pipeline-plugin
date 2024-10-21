@@ -281,7 +281,7 @@
                         <configuration>
                             <!-- TODO fails on CI on Windows for inscrutable reasons -->
                             <excludes>
-                                <exclude>se.diabol.jenkins.pipeline.functionaltest.GuiFunctionalIT</exclude>
+                                <exclude>se.diabol.jenkins.pipeline.functionaltest.GuiFunctionalTest</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

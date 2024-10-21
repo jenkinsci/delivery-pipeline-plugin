@@ -45,7 +45,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import se.diabol.jenkins.pipeline.DeliveryPipelineView;
 
-public class GuiFunctionalIT {
+public class GuiFunctionalTest {
 
     private static final boolean DO_NOT_SHOW_UPSTREAM = false;
     private WebDriver webDriver;
@@ -323,8 +323,8 @@ public class GuiFunctionalIT {
 
         Dashboard view = new Dashboard("Dashboard");
         jenkins.getInstance().addView(view);
-        view.updateByXml(new StreamSource(GuiFunctionalIT.class.getResourceAsStream(
-                "/se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalIT/DashboardViewPage.xml")));
+        view.updateByXml(new StreamSource(GuiFunctionalTest.class.getResourceAsStream(
+                "/se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalTest/DashboardViewPage.xml")));
         view.save();
 
         DeliveryPipelinePage page =
