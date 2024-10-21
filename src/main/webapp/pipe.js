@@ -10,7 +10,7 @@ function pipelineUtils() {
             return;
         }
 
-        Q.ajax({
+        jQuery.ajax({
             url: rootURL + '/' + view.viewUrl + 'api/json' + '?page=' + page + '&component=' + component + '&fullscreen=' + fullscreen,
             dataType: 'json',
             async: true,
@@ -23,7 +23,7 @@ function pipelineUtils() {
                 }, timeout);
             },
             error: function (xhr, status, error) {
-                Q('#' + errorDiv).html('Error communicating to server! ' + htmlEncode(error)).show();
+                jQuery('#' + errorDiv).html('Error communicating to server! ' + htmlEncode(error)).show();
                 jsplumb.repaintEverything();
                 setTimeout(function () {
                     self.updatePipelines(divNames, errorDiv, view, fullscreen, page, component, showChanges, aggregatedChangesGroupingPattern, timeout, pipelineid, jsplumb);
@@ -49,11 +49,11 @@ function pipelineUtils() {
 
         if (lastResponse === null || JSON.stringify(data.pipelines) !== JSON.stringify(lastResponse.pipelines)) {
             for (var z = 0; z < divNames.length; z++) {
-                Q('#' + divNames[z]).html('');
+                jQuery('#' + divNames[z]).html('');
             }
 
             if (!data.pipelines || data.pipelines.length === 0) {
-                Q('#pipeline-message-' + pipelineid).html('No pipelines configured or found. Please review the <a href="configure">configuration</a>')
+                jQuery('#pipeline-message-' + pipelineid).html('No pipelines configured or found. Please review the <a href="configure">configuration</a>')
             }
 
             jsplumb.reset();
@@ -84,7 +84,7 @@ function pipelineUtils() {
 
                     contributors = [];
                     if (pipeline.contributors) {
-                        Q.each(pipeline.contributors, function (index, contributor) {
+                        jQuery.each(pipeline.contributors, function (index, contributor) {
                             contributors.push(htmlEncode(contributor.name));
                         });
                     }
@@ -245,8 +245,8 @@ function pipelineUtils() {
                 }
                 html.push(getPagination(showAvatars, component));
                 html.push('</section>');
-                Q('#' + divNames[c % divNames.length]).append(html.join(''));
-                Q('#pipeline-message-' + pipelineid).html('');
+                jQuery('#' + divNames[c % divNames.length]).append(html.join(''));
+                jQuery('#pipeline-message-' + pipelineid).html('');
             }
 
             var source;
@@ -254,11 +254,11 @@ function pipelineUtils() {
             lastResponse = data;
             equalheight('.pipeline-row .stage');
 
-            Q.each(data.pipelines, function (dataPipelineIndex, component) {
-                Q.each(component.pipelines, function (componentPipelineIndex, pipeline) {
-                    Q.each(pipeline.stages, function (pipelineStagesIndex, stage) {
+            jQuery.each(data.pipelines, function (dataPipelineIndex, component) {
+                jQuery.each(component.pipelines, function (componentPipelineIndex, pipeline) {
+                    jQuery.each(pipeline.stages, function (pipelineStagesIndex, stage) {
                         if (stage.downstreamStages) {
-                            Q.each(stage.downstreamStageIds, function (l, value) {
+                            jQuery.each(stage.downstreamStageIds, function (l, value) {
                                 source = getStageId(stage.id + '', componentPipelineIndex);
                                 target = getStageId(value + '', componentPipelineIndex);
 
@@ -331,7 +331,7 @@ function addPipelineHeader(html, component, data, c, resURL) {
 }
 
 function displayErrorIfAvailable(data, errrorDivId) {
-    var cErrorDiv = Q('#' + errrorDivId);
+    var cErrorDiv = jQuery('#' + errrorDivId);
     if (data.error) {
         cErrorDiv.html('Error: ' + data.error).show();
     } else {
@@ -380,7 +380,7 @@ function generateTestInfo(data, task) {
     }
 
     var html = ['<div class="infoPanelOuter">'];
-    Q.each(task.testResults, function(i, analysis) {
+    jQuery.each(task.testResults, function(i, analysis) {
         html.push('<div class="infoPanel"><div class="infoPanelInner">');
         html.push('<a href=' + getLink(data,analysis.url) + '>' + analysis.name + '</a>');
         html.push('<table id="priority.summary" class="pane">');
@@ -424,7 +424,7 @@ function generateStaticAnalysisInfo(data, task) {
     html.push('</thead>');
     html.push('<tbody>');
 
-    Q.each(task.staticAnalysisResults, function(i, analysis) {
+    jQuery.each(task.staticAnalysisResults, function(i, analysis) {
         html.push('<tr>');
             html.push('<td class="pane"><a href=' + getLink(data,analysis.url) + '>' + trimWarningsFromString(analysis.name) + '</a></td>');
             html.push('<td class="pane" style="text-align: center">' + analysis.high + '</td>');
@@ -451,7 +451,7 @@ function generatePromotionsInfo(data, task) {
     }
 
     var html = ['<div class="infoPanelOuter">'];
-    Q.each(task.status.promotions, function(i, promo) {
+    jQuery.each(task.status.promotions, function(i, promo) {
         html.push('<div class="infoPanel"><div class="infoPanelInner"><div class="promo-layer">');
         html.push('<img class="promo-icon" height="16" width="16" src="' + rootURL + promo.icon + '"/>');
         html.push('<span class="promo-name"><a href="' + getLink(data,task.link) + 'promotion">' + htmlEncode(promo.name) + '</a></span><br/>');
@@ -462,7 +462,7 @@ function generatePromotionsInfo(data, task) {
         if (promo.params.length > 0) {
             html.push('<br/>');
         }
-        Q.each(promo.params, function (j, param) {
+        jQuery.each(promo.params, function (j, param) {
             html.push(param.replace(/\r\n/g, '<br/>') + '<br />');
         });
         html.push('</div></div></div>');
@@ -517,7 +517,7 @@ function generateAggregatedChangelog(stageChanges, aggregatedChangesGroupingPatt
         stageChanges.forEach(function(stageChange) {
             var matches = stageChange.message.match(re) || [unmatchedChangesKey];
 
-            Q.unique(matches).forEach(function (match) {
+            jQuery.unique(matches).forEach(function (match) {
                 changes[match] = changes[match] || [];
                 changes[match].push(stageChange);
             });
@@ -598,7 +598,7 @@ function formatDuration(millis) {
 }
 
 function triggerManual(taskId, downstreamProject, upstreamProject, upstreamBuild, viewUrl) {
-    Q('#manual-' + taskId).hide();
+    jQuery('#manual-' + taskId).hide();
     var formData = {project: downstreamProject, upstream: upstreamProject, buildId: upstreamBuild};
     var before;
 
@@ -610,7 +610,7 @@ function triggerManual(taskId, downstreamProject, upstreamProject, upstreamBuild
         before = function(xhr){}
     }
 
-    Q.ajax({
+    jQuery.ajax({
         url: rootURL + '/' + viewUrl + 'api/manualStep',
         type: 'POST',
         data: formData,
@@ -627,7 +627,7 @@ function triggerManual(taskId, downstreamProject, upstreamProject, upstreamBuild
 }
 
 function triggerRebuild(taskId, project, buildId, viewUrl) {
-    Q('#rebuild-' + taskId).hide();
+    jQuery('#rebuild-' + taskId).hide();
     var formData = {project: project, buildId: buildId};
 
     var before;
@@ -639,7 +639,7 @@ function triggerRebuild(taskId, project, buildId, viewUrl) {
         before = function(xhr){}
     }
 
-    Q.ajax({
+    jQuery.ajax({
         url: rootURL + '/' + viewUrl + 'api/rebuildStep',
         type: 'POST',
         data: formData,
@@ -655,7 +655,7 @@ function triggerRebuild(taskId, project, buildId, viewUrl) {
 }
 
 function specifyInput(taskId, project, buildId, viewUrl) {
-    Q('#input-' + taskId).hide();
+    jQuery('#input-' + taskId).hide();
     var formData = {project: project, upstream: 'N/A', buildId: buildId}, before;
 
     var before;
@@ -667,7 +667,7 @@ function specifyInput(taskId, project, buildId, viewUrl) {
         before = function(xhr){}
     }
 
-    Q.ajax({
+    jQuery.ajax({
         url: rootURL + '/' + viewUrl + 'api/inputStep',
         type: 'POST',
         data: formData,
@@ -683,7 +683,7 @@ function specifyInput(taskId, project, buildId, viewUrl) {
 }
 
 function abortBuild(taskId, project, buildId, viewUrl) {
-    Q('#abort-' + taskId).hide();
+    jQuery('#abort-' + taskId).hide();
     var formData = {project: project, upstream: 'N/A', buildId: buildId}, before;
 
     var before;
@@ -695,7 +695,7 @@ function abortBuild(taskId, project, buildId, viewUrl) {
         before = function(xhr){}
     }
 
-    Q.ajax({
+    jQuery.ajax({
         url: rootURL + '/' + viewUrl + 'api/abortBuild',
         type: 'POST',
         data: formData,
@@ -725,7 +725,7 @@ function triggerBuild(url, taskId) {
         before = function(xhr){}
     }
 
-    Q.ajax({
+    jQuery.ajax({
         url: rootURL + '/' + url + 'build?delay=0sec',
         type: 'POST',
         beforeSend: before,
@@ -759,9 +759,9 @@ function equalheight(container) {
     var $el;
     var topPosition = 0;
 
-    Q(container).each(function () {
-        $el = Q(this);
-        Q($el).height('auto');
+    jQuery(container).each(function () {
+        $el = jQuery(this);
+        jQuery($el).height('auto');
         topPosition = $el.position().top;
 
         if (currentRowStart !== topPosition) {
