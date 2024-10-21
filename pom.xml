@@ -4,10 +4,10 @@
 
     <groupId>se.diabol.jenkins.pipeline</groupId>
     <artifactId>delivery-pipeline-plugin</artifactId>
-    <version>1.4.3-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <name>Delivery Pipeline Plugin</name>
-    <url>https://github.com/jenkinsci/delivery-pipeline-plugin</url>
+    <url>https://github.com/jenkinsci/${project.artifactId}</url>
 
     <licenses>
         <license>
@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.79</version>
+        <version>4.88</version>
         <relativePath />
     </parent>
 
@@ -37,24 +37,25 @@
     </pluginRepositories>
 
     <properties>
-        <jenkins.version>2.414.3</jenkins.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <revision>1.4.3</revision>
+        <changelist>-SNAPSHOT</changelist>
+        <jenkins.version>2.440.3</jenkins.version>
+        <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
     </properties>
 
     <scm>
-        <connection>scm:git:https://github.com/jenkinsci/delivery-pipeline-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/delivery-pipeline-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/delivery-pipeline-plugin/</url>
-        <tag>HEAD</tag>
+        <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
+        <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+        <url>https://github.com/${gitHubRepo}</url>
+        <tag>${scmTag}</tag>
     </scm>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.414.x</artifactId>
-                <version>2884.vc36b_64ce114a_</version>
+                <artifactId>bom-2.440.x</artifactId>
+                <version>3435.v238d66a_043fb_</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -108,7 +109,6 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>promoted-builds</artifactId>
-            <version>945.v597f5c6a_d3fd</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -165,6 +165,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
