@@ -43,7 +43,7 @@
         <jenkins.baseline>2.541</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.2</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
-        <selenium.version>4.25.0</selenium.version>
+        <selenium.version>4.47.0</selenium.version>
         <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
     </properties>
 
@@ -82,7 +82,7 @@
         <dependency>
             <groupId>org.jgrapht</groupId>
             <artifactId>jgrapht-core</artifactId>
-            <version>1.1.0</version>
+            <version>1.5.3</version>
         </dependency>
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
@@ -164,28 +164,17 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>jquery</artifactId>
-            <version>1.12.4-1</version>
+            <version>1.12.4-3</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>parameterized-trigger</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jvnet.hudson.plugins</groupId>
-            <artifactId>analysis-core</artifactId>
-            <version>1.96</version>
+            <groupId>io.jenkins.plugins</groupId>
+            <artifactId>warnings-ng</artifactId>
+            <version>12.9923.v0a_d61546e93d</version>
             <optional>true</optional>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.code.findbugs</groupId>
-                    <artifactId>annotations</artifactId>
-                </exclusion>
-                <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: exclude vulnerable xerces -->
-                <exclusion>
-                    <groupId>xerces</groupId>
-                    <artifactId>xercesImpl</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -268,7 +257,7 @@
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
-            <version>1.15.5</version>
+            <version>1.18.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>

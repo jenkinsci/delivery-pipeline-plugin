@@ -184,13 +184,13 @@ How to contribute
 Read GitHub's general contribution guidelines: https://guides.github.com/activities/contributing-to-open-source/#contributing
 
 It basically comes down to the following guidelines:
- 1. If applicable, create a [Jira issue](https://issues.jenkins-ci.org/issues/?jql=project+%3D+JENKINS+AND+component+%3D+delivery-pipeline-plugin)
+ 1. If applicable, create a [GitHub issue](https://github.com/jenkinsci/delivery-pipeline-plugin/issues) ([old Jira issues](https://issues.jenkins-ci.org/issues/?jql=project+%3D+JENKINS+AND+component+%3D+delivery-pipeline-plugin))
     + Make sure a similar issue doesn't already exist
  2. Fork the repo
  3. Contribute and have fun!
  4. Add as much unit testing as possible to any new code changes
-    + This will make the code much more easy to maintain and to understand its intent
+    + This will make the code much easier to maintain and to understand its intent
  5. Make sure your code is well formatted and aligns with the projects code style conventions. This will be enforced by the CI build that runs on each pull request.
- 6. Make sure to prefix the commit message with the associated Jira issue number together with a descriptive commit message
+ 6. Make sure to prefix the commit message with the associated GitHub issue number together with a descriptive commit message
  7. Create a pull request to start a discussion and to get feedback from the maintainers
-    + Add a link to the pull request in the associated Jira issue
+    + Add a link to the pull request in the associated GitHub issue

@@ -33,9 +33,8 @@ import hudson.model.ItemGroup;
 import hudson.model.Result;
 import hudson.util.RunList;
 import jenkins.model.Jenkins;
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.alg.CycleDetector;
-import org.jgrapht.graph.SimpleDirectedGraph;
+import org.jgrapht.alg.cycle.CycleDetector;
+import org.jgrapht.graph.DefaultDirectedGraph;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 import se.diabol.jenkins.core.AbstractItem;
@@ -225,7 +224,7 @@ public class Stage extends AbstractItem {
 
     public static List<Stage> placeStages(AbstractProject firstProject, Collection<Stage> stages)
             throws PipelineException {
-        DirectedGraph<Stage, Edge> graph = new SimpleDirectedGraph<>(new StageEdgeFactory());
+        DefaultDirectedGraph<Stage, Edge> graph = new DefaultDirectedGraph<>(Edge.class);
         for (Stage stage : stages) {
             stage.setTaskConnections(getStageConnections(stage, stages));
             graph.addVertex(stage);
@@ -255,7 +254,7 @@ public class Stage extends AbstractItem {
 
 
         List<List<Stage>> allPaths = findAllRunnablePaths(findStageForJob(firstProject.getRelativeNameFrom(
-                Jenkins.getInstance()), stages), graph);
+                Jenkins.get()), stages), graph);
         allPaths.sort((stages1, stages2) -> stages2.size() - stages1.size());
         
         //for keeping track of which row has an available column
@@ -312,7 +311,7 @@ public class Stage extends AbstractItem {
         return result;
     }
 
-    private static List<List<Stage>> findAllRunnablePaths(Stage start, DirectedGraph<Stage, Edge> graph) {
+    private static List<List<Stage>> findAllRunnablePaths(Stage start, DefaultDirectedGraph<Stage, Edge> graph) {
         List<List<Stage>> paths = new LinkedList<>();
         if (graph.outDegreeOf(start) == 0) {
             List<Stage> path = new LinkedList<>();

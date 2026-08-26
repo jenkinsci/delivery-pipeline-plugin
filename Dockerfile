@@ -1,5 +1,5 @@
-FROM jenkins/jenkins:2.107.3-alpine
-MAINTAINER Diabol AB - https://www.diabol.se - https://github.com/Diabol
+FROM jenkins/jenkins:2.541.2-alpine
+MAINTAINER Jenkins Delivery Pipeline Plugin - https://github.com/jenkinsci/delivery-pipeline-plugin
 
 USER jenkins
 COPY docker/plugins.txt /usr/share/jenkins/ref/
