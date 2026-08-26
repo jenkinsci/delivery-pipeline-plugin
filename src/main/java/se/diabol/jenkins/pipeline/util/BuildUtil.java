@@ -25,14 +25,14 @@ import hudson.model.CauseAction;
 import hudson.util.RunList;
 
 import java.util.List;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
+import jakarta.annotation.Nullable;
 
 public final class BuildUtil {
 
     private BuildUtil() {
     }
 
-    @CheckForNull
+    @Nullable
     public static AbstractBuild getUpstreamBuild(AbstractBuild build) {
         List<CauseAction> actions = build.getActions(CauseAction.class);
         for (CauseAction action : actions) {
@@ -60,7 +60,7 @@ public final class BuildUtil {
      * @param first the known first upstream build
      * @return the first upstream build for the given build
      */
-    @CheckForNull
+    @Nullable
     public static AbstractBuild getFirstUpstreamBuild(AbstractBuild build, AbstractProject first) {
         if (build == null) {
             return null;
@@ -88,7 +88,7 @@ public final class BuildUtil {
      * @param runList the list of projects
      * @return the build for projects that has been triggered by the supplied upstream project.
      */
-    @CheckForNull
+    @Nullable
     public static AbstractBuild match(RunList<? extends AbstractBuild> runList, AbstractBuild firstBuild) {
         if (firstBuild != null) {
             for (AbstractBuild currentBuild : runList) {

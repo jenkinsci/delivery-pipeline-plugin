@@ -32,7 +32,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
+import jakarta.annotation.Nullable;
 
 public class PipelineVersionContributor extends BuildWrapper {
 
@@ -82,7 +82,7 @@ public class PipelineVersionContributor extends BuildWrapper {
         };
     }
 
-    @CheckForNull
+    @Nullable
     public static String getVersion(AbstractBuild build)  {
         PipelineVersionAction action = build.getAction(PipelineVersionAction.class);
         if (action != null) {

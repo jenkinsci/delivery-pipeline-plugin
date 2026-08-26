@@ -20,14 +20,14 @@ package se.diabol.jenkins.pipeline.trigger;
 import hudson.model.AbstractProject;
 
 import java.util.List;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
+import jakarta.annotation.Nullable;
 
 public final class ManualTriggerFactory {
 
     private ManualTriggerFactory() {
     }
 
-    @CheckForNull
+    @Nullable
     public static ManualTrigger getManualTrigger(AbstractProject<?, ?> project, AbstractProject<?, ?> downstream) {
         List<ManualTriggerResolver> resolvers = ManualTriggerResolver.all();
         for (ManualTriggerResolver resolver : resolvers) {

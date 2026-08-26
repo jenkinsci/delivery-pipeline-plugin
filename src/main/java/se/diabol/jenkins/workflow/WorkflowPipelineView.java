@@ -23,6 +23,7 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Api;
 import hudson.model.Descriptor;
+import hudson.model.Descriptor.FormException;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
@@ -42,8 +43,8 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.core.PipelineView;
 import se.diabol.jenkins.core.TimestampFormat;
@@ -69,7 +70,8 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import edu.umd.cs.findbugs.annotations.NonNull;
+import jakarta.annotation.Nonnull;
+import jakarta.servlet.ServletException;
 
 public class WorkflowPipelineView extends View implements PipelineView {
 
@@ -323,15 +325,11 @@ public class WorkflowPipelineView extends View implements PipelineView {
     }
 
     @Override
-    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException {
-        try {
-            if (!isDefault()) {
-                return getOwner().getPrimaryView().doCreateItem(req, rsp);
-            } else {
-                return jenkins().doCreateItem(req, rsp);
-            }
-        } catch (javax.servlet.ServletException e) {
-            throw new IOException(e);
+    public Item doCreateItem(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
+        if (!isDefault()) {
+            return getOwner().getPrimaryView().doCreateItem(req, rsp);
+        } else {
+            return jenkins().doCreateItem(req, rsp);
         }
     }
 
@@ -413,13 +411,9 @@ public class WorkflowPipelineView extends View implements PipelineView {
     }
 
     @Override
-    protected void submit(StaplerRequest req) throws IOException, Descriptor.FormException {
-        try {
-            req.bindJSON(this, req.getSubmittedForm());
-            componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
-        } catch (javax.servlet.ServletException e) {
-            throw new IOException(e);
-        }
+    protected void submit(StaplerRequest2 req) throws IOException, ServletException, FormException {
+        req.bindJSON(this, req.getSubmittedForm());
+        componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
     }
 
     private List<Pipeline> resolvePipelines(WorkflowJob job) throws PipelineException {
@@ -504,7 +498,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
             return FormValidation.ok();
         }
 
-        @NonNull
+        @Nonnull
         @Override
         public String getDisplayName() {
             return "Delivery Pipeline View for Jenkins Pipelines";
@@ -536,7 +530,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
         @Extension
         public static class DescriptorImpl extends Descriptor<WorkflowPipelineView.ComponentSpec> {
 
-            @NonNull
+            @Nonnull
             @Override
             public String getDisplayName() {
                 return "";

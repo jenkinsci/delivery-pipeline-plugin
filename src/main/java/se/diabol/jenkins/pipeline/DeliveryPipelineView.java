@@ -73,7 +73,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import edu.umd.cs.findbugs.annotations.NonNull;
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletException;
 
 public class DeliveryPipelineView extends View implements PipelineView {
@@ -732,7 +732,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
         @Extension
         public static class DescriptorImpl extends Descriptor<RegExpSpec> {
 
-            @NonNull
+            @Nonnull
             @Override
             public String getDisplayName() {
                 return "RegExp";
@@ -806,7 +806,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
         @Extension
         public static class DescriptorImpl extends Descriptor<ComponentSpec> {
 
-            @NonNull
+            @Nonnull
             @Override
             public String getDisplayName() {
                 return "";

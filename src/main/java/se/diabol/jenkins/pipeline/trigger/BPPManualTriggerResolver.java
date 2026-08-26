@@ -27,7 +27,7 @@ import se.diabol.jenkins.pipeline.util.ProjectUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
+import jakarta.annotation.Nullable;
 
 @Extension(optional = true)
 public class BPPManualTriggerResolver extends ManualTriggerResolver {
@@ -38,7 +38,7 @@ public class BPPManualTriggerResolver extends ManualTriggerResolver {
 
 
     @Override
-    @CheckForNull
+    @Nullable
     public ManualTrigger getManualTrigger(AbstractProject<?, ?> project, AbstractProject<?, ?> downstream) {
         BuildPipelineTrigger bppTrigger = downstream.getPublishersList().get(BuildPipelineTrigger.class);
         if (bppTrigger != null) {
