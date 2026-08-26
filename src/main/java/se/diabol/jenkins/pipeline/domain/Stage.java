@@ -54,7 +54,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.CheckForNull;
+import jakarta.annotation.Nullable;
 
 @ExportedBean(defaultVisibility = AbstractItem.VISIBILITY)
 public class Stage extends AbstractItem {
@@ -356,7 +356,7 @@ public class Stage extends AbstractItem {
         return result;
     }
 
-    @CheckForNull
+    @Nullable
     protected static Stage findStageForJob(String name, Collection<Stage> stages) {
         for (Stage stage : stages) {
             for (int j = 0; j < stage.getTasks().size(); j++) {
@@ -370,12 +370,12 @@ public class Stage extends AbstractItem {
 
     }
 
-    @CheckForNull
+    @Nullable
     public AbstractBuild getHighestBuild(AbstractProject firstProject, ItemGroup context) {
         return getHighestBuild(firstProject, context, null);
     }
 
-    @CheckForNull
+    @Nullable
     public AbstractBuild getHighestBuild(AbstractProject firstProject, ItemGroup context, Result minResult) {
         int highest = -1;
         for (Task task : getTasks()) {
@@ -393,7 +393,7 @@ public class Stage extends AbstractItem {
         }
     }
 
-    @CheckForNull
+    @Nullable
     private AbstractBuild getFirstUpstreamBuild(AbstractProject<?, ?> project, AbstractProject<?, ?> first,
                                                 Result minResult) {
         RunList<? extends AbstractBuild> builds = project.getBuilds();

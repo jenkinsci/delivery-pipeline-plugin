@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.88</version>
+        <version>6.2138.v03274d462c13</version>
         <relativePath />
     </parent>
 
@@ -37,13 +37,14 @@
     </pluginRepositories>
 
     <properties>
-        <revision>1.4.3</revision>
+        <revision>1.5.0</revision>
         <changelist>-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-        <jenkins.baseline>2.440</jenkins.baseline>
-        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <jenkins.baseline>2.541</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.2</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
         <selenium.version>4.25.0</selenium.version>
+        <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
     </properties>
 
     <scm>
@@ -58,9 +59,21 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>3435.v238d66a_043fb_</version>
+                <version>6166.va_a_8b_5eda_8ef5</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- CVE-2025-48924: force safe version of transitive dep from webdrivermanager -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.20.0</version>
+            </dependency>
+            <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: safe xerces replacing analysis-core's bundled version -->
+            <dependency>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+                <version>2.12.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -79,7 +92,7 @@
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
-            <version>1.9.4</version>
+            <version>1.11.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -115,7 +128,7 @@
         <dependency>
             <groupId>io.github.bonigarcia</groupId>
             <artifactId>webdrivermanager</artifactId>
-            <version>5.9.2</version>
+            <version>6.1.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -166,6 +179,11 @@
                 <exclusion>
                     <groupId>com.google.code.findbugs</groupId>
                     <artifactId>annotations</artifactId>
+                </exclusion>
+                <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: exclude vulnerable xerces -->
+                <exclusion>
+                    <groupId>xerces</groupId>
+                    <artifactId>xercesImpl</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -264,6 +282,21 @@
             <version>3.4</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1C</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <excludes>
+                        <exclude>se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <profiles>
         <profile>

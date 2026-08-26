@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.transform.stream.StreamSource;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -76,12 +77,15 @@ public class GuiFunctionalTest {
 
     @Before
     public void before() {
-        if (isCi()) {
-            webDriver = new ChromeDriver(new ChromeOptions().addArguments("--headless", "--disable-dev-shm-usage", "--no-sandbox"));
-        } else {
-            webDriver = new ChromeDriver(new ChromeOptions());
+        try {
+            if (isCi()) {
+                webDriver = new ChromeDriver(new ChromeOptions().addArguments("--headless", "--disable-dev-shm-usage", "--no-sandbox"));
+            } else {
+                webDriver = new ChromeDriver(new ChromeOptions());
+            }
+        } catch (Exception e) {
+            Assume.assumeNoException("Chrome binary not found, skipping GUI functional tests", e);
         }
-        //webDriver.
     }
 
     @After
