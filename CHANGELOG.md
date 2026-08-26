@@ -4,7 +4,7 @@ Starting from version 0.10.1, the Delivery Pipeline Plugin is released
 completely automatically and the generated release notes can be found on
 GitHub:
 
-<https://github.com/Diabol/delivery-pipeline-plugin/releases/>
+<https://github.com/jenkinsci/delivery-pipeline-plugin/releases/>
 
 ### 0.10.0 (Nov 16 2016)
 
