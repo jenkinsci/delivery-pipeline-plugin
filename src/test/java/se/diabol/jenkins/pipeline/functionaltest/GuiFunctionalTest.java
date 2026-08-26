@@ -32,7 +32,6 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.transform.stream.StreamSource;
-import org.apache.commons.lang.StringUtils;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -56,7 +55,8 @@ public class GuiFunctionalTest {
     private static final String NONE = null;
 
     private static boolean isCi() {
-        return StringUtils.isNotBlank(System.getenv("CI"));
+        String ci = System.getenv("CI");
+        return ci != null && !ci.isBlank();
     }
 
     @BeforeClass

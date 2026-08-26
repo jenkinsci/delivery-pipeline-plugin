@@ -194,9 +194,3 @@ It basically comes down to the following guidelines:
  6. Make sure to prefix the commit message with the associated Jira issue number together with a descriptive commit message
  7. Create a pull request to start a discussion and to get feedback from the maintainers
     + Add a link to the pull request in the associated Jira issue
-
-Contact
-----
-If you have any questions, feel free to reach out to one of the maintainers:
-* [Patrik Bostr&ouml;m](https://github.com/patbos)
-* [Andreas Rehn](https://github.com/mrfatstrat)
