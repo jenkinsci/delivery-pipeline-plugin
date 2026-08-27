@@ -17,7 +17,6 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain.status.promotion;
 
-import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BooleanParameterValue;
 import hudson.model.FileParameterValue;
@@ -27,13 +26,14 @@ import hudson.plugins.promoted_builds.PromotedBuildAction;
 import hudson.plugins.promoted_builds.Promotion;
 import hudson.plugins.promoted_builds.Status;
 import org.apache.commons.collections.CollectionUtils;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-@Extension(optional = true)
+@OptionalExtension
 public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
 
     // Force a classloading error plugin isn't available

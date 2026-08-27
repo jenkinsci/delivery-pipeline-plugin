@@ -17,10 +17,10 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.portlet;
 
-import hudson.Extension;
 import hudson.model.Api;
 import hudson.model.Descriptor;
 import hudson.plugins.view.dashboard.DashboardPortlet;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 import se.diabol.jenkins.pipeline.DeliveryPipelineView;
 
@@ -37,7 +37,7 @@ public class DeliveryPipelineViewPortlet extends DashboardPortlet {
 
     private final String initialJob;
     private final String finalJob;
-    private String portletId;
+    private final String portletId;
 
     @DataBoundConstructor
     public DeliveryPipelineViewPortlet(String name, String initialJob, String finalJob) throws IOException {
@@ -84,7 +84,7 @@ public class DeliveryPipelineViewPortlet extends DashboardPortlet {
         view.setShowStaticAnalysisResults(true);
         view.setNoOfPipelines(0);
         List<DeliveryPipelineView.ComponentSpec> componentSpecs = new ArrayList<>();
-        if (initialJob != null && !"".equals(initialJob.trim())) {
+        if (initialJob != null && !initialJob.trim().isEmpty()) {
             DeliveryPipelineView.ComponentSpec componentSpec = new DeliveryPipelineView.ComponentSpec("Aggregated view",
                     initialJob, finalJob, false);
             componentSpecs.add(componentSpec);
@@ -92,7 +92,7 @@ public class DeliveryPipelineViewPortlet extends DashboardPortlet {
         view.setComponentSpecs(componentSpecs);
     }
 
-    @Extension(optional = true)
+    @OptionalExtension
     public static class DescriptorImpl extends Descriptor<DashboardPortlet> {
         @Override
         public String getDisplayName() {
