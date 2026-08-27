@@ -17,18 +17,18 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.core;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
-public class GenericComponentTest {
+class GenericComponentTest {
 
     @Test
-    public void shouldGetLastActivity() {
+    void shouldGetLastActivity() {
         final long latestActivity = System.currentTimeMillis();
 
         GenericPipeline first = new GenericPipeline("") {
@@ -61,5 +61,4 @@ public class GenericComponentTest {
 
         assertThat(component.getLastActivity(), is(latestActivity));
     }
-
 }

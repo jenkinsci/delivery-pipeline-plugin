@@ -17,31 +17,37 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain.task;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
 import hudson.tasks.BuildTrigger;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.DeliveryPipelineView;
 
-public class ManualStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class ManualStepTest {
+
+    private JenkinsRule jenkins;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testIsManualTriggerAndResolveManualStep() throws Exception {
+    void testIsManualTriggerAndResolveManualStep() throws Exception {
         final FreeStyleProject upstream = jenkins.createFreeStyleProject("upstream");
         final FreeStyleProject downstreamManual = jenkins.createFreeStyleProject("downstreamManual");
         upstream.getPublishersList().add(new BuildPipelineTrigger("downstreamManual", null));
@@ -70,7 +76,7 @@ public class ManualStepTest {
     }
 
     @Test
-    public void testGetManualStepLatest() throws Exception {
+    void testGetManualStepLatest() throws Exception {
         FreeStyleProject upstream = jenkins.createFreeStyleProject("upstream");
         FreeStyleProject downstream = jenkins.createFreeStyleProject("downstream");
         upstream.getPublishersList().add(new BuildPipelineTrigger("downstream", null));
@@ -109,7 +115,7 @@ public class ManualStepTest {
     }
 
     @Test
-    public void testGetManualStepLatestWithFolders() throws Exception {
+    void testGetManualStepLatestWithFolders() throws Exception {
         MockFolder folder = jenkins.createFolder("folder");
         FreeStyleProject upstream = folder.createProject(FreeStyleProject.class, "upstream");
         FreeStyleProject downstream = folder.createProject(FreeStyleProject.class, "downstream");
@@ -136,7 +142,7 @@ public class ManualStepTest {
     }
 
     @Test
-    public void testGetManualStepAggregated() throws Exception {
+    void testGetManualStepAggregated() throws Exception {
         final FreeStyleProject upstream = jenkins.createFreeStyleProject("upstream");
         final FreeStyleProject downstream = jenkins.createFreeStyleProject("downstream");
         upstream.getPublishersList().add(new BuildPipelineTrigger("downstream", null));
@@ -185,7 +191,7 @@ public class ManualStepTest {
     }
 
     @Test
-    public void getManualStepAggregatedNoTrigger() throws Exception {
+    void getManualStepAggregatedNoTrigger() throws Exception {
         final FreeStyleProject projectA =  jenkins.createFreeStyleProject("a");
         final FreeStyleProject projectB =  jenkins.createFreeStyleProject("b");
         assertNull(ManualStep.getManualStepAggregated(projectA, projectA));
@@ -196,7 +202,7 @@ public class ManualStepTest {
     }
 
     @Test
-    public void getManualStepLatestWithMultipleManualTriggers() throws Exception {
+    void getManualStepLatestWithMultipleManualTriggers() throws Exception {
         final FreeStyleProject projectA =  jenkins.createFreeStyleProject("A");
         final FreeStyleProject projectB =  jenkins.createFreeStyleProject("B");
         final FreeStyleProject projectC =  jenkins.createFreeStyleProject("C");
@@ -222,7 +228,7 @@ public class ManualStepTest {
 
     @Test
     @Issue("JENKINS-27584")
-    public void getManualStepLatestUpstreamDeleted() throws Exception {
+    void getManualStepLatestUpstreamDeleted() throws Exception {
         FreeStyleProject projectA =  jenkins.createFreeStyleProject("A");
         FreeStyleProject projectB =  jenkins.createFreeStyleProject("B");
         FreeStyleProject projectC =  jenkins.createFreeStyleProject("C");
@@ -246,12 +252,11 @@ public class ManualStepTest {
         assertNull(projectB.getLastBuild());
         step = ManualStep.getManualStepLatest(projectC, projectC.getLastBuild(), firstBuild);
         assertNotNull(step);
-
     }
 
     @Test
     @Issue("JENKINS-28937")
-    public void testFailure() throws Exception {
+    void testFailure() throws Exception {
         final FreeStyleProject projectA = jenkins.createFreeStyleProject("A");
         final FreeStyleProject projectB = jenkins.createFreeStyleProject("B");
         final FreeStyleProject projectC = jenkins.createFreeStyleProject("C");
@@ -272,5 +277,4 @@ public class ManualStepTest {
         assertNotNull(step);
         assertFalse(step.isEnabled());
     }
-
 }

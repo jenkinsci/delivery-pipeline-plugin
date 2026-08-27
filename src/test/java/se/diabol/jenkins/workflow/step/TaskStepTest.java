@@ -17,32 +17,33 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.step;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TaskStepTest {
+class TaskStepTest {
 
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldThrowIllegalArgumentForNullNameInConstructor() {
-        new TaskStep(null);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void shouldThrowIllegalArgumentForEmptyNameInConstructor() {
-        new TaskStep("");
+    @Test
+    void shouldThrowIllegalArgumentForNullNameInConstructor() {
+        assertThrows(IllegalArgumentException.class, () -> new TaskStep(null));
     }
 
     @Test
-    public void constructorShouldTakeName() {
+    void shouldThrowIllegalArgumentForEmptyNameInConstructor() {
+        assertThrows(IllegalArgumentException.class, () -> new TaskStep(""));
+    }
+
+    @Test
+    void constructorShouldTakeName() {
         String expectedName = "taskStep";
         TaskStep taskStep = new TaskStep(expectedName);
         assertThat(taskStep.name, is(expectedName));
     }
 
     @Test
-    public void descriptorShouldReturnExpectedNames() {
+    void descriptorShouldReturnExpectedNames() {
         TaskStep.DescriptorImpl descriptor = new TaskStep.DescriptorImpl();
         assertThat(descriptor.getDisplayName(), is("Task"));
         assertThat(descriptor.getFunctionName(), is("task"));

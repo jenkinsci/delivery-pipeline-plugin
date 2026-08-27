@@ -24,27 +24,33 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Run;
 import hudson.triggers.SCMTrigger;
 import hudson.triggers.TimerTrigger;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.test.FakeRepositoryBrowserSCM;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TriggerCauseTest {
+@WithJenkins
+class TriggerCauseTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testGetTriggeredBy() throws Exception {
+    void testGetTriggeredBy() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         jenkins.setQuietPeriod(0);
         project.scheduleBuild(new Cause.UserIdCause());
@@ -55,7 +61,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByWithChangeLog() throws Exception {
+    void testGetTriggeredByWithChangeLog() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -69,7 +75,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByWithNoUserIdCause() throws Exception {
+    void testGetTriggeredByWithNoUserIdCause() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         jenkins.setQuietPeriod(0);
         jenkins.buildAndAssertSuccess(project);
@@ -79,7 +85,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByTimer() throws Exception {
+    void testGetTriggeredByTimer() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -93,7 +99,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredBySCMChange() throws Exception {
+    void testGetTriggeredBySCMChange() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -107,7 +113,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredBySCMChangeQueued() throws Exception {
+    void testGetTriggeredBySCMChangeQueued() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -124,7 +130,7 @@ public class TriggerCauseTest {
 
     @Test
     @Issue("JENKINS-22611")
-    public void testGetTriggeredByMultipleSCMChange() throws Exception {
+    void testGetTriggeredByMultipleSCMChange() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -145,7 +151,7 @@ public class TriggerCauseTest {
 
 
     @Test
-    public void testGetTriggeredByRemoteCause() throws Exception {
+    void testGetTriggeredByRemoteCause() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         jenkins.setQuietPeriod(0);
         project.scheduleBuild(new Cause.RemoteCause("localhost", "Remote"));
@@ -156,7 +162,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByDeeplyNestedUpstreamCause() throws Exception {
+    void testGetTriggeredByDeeplyNestedUpstreamCause() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         jenkins.setQuietPeriod(0);
         project.scheduleBuild(new Cause.UpstreamCause.DeeplyNestedUpstreamCause());
@@ -167,7 +173,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByUpStreamJob() throws Exception {
+    void testGetTriggeredByUpStreamJob() throws Exception {
         FreeStyleProject upstream = jenkins.createFreeStyleProject("up");
         jenkins.setQuietPeriod(0);
         jenkins.buildAndAssertSuccess(upstream);
@@ -184,7 +190,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByUpStreamJobNotExists() throws Exception {
+    void testGetTriggeredByUpStreamJobNotExists() throws Exception {
         FreeStyleProject upstream = jenkins.createFreeStyleProject("up");
         jenkins.setQuietPeriod(0);
         jenkins.buildAndAssertSuccess(upstream);
@@ -200,7 +206,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByUpStreamJobBuildNotExist() throws Exception {
+    void testGetTriggeredByUpStreamJobBuildNotExist() throws Exception {
         FreeStyleProject upstream = jenkins.createFreeStyleProject("up");
         jenkins.setQuietPeriod(0);
         jenkins.buildAndAssertSuccess(upstream);
@@ -217,7 +223,7 @@ public class TriggerCauseTest {
 
 
     @Test
-    public void testGetTriggeredByWithCulprits() throws Exception {
+    void testGetTriggeredByWithCulprits() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user-fail").withMsg("Fixed bug");
@@ -245,7 +251,7 @@ public class TriggerCauseTest {
     }
 
     @Test
-    public void testGetTriggeredByNullBuild() throws Exception {
+    void testGetTriggeredByNullBuild() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         List<TriggerCause> triggeredBy = TriggerCause.getTriggeredBy(project, null);
         assertTrue(triggeredBy.isEmpty());
@@ -253,7 +259,7 @@ public class TriggerCauseTest {
 
     @Test
     @WithoutJenkins
-    public void testHashcodeEquals() {
+    void testHashcodeEquals() {
         TriggerCause trigger1 = new TriggerCause(TriggerCause.TYPE_MANUAL, "manual trigger");
         TriggerCause trigger2 = new TriggerCause(TriggerCause.TYPE_MANUAL, "manual trigger");
         TriggerCause trigger3 = new TriggerCause(TriggerCause.TYPE_MANUAL, "manual");
@@ -264,7 +270,7 @@ public class TriggerCauseTest {
         assertNotEquals(trigger1, trigger3);
         assertNotEquals(trigger3, trigger4);
         assertNotEquals(trigger3, null);
-        assertNotEquals(trigger3, "");
+        assertNotEquals("", trigger3);
         assertNotEquals(trigger1.hashCode(), trigger3.hashCode());
     }
 }

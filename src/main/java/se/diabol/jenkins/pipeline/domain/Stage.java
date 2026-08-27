@@ -33,9 +33,8 @@ import hudson.model.ItemGroup;
 import hudson.model.Result;
 import hudson.util.RunList;
 import jenkins.model.Jenkins;
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.alg.CycleDetector;
-import org.jgrapht.graph.SimpleDirectedGraph;
+import org.jgrapht.alg.cycle.CycleDetector;
+import org.jgrapht.graph.DefaultDirectedGraph;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 import se.diabol.jenkins.core.AbstractItem;
@@ -53,8 +52,9 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import javax.annotation.CheckForNull;
+import jakarta.annotation.Nullable;
 
 @ExportedBean(defaultVisibility = AbstractItem.VISIBILITY)
 public class Stage extends AbstractItem {
@@ -225,7 +225,7 @@ public class Stage extends AbstractItem {
 
     public static List<Stage> placeStages(AbstractProject firstProject, Collection<Stage> stages)
             throws PipelineException {
-        DirectedGraph<Stage, Edge> graph = new SimpleDirectedGraph<>(new StageEdgeFactory());
+        DefaultDirectedGraph<Stage, Edge> graph = new DefaultDirectedGraph<>(Edge.class);
         for (Stage stage : stages) {
             stage.setTaskConnections(getStageConnections(stage, stages));
             graph.addVertex(stage);
@@ -255,11 +255,11 @@ public class Stage extends AbstractItem {
 
 
         List<List<Stage>> allPaths = findAllRunnablePaths(findStageForJob(firstProject.getRelativeNameFrom(
-                Jenkins.getInstance()), stages), graph);
+                Jenkins.get()), stages), graph);
         allPaths.sort((stages1, stages2) -> stages2.size() - stages1.size());
-        
+
         //for keeping track of which row has an available column
-        final Map<Integer,Integer> columnRowMap = Maps.newHashMap();
+        final Map<Integer, Integer> columnRowMap = Maps.newHashMap();
         final List<Stage> processedStages = Lists.newArrayList();
 
         for (List<Stage> path : allPaths) {
@@ -312,7 +312,7 @@ public class Stage extends AbstractItem {
         return result;
     }
 
-    private static List<List<Stage>> findAllRunnablePaths(Stage start, DirectedGraph<Stage, Edge> graph) {
+    private static List<List<Stage>> findAllRunnablePaths(Stage start, DefaultDirectedGraph<Stage, Edge> graph) {
         List<List<Stage>> paths = new LinkedList<>();
         if (graph.outDegreeOf(start) == 0) {
             List<Stage> path = new LinkedList<>();
@@ -356,7 +356,7 @@ public class Stage extends AbstractItem {
         return result;
     }
 
-    @CheckForNull
+    @Nullable
     protected static Stage findStageForJob(String name, Collection<Stage> stages) {
         for (Stage stage : stages) {
             for (int j = 0; j < stage.getTasks().size(); j++) {
@@ -370,12 +370,12 @@ public class Stage extends AbstractItem {
 
     }
 
-    @CheckForNull
+    @Nullable
     public AbstractBuild getHighestBuild(AbstractProject firstProject, ItemGroup context) {
         return getHighestBuild(firstProject, context, null);
     }
 
-    @CheckForNull
+    @Nullable
     public AbstractBuild getHighestBuild(AbstractProject firstProject, ItemGroup context, Result minResult) {
         int highest = -1;
         for (Task task : getTasks()) {
@@ -393,18 +393,24 @@ public class Stage extends AbstractItem {
         }
     }
 
-    @CheckForNull
+    @Nullable
     private AbstractBuild getFirstUpstreamBuild(AbstractProject<?, ?> project, AbstractProject<?, ?> first,
                                                 Result minResult) {
         RunList<? extends AbstractBuild> builds = project.getBuilds();
-        for (AbstractBuild build : builds) {
-            if (minResult != null && (build.isBuilding() || build.getResult().isWorseThan(minResult))) {
-                continue;
-            }
+        if (Objects.nonNull(builds)) {
+            for (AbstractBuild build : builds) {
+                if (build != null) {
+                    if (minResult != null
+                            && (build.isBuilding()
+                            || (build.getResult() != null && build.getResult().isWorseThan(minResult)))) {
+                        continue;
+                    }
 
-            AbstractBuild upstream = BuildUtil.getFirstUpstreamBuild(build, first);
-            if (upstream != null && upstream.getProject().equals(first)) {
-                return upstream;
+                    AbstractBuild upstream = BuildUtil.getFirstUpstreamBuild(build, first);
+                    if (upstream != null && upstream.getProject().equals(first)) {
+                        return upstream;
+                    }
+                }
             }
         }
         return null;

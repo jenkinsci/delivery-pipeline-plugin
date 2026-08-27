@@ -20,8 +20,19 @@ This plugin has been contributed to the community by [Diabol AB](https://www.dia
 
 ![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_screenshot.png)
 
+Recent Changes
+---
+- **1.5.0**: Version bump; continued modernization and dependency maintenance.
+- **Plugin modernized** — updated build tooling, POM structure, and CI configuration to current Jenkins plugin standards.
+- **Functional tests restored** — integration test suite re-enabled after prior removal.
+- **JDK 25 support** — build and CI updated to support Java 25.
+- **Dependency updates** — upgraded build-pipeline-plugin, analysis-core, build-name-setter, byte-buddy, objenesis, and commons-logging to current versions.
+- **UI fixes** — corrected missing arrow graphics and clock rendering in the pipeline view.
+
 Requirements
 ---
+Delivery Pipeline plugin 1.5.0 and later requires Java 11 and Jenkins core 2.541.2 or later (Java 25 supported for plugin development).
+
 Delivery Pipeline plugin 1.4.0 and later requires Java 8 and Jenkins core 2.164 or later (Java 11 required for plugin development).
 
 Delivery Pipeline plugin 1.3.0 and later requires Java 8 and Jenkins core 2.73.3 or later.
@@ -173,19 +184,13 @@ How to contribute
 Read GitHub's general contribution guidelines: https://guides.github.com/activities/contributing-to-open-source/#contributing
 
 It basically comes down to the following guidelines:
- 1. If applicable, create a [Jira issue](https://issues.jenkins-ci.org/issues/?jql=project+%3D+JENKINS+AND+component+%3D+delivery-pipeline-plugin)
+ 1. If applicable, create a [GitHub issue](https://github.com/jenkinsci/delivery-pipeline-plugin/issues) ([old Jira issues](https://issues.jenkins-ci.org/issues/?jql=project+%3D+JENKINS+AND+component+%3D+delivery-pipeline-plugin))
     + Make sure a similar issue doesn't already exist
  2. Fork the repo
  3. Contribute and have fun!
  4. Add as much unit testing as possible to any new code changes
-    + This will make the code much more easy to maintain and to understand its intent
+    + This will make the code much easier to maintain and to understand its intent
  5. Make sure your code is well formatted and aligns with the projects code style conventions. This will be enforced by the CI build that runs on each pull request.
- 6. Make sure to prefix the commit message with the associated Jira issue number together with a descriptive commit message
+ 6. Make sure to prefix the commit message with the associated GitHub issue number together with a descriptive commit message
  7. Create a pull request to start a discussion and to get feedback from the maintainers
-    + Add a link to the pull request in the associated Jira issue
-
-Contact
-----
-If you have any questions, feel free to reach out to one of the maintainers:
-* [Patrik Bostr&ouml;m](https://github.com/patbos)
-* [Andreas Rehn](https://github.com/mrfatstrat)
+    + Add a link to the pull request in the associated GitHub issue

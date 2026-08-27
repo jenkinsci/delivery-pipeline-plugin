@@ -17,7 +17,6 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain.status.promotion;
 
-import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BooleanParameterValue;
 import hudson.model.FileParameterValue;
@@ -27,19 +26,18 @@ import hudson.plugins.promoted_builds.PromotedBuildAction;
 import hudson.plugins.promoted_builds.Promotion;
 import hudson.plugins.promoted_builds.Status;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-@Extension(optional = true)
+@OptionalExtension
 public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
 
     // Force a classloading error plugin isn't available
     public static final Class<PromotedBuildAction> CLASS = PromotedBuildAction.class;
-    static final String DEFAULT_ICON_SIZE = "16x16";
 
     private PromotionStatusWrapper promotionStatusWrapper = new PromotionStatusWrapper();
     private PromotedBuildActionWrapper promotedBuildActionWrapper = new PromotedBuildActionWrapper();
@@ -60,7 +58,7 @@ public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
         if (action != null) {
             for (Object status : promotedBuildActionWrapper.getPromotions(action)) {
                 final List<String> params = new ArrayList<>();
-                for (Promotion promotion : (Collection<Promotion>) promotionStatusWrapper.getPromotionBuilds(status)) {
+                for (Promotion promotion : promotionStatusWrapper.getPromotionBuilds(status)) {
                     populatePromotionParameters(params, promotion);
                     promotionStatusList.add(buildNewPromotionStatus(build, status, params, promotion));
                 }
@@ -79,7 +77,7 @@ public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
         final long startTime = promotion.getStartTimeInMillis();
         final long duration = promotion.getTime().getTime() - build.getTimeInMillis();
         final String userName = promotion.getUserName();
-        final String icon = promotionStatusWrapper.getIcon(status, DEFAULT_ICON_SIZE);
+        final String icon = promotionStatusWrapper.getIcon(status);
 
         return new PromotionStatus(name, startTime, duration, userName, icon, params);
     }
@@ -88,7 +86,8 @@ public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
         final Promotion promotion = (Promotion) promotionObj;
         for (ParameterValue value : promotion.getParameterValues()) {
             if (value instanceof StringParameterValue) {
-                if (StringUtils.isNotBlank((String)((StringParameterValue) value).getValue())) {
+                String stringValue = (String) ((StringParameterValue) value).getValue();
+                if (stringValue != null && !stringValue.isBlank()) {
                     params.add("<strong>" + value.getName() + "</strong>: " + ((StringParameterValue)value).getValue());
                 }
             } else if (value instanceof FileParameterValue) {
@@ -118,15 +117,15 @@ public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
 
     static class PromotionStatusWrapper {
         public Collection<Promotion> getPromotionBuilds(Object status) {
-            return ((hudson.plugins.promoted_builds.Status) status).getPromotionBuilds();
+            return ((Status) status).getPromotionBuilds();
         }
 
         public String getName(Object status) {
-            return ((hudson.plugins.promoted_builds.Status) status).getName();
+            return ((Status) status).getName();
         }
 
-        public String getIcon(Object status, String size) {
-            return ((hudson.plugins.promoted_builds.Status) status).getIcon();
+        public String getIcon(Object status) {
+            return ((Status) status).getIcon();
         }
 
         public long getStartTime(Object status) {

@@ -347,7 +347,13 @@ div.pipeline-message {
 }
 
 ._jsPlumb_connector {
-    z-index: -100;
+    z-index: 0;
+}
+
+/* Bootstrap resets svg overflow to hidden, which clips jsPlumb arrow heads */
+svg._jsPlumb_connector,
+svg._jsPlumb_overlay {
+    overflow: visible;
 }
 
 div.infoPanel {

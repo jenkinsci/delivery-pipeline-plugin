@@ -15,7 +15,7 @@ function pipelineUtils() {
             dataType: 'json',
             async: true,
             cache: false,
-            timeout: 20000,
+            timeout: 60000,
             success: function (data) {
                 self.refreshPipelines(data, divNames, errorDiv, view, fullscreen, showChanges, aggregatedChangesGroupingPattern, pipelineid, jsplumb);
                 setTimeout(function () {
@@ -326,7 +326,7 @@ function addPipelineHeader(html, component, data, c, resURL) {
         } else {
             html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${component.firstJobUrl}" data-task-id="${data.name}">`);
         }
-        html.push('<img class="icon-clock icon-md" title="Build now" src="' + resURL + '/images/svgs/clock.svg">');
+        html.push('<img class="icon-clock icon-md" title="Build now" src="' + resURL + '/plugin/delivery-pipeline-plugin/themes/default/clock.svg">');
         html.push('</a>');
     }
     html.push('</h1>');
@@ -617,7 +617,7 @@ function triggerManual(taskId, downstreamProject, upstreamProject, upstreamBuild
         type: 'POST',
         data: formData,
         beforeSend: before,
-        timeout: 20000,
+        timeout: 60000,
         async: true,
         success: function (data, textStatus, jqXHR) {
             console.info('Triggered build of ' + downstreamProject + ' successfully!');
@@ -646,7 +646,7 @@ function triggerRebuild(taskId, project, buildId, viewUrl) {
         type: 'POST',
         data: formData,
         beforeSend: before,
-        timeout: 20000,
+        timeout: 60000,
         success: function (data, textStatus, jqXHR) {
             console.info('Triggered rebuild of ' + project + ' successfully!')
         },
@@ -674,7 +674,7 @@ function specifyInput(taskId, project, buildId, viewUrl) {
         type: 'POST',
         data: formData,
         beforeSend: before,
-        timeout: 20000,
+        timeout: 60000,
         success: function (data, textStatus, jqXHR) {
             console.info('Successfully triggered input step of ' + project + '!')
         },
@@ -702,7 +702,7 @@ function abortBuild(taskId, project, buildId, viewUrl) {
         type: 'POST',
         data: formData,
         beforeSend: before,
-        timeout: 20000,
+        timeout: 60000,
         success: function (data, textStatus, jqXHR) {
             console.info('Successfully aborted build of ' + project + '!')
         },
@@ -731,7 +731,7 @@ function triggerBuild(url, taskId) {
         url: rootURL + '/' + url + 'build?delay=0sec',
         type: 'POST',
         beforeSend: before,
-        timeout: 20000,
+        timeout: 60000,
         success: function (data, textStatus, jqXHR) {
             console.info('Triggered build of ' + taskId + ' successfully!')
         },
@@ -754,29 +754,31 @@ function getStageId(name, count) {
 }
 
 function equalheight(container) {
+    var elements = Q(container);
 
-    var currentTallest = 0;
-    var currentRowStart = 0;
-    var rowDivs = new Array();
-    var $el;
-    var topPosition = 0;
+    // Batch write: reset all heights before reading positions
+    elements.height('auto');
 
-    Q(container).each(function () {
-        $el = Q(this);
-        Q($el).height('auto');
-        topPosition = $el.position().top;
-
-        if (currentRowStart !== topPosition) {
-            rowDivs.length = 0; // empty the array
-            currentRowStart = topPosition;
-            currentTallest = $el.height() + 2;
-            rowDivs.push($el);
-        } else {
-            rowDivs.push($el);
-            currentTallest = (currentTallest < $el.height() + 2) ? ($el.height() + 2) : (currentTallest);
+    // Batch read: collect positions and heights without triggering repeated reflows
+    var rowMap = {};
+    elements.each(function () {
+        var $el = Q(this);
+        var top = $el.position().top;
+        if (!rowMap[top]) {
+            rowMap[top] = { divs: [], maxHeight: 0 };
         }
-        for (currentDiv = 0; currentDiv < rowDivs.length; currentDiv++) {
-            rowDivs[currentDiv].height(currentTallest);
+        var h = $el.height() + 2;
+        if (h > rowMap[top].maxHeight) {
+            rowMap[top].maxHeight = h;
+        }
+        rowMap[top].divs.push($el);
+    });
+
+    // Batch write: set all heights at once
+    Object.keys(rowMap).forEach(function (top) {
+        var row = rowMap[top];
+        for (var i = 0; i < row.divs.length; i++) {
+            row.divs[i].height(row.maxHeight);
         }
     });
 }

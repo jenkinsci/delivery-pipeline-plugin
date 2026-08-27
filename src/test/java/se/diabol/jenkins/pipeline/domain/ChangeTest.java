@@ -17,59 +17,58 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import hudson.MarkupText;
 import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
 import hudson.scm.ChangeLogAnnotator;
 import hudson.scm.ChangeLogSet;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.FakeChangeLogSCM;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.test.FakeRepositoryBrowserSCM;
 import se.diabol.jenkins.pipeline.test.MeanFakeRepositoryBrowserSCM;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
 
-public class ChangeTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class ChangeTest {
 
+    private JenkinsRule jenkins;
 
     private static Logger log = Logger.getLogger(Change.class.getName()); // matches the logger in the affected class
     private static OutputStream logCapturingStream;
     private static StreamHandler customLogHandler;
 
-    @Before
-    public void attachLogCapturer() {
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
         logCapturingStream = new ByteArrayOutputStream();
         Handler[] handlers = log.getParent().getHandlers();
         customLogHandler = new StreamHandler(logCapturingStream, handlers[0].getFormatter());
         log.addHandler(customLogHandler);
     }
 
-    public String getTestCapturedLog() throws IOException {
+    public String getTestCapturedLog() {
         customLogHandler.flush();
         return logCapturingStream.toString();
     }
 
     @Test
-    public void testGetChangesNoBrowser() throws Exception {
+    void testGetChangesNoBrowser() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeChangeLogSCM scm = new FakeChangeLogSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -88,7 +87,7 @@ public class ChangeTest {
     }
 
     @Test
-    public void testGetChangesWithBrowser() throws Exception {
+    void testGetChangesWithBrowser() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user").withMsg("Fixed bug");
@@ -107,8 +106,8 @@ public class ChangeTest {
     }
 
     @Test
-    @Ignore
-    public void testGetChangesWithAnnotator() throws Exception {
+    @Disabled
+    void testGetChangesWithAnnotator() throws Exception {
         ChangeLogAnnotator.all().add(new ChangeLogAnnotator() {
             @Override
             public void annotate(AbstractBuild<?, ?> build, ChangeLogSet.Entry change, MarkupText text) {
@@ -130,7 +129,7 @@ public class ChangeTest {
     }
 
     @Test
-    public void testGetChangesWithBrowserThrowIOException() throws Exception {
+    void testGetChangesWithBrowserThrowIOException() throws Exception {
         MockFolder folder = jenkins.createFolder("Folder");
         FreeStyleProject project = folder.createProject(FreeStyleProject.class, "build");
         MeanFakeRepositoryBrowserSCM scm = new MeanFakeRepositoryBrowserSCM();
@@ -149,8 +148,6 @@ public class ChangeTest {
         assertNull(change.getChangeLink());
 
         String capturedLog = getTestCapturedLog();
-        Assert.assertTrue(capturedLog.contains("Could not get changeset link for: Folder » build #1"));
+        assertTrue(capturedLog.contains("Could not get changeset link for: Folder » build #1"));
     }
-
-
 }

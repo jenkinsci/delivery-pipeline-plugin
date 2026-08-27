@@ -17,49 +17,48 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import se.diabol.jenkins.pipeline.domain.Component;
-import se.diabol.jenkins.pipeline.domain.Pipeline;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PipelinePaginationTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+class PipelinePaginationTest {
 
     private static final boolean PAGING_ENABLED = true;
 
     @Test
-    public void testPipelinePagination() throws Exception {
+    void testPipelinePagination() {
         PipelinePagination pagination = new PipelinePagination(1, 50, 10, "?page=");
         assertEquals(1, pagination.getCurrentPage());
         assertEquals(50, pagination.getTotalCount());
         assertEquals(10, pagination.getPageSize());
         assertNotNull(pagination.getTag());
     }
-    
+
     @Test
-    public void testPipelinePaginationPrevStep() throws Exception {
+    void testPipelinePaginationPrevStep() {
         PipelinePagination pagination = new PipelinePagination(12, 50, 3, "?page=");
         assertEquals(12, pagination.getCurrentPage());
         assertEquals(50, pagination.getTotalCount());
         assertEquals(3, pagination.getPageSize());
         assertNotNull(pagination.getTag());
     }
-    
+
     @Test
-    public void testPipelinePaginationNextStep() throws Exception {
+    void testPipelinePaginationNextStep() {
         PipelinePagination pagination = new PipelinePagination(1, 50, 3, "?page=");
         assertEquals(1, pagination.getCurrentPage());
         assertEquals(50, pagination.getTotalCount());
         assertEquals(3, pagination.getPageSize());
         assertNotNull(pagination.getTag());
     }
-    
+
     @Test
-    public void testComponentNumber() {
+    void testComponentNumber() {
         Component componentB = new Component("B", "B", "job/A", false, 3, PAGING_ENABLED, 2);
         Component componentA = new Component("A", "A", "job/B", false, 3, PAGING_ENABLED, 1);
         List<Component> list = new ArrayList<>();
@@ -68,9 +67,9 @@ public class PipelinePaginationTest {
         assertEquals(1, list.get(0).getComponentNumber());
         assertEquals(2, list.get(1).getComponentNumber());
     }
-    
+
     @Test
-    public void testComponent() {
+    void testComponent() {
         Component componentA = new Component("A", "A", "job/B", false, 3, PAGING_ENABLED, 1);
         componentA.setPipelines(new ArrayList<>());
         assertNotNull(componentA.getPagingData());

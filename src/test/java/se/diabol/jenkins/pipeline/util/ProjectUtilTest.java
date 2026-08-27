@@ -23,31 +23,37 @@ import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.tasks.BuildTrigger;
 import hudson.util.ListBoxModel;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.test.TestUtil;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ProjectUtilTest {
+@WithJenkins
+class ProjectUtilTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @WithoutJenkins
     @Test
-    public void testValidUtilClass() throws Exception {
+    void testValidUtilClass() throws Exception {
         TestUtil.assertUtilityClassWellDefined(ProjectUtil.class);
     }
 
     @Test
-    public void testFillAllProjects() throws Exception {
+    void testFillAllProjects() throws Exception {
         FreeStyleProject build1 = jenkins.createFreeStyleProject("build1");
         FreeStyleProject build2 = jenkins.createFreeStyleProject("build2");
         ListBoxModel list = ProjectUtil.fillAllProjects(jenkins.getInstance(), AbstractProject.class);
@@ -61,7 +67,7 @@ public class ProjectUtilTest {
     }
 
     @Test
-    public void testGetProjects() throws Exception {
+    void testGetProjects() throws Exception {
         jenkins.createFreeStyleProject("build-comp1project");
         jenkins.createFreeStyleProject("build-comp1-project");
         jenkins.createFreeStyleProject("build-comp2-project");
@@ -79,7 +85,7 @@ public class ProjectUtilTest {
     }
 
     @Test
-    public void testGetProjectsInFolders() throws Exception {
+    void testGetProjectsInFolders() throws Exception {
         Folder folder1 = jenkins.jenkins.createProject(Folder.class, "folder1");
         Folder folder2 = jenkins.jenkins.createProject(Folder.class, "folder2");
 
@@ -96,7 +102,7 @@ public class ProjectUtilTest {
     }
 
     @Test
-    public void testGetProjectList() throws Exception {
+    void testGetProjectList() throws Exception {
         jenkins.createFreeStyleProject("p1");
         jenkins.createFreeStyleProject("p2");
 
@@ -114,7 +120,7 @@ public class ProjectUtilTest {
     }
 
     @Test
-    public void testRecursiveProjects() throws Exception {
+    void testRecursiveProjects() throws Exception {
         FreeStyleProject projectA = jenkins.createFreeStyleProject("projectA");
         FreeStyleProject projectB = jenkins.createFreeStyleProject("projectB");
         projectA.getPublishersList().add(new BuildTrigger(projectB.getName(), true));
@@ -130,13 +136,13 @@ public class ProjectUtilTest {
     }
 
     @Test
-    public void testGetAllDownstreamProjects() {
+    void testGetAllDownstreamProjects() {
         Map<String, AbstractProject<?, ?>> result = ProjectUtil.getAllDownstreamProjects(null, null);
         assertTrue(result.isEmpty());
     }
 
     @Test
-    public void testGetStartUpstreamsSimple() throws Exception {
+    void testGetStartUpstreamsSimple() throws Exception {
         FreeStyleProject projectA = jenkins.createFreeStyleProject("A");
         FreeStyleProject projectB = jenkins.createFreeStyleProject("B");
         FreeStyleProject projectC = jenkins.createFreeStyleProject("C");
@@ -151,7 +157,7 @@ public class ProjectUtilTest {
 
     @Test
     @WithoutJenkins
-    public void getProjectsShouldReturnEmptyMapForEmptyRegExp() {
+    void getProjectsShouldReturnEmptyMapForEmptyRegExp() {
         assertTrue(ProjectUtil.getProjects(" ").isEmpty());
         assertTrue(ProjectUtil.getProjects("   ").isEmpty());
         assertTrue(ProjectUtil.getProjects("\r\n").isEmpty());

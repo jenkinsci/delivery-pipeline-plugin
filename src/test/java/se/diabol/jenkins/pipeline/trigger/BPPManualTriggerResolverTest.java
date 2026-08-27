@@ -17,32 +17,38 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.trigger;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import hudson.model.FreeStyleProject;
 import hudson.tasks.BuildTrigger;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class BPPManualTriggerResolverTest {
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class BPPManualTriggerResolverTest {
+
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testGetTriggerNoRelation() throws Exception {
+    void testGetTriggerNoRelation() throws Exception {
         FreeStyleProject projectA = jenkins.createFreeStyleProject("a");
         FreeStyleProject projectB = jenkins.createFreeStyleProject("b");
         assertNull(new BPPManualTriggerResolver().getManualTrigger(projectA, projectB));
     }
 
     @Test
-    public void testGetTriggerBPPManualTrigger() throws Exception {
+    void testGetTriggerBPPManualTrigger() throws Exception {
         final FreeStyleProject projectA = jenkins.createFreeStyleProject("a");
         final FreeStyleProject projectB = jenkins.createFreeStyleProject("b");
         final FreeStyleProject projectC = jenkins.createFreeStyleProject("c");
@@ -59,7 +65,7 @@ public class BPPManualTriggerResolverTest {
     }
 
     @Test
-    public void testGetTriggerBPPManualTriggerFolders() throws Exception {
+    void testGetTriggerBPPManualTriggerFolders() throws Exception {
         MockFolder folder = jenkins.createFolder("folder");
         FreeStyleProject projectA = folder.createProject(FreeStyleProject.class, "a");
         FreeStyleProject projectB = folder.createProject(FreeStyleProject.class, "b");
@@ -70,7 +76,7 @@ public class BPPManualTriggerResolverTest {
     }
 
     @Test
-    public void testIsManualTriggerMultipleUpstreams() throws Exception {
+    void testIsManualTriggerMultipleUpstreams() throws Exception {
         final FreeStyleProject projectA = jenkins.createFreeStyleProject("a");
         final FreeStyleProject projectB = jenkins.createFreeStyleProject("b");
         final FreeStyleProject projectC = jenkins.createFreeStyleProject("c");

@@ -17,25 +17,22 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain;
 
-import static org.junit.Assert.assertEquals;
-
-import org.junit.Test;
-
-import se.diabol.jenkins.pipeline.domain.task.Task;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
-public class EdgeTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class EdgeTest {
 
     @Test
-    public void testGetSet() {
-        Stage stageA = new Stage("A", Collections.<Task>emptyList());
-        Stage stageB = new Stage("B", Collections.<Task>emptyList());
+    void testGetSet() {
+        Stage stageA = new Stage("A", Collections.emptyList());
+        Stage stageB = new Stage("B", Collections.emptyList());
 
         Edge edge = new Edge(stageA, stageB);
 
         assertEquals(edge.getSource(), stageA);
         assertEquals(edge.getTarget(), stageB);
     }
-
 }

@@ -23,7 +23,7 @@ import se.diabol.jenkins.pipeline.domain.TriggerCause;
 import se.diabol.jenkins.pipeline.util.JenkinsUtil;
 
 import java.util.List;
-import javax.annotation.CheckForNull;
+import jakarta.annotation.Nullable;
 
 public abstract class CauseResolver implements ExtensionPoint {
 
@@ -34,7 +34,7 @@ public abstract class CauseResolver implements ExtensionPoint {
      * @return a TriggerCause or null if the CauseResolver implementation cant find a proper cause indication that
      *      other resolvers should make a try
      */
-    @CheckForNull
+    @Nullable
     public abstract TriggerCause resolveCause(Cause cause);
 
     /**

@@ -19,40 +19,45 @@ package se.diabol.jenkins.pipeline.resolver;
 
 import hudson.cli.BuildCommand;
 import hudson.model.Cause;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.domain.TriggerCause;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class CoreCauseResolverTest {
+@WithJenkins
+class CoreCauseResolverTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
 
     private CoreCauseResolver resolver = new CoreCauseResolver();
 
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
+
     @Test
     @WithoutJenkins
-    public void shouldResolveRemoteCause() {
+    void shouldResolveRemoteCause() {
         TriggerCause triggerCause = resolver.resolveCause(new Cause.RemoteCause("hostname", "note"));
         assertNotNull(triggerCause);
         assertEquals(TriggerCause.TYPE_REMOTE, triggerCause.getType());
     }
 
     @Test
-    public void shouldResolveCliCause() {
+    void shouldResolveCliCause() {
         TriggerCause triggerCause = resolver.resolveCause(new BuildCommand.CLICause("username"));
         assertNotNull(triggerCause);
         assertEquals(TriggerCause.TYPE_MANUAL, triggerCause.getType());
     }
 
     @Test
-    public void shouldYieldAnonymousForUnknownUser() {
+    void shouldYieldAnonymousForUnknownUser() {
         assertEquals("anonymous", CoreCauseResolver.getDisplayName(null));
     }
-
 }

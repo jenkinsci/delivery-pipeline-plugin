@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.CheckForNull;
+import jakarta.annotation.Nullable;
 
 @ExportedBean(defaultVisibility = AbstractItem.VISIBILITY)
 public class ManualStep {
@@ -52,7 +52,7 @@ public class ManualStep {
         this.possibleVersions = possibleVersions;
     }
 
-    @CheckForNull
+    @Nullable
     public static ManualStep resolveManualStep(AbstractProject project) {
         if (isManualTrigger(project)) {
             return new ManualStep(project.getName(), null, false, project.hasPermission(Item.BUILD), null);
@@ -81,7 +81,7 @@ public class ManualStep {
         return result;
     }
 
-    @CheckForNull
+    @Nullable
     public static ManualStep getManualStepLatest(AbstractProject project, AbstractBuild build,
                                                  AbstractBuild firstBuild) {
         if (isManualTrigger(project)) {
@@ -117,7 +117,7 @@ public class ManualStep {
         return null;
     }
 
-    @CheckForNull
+    @Nullable
     public static ManualStep getManualStepAggregated(AbstractProject project, AbstractProject firstProject) {
         if (isManualTrigger(project)) {
             Map<String, String> versions = new HashMap<>();

@@ -18,27 +18,26 @@ If not, see <http://www.gnu.org/licenses/>.
 package se.diabol.jenkins.pipeline.trigger;
 
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
-import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.tasks.Publisher;
 import hudson.util.DescribableList;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 import se.diabol.jenkins.pipeline.util.ProjectUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.CheckForNull;
+import jakarta.annotation.Nullable;
 
-@Extension(optional = true)
+@OptionalExtension
 public class BPPManualTriggerResolver extends ManualTriggerResolver {
 
     // Force a classloading error plugin isn't available
     @SuppressWarnings("unused")
     public static final Class CLASS = BuildPipelineTrigger.class;
 
-
     @Override
-    @CheckForNull
+    @Nullable
     public ManualTrigger getManualTrigger(AbstractProject<?, ?> project, AbstractProject<?, ?> downstream) {
         BuildPipelineTrigger bppTrigger = downstream.getPublishersList().get(BuildPipelineTrigger.class);
         if (bppTrigger != null) {

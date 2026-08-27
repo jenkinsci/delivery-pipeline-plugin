@@ -17,29 +17,35 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.resolver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.tasks.BuildTrigger;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.RelationshipResolver;
 import se.diabol.jenkins.pipeline.util.ProjectUtil;
 
 import java.util.List;
 import java.util.Map;
 
-public class ProjectRelationshipResolverTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class ProjectRelationshipResolverTest {
+
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testNoDownstream() throws Exception {
+    void testNoDownstream() throws Exception {
         FreeStyleProject projectA = jenkins.createFreeStyleProject("a");
         RelationshipResolver resolver = new ProjectRelationshipResolver();
         List<AbstractProject> downStreams = resolver.getDownstreamProjects(projectA);
@@ -47,7 +53,7 @@ public class ProjectRelationshipResolverTest {
     }
 
     @Test
-    public void testHasDownstream() throws Exception {
+    void testHasDownstream() throws Exception {
         final FreeStyleProject projectA = jenkins.createFreeStyleProject("a");
         final FreeStyleProject projectB = jenkins.createFreeStyleProject("b");
         projectA.getPublishersList().add(new BuildTrigger("b", false));
@@ -60,7 +66,7 @@ public class ProjectRelationshipResolverTest {
 
     @SuppressWarnings("deprecation")
     @Test
-    public void testFirstLastProjects() throws Exception {
+    void testFirstLastProjects() throws Exception {
         FreeStyleProject projectA = jenkins.createFreeStyleProject("projectA");
         FreeStyleProject projectB = jenkins.createFreeStyleProject("projectB");
         FreeStyleProject projectC = jenkins.createFreeStyleProject("projectC");
@@ -74,10 +80,9 @@ public class ProjectRelationshipResolverTest {
         jenkins.getInstance().getExtensionList(RelationshipResolver.class).add(new ProjectRelationshipResolver());
         Map<String, AbstractProject<?, ?>> projects = ProjectUtil.getAllDownstreamProjects(projectB, projectC);
         assertEquals(2, projects.size());
-        assertTrue(!projects.containsKey("projectA"));
+        assertFalse(projects.containsKey("projectA"));
         assertTrue(projects.containsKey("projectB"));
         assertTrue(projects.containsKey("projectC"));
-        assertTrue(!projects.containsKey("projectD"));
+        assertFalse(projects.containsKey("projectD"));
     }
-
 }

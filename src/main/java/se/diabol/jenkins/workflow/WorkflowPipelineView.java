@@ -23,6 +23,7 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Api;
 import hudson.model.Descriptor;
+import hudson.model.Descriptor.FormException;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
@@ -42,8 +43,8 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.core.PipelineView;
 import se.diabol.jenkins.core.TimestampFormat;
@@ -69,8 +70,8 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
+import jakarta.annotation.Nonnull;
+import jakarta.servlet.ServletException;
 
 public class WorkflowPipelineView extends View implements PipelineView {
 
@@ -324,7 +325,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
     }
 
     @Override
-    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+    public Item doCreateItem(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
         if (!isDefault()) {
             return getOwner().getPrimaryView().doCreateItem(req, rsp);
         } else {
@@ -410,7 +411,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
     }
 
     @Override
-    protected void submit(StaplerRequest req) throws IOException, ServletException, Descriptor.FormException {
+    protected void submit(StaplerRequest2 req) throws IOException, ServletException, FormException {
         req.bindJSON(this, req.getSubmittedForm());
         componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
     }
@@ -527,7 +528,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
         }
 
         @Extension
-        public static class DescriptorImpl extends Descriptor<WorkflowPipelineView.ComponentSpec> {
+        public static class DescriptorImpl extends Descriptor<ComponentSpec> {
 
             @Nonnull
             @Override
