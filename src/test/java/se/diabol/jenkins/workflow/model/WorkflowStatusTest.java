@@ -17,19 +17,19 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-
 import org.joda.time.DateTime;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import se.diabol.jenkins.pipeline.domain.status.StatusType;
 import se.diabol.jenkins.workflow.api.Stage;
 
-public class WorkflowStatusTest {
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+
+class WorkflowStatusTest {
 
     @Test
-    public void ofShouldReturnWorkflowStatus() throws Exception {
+    void ofShouldReturnWorkflowStatus() {
         Stage stage = getStageWithStatus("RUNNING");
         WorkflowStatus status = WorkflowStatus.of(stage);
         assertThat(status.getDuration(), is(stage.durationMillis));
@@ -37,36 +37,36 @@ public class WorkflowStatusTest {
     }
 
     @Test
-    public void nullStageShouldYieldNotBuiltStatusType() throws Exception {
-        assertThat(WorkflowStatus.statusType((Stage) null), is(StatusType.NOT_BUILT));
+    void nullStageShouldYieldNotBuiltStatusType() {
+        assertThat(WorkflowStatus.statusType(null), is(StatusType.NOT_BUILT));
     }
 
     @Test
-    public void stageWithNoStatusShouldYieldNotBuiltStatusType() throws Exception {
-        assertThat(WorkflowStatus.statusType((Stage) null), is(StatusType.NOT_BUILT));
+    void stageWithNoStatusShouldYieldNotBuiltStatusType() {
+        assertThat(WorkflowStatus.statusType(null), is(StatusType.NOT_BUILT));
     }
 
     @Test
-    public void stageWithInProgressStatusShouldYieldRunningStatusType() throws Exception {
+    void stageWithInProgressStatusShouldYieldRunningStatusType() {
         Stage stageInProgress = getStageWithStatus("IN_PROGRESS");
         assertThat(WorkflowStatus.statusType(stageInProgress), is(StatusType.RUNNING));
     }
 
     @Test
-    public void stageWithAbortedStatusShouldYieldCancelledStatusType() throws Exception {
+    void stageWithAbortedStatusShouldYieldCancelledStatusType() {
         Stage stageInProgress = getStageWithStatus("ABORTED");
         assertThat(WorkflowStatus.statusType(stageInProgress), is(StatusType.CANCELLED));
     }
 
     @Test
     @Issue("JENKINS-49019")
-    public void stageWithNotExecutedStatusShouldYieldNotBuiltStatusType() throws Exception {
+    void stageWithNotExecutedStatusShouldYieldNotBuiltStatusType() {
         Stage stageInProgress = getStageWithStatus("NOT_EXECUTED");
         assertThat(WorkflowStatus.statusType(stageInProgress), is(StatusType.NOT_BUILT));
     }
 
     @Test
-    public void stageWithFailedStatusShouldYieldFailedStatusType() throws Exception {
+    void stageWithFailedStatusShouldYieldFailedStatusType() {
         Stage failedStage = getStageWithStatus("FAILED");
         assertThat(WorkflowStatus.statusType(failedStage), is(StatusType.FAILED));
     }
@@ -74,5 +74,4 @@ public class WorkflowStatusTest {
     private static Stage getStageWithStatus(String status) {
         return new Stage("id", "name", status, new DateTime(System.currentTimeMillis()), 100L);
     }
-
 }

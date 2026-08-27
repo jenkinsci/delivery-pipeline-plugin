@@ -31,5 +31,4 @@ public class ConfigureJobPage {
     public void submit() {
         webDriver.findElement(By.name("Submit")).click();
     }
-
 }

@@ -17,12 +17,12 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.step;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class TaskStepExecutionTest {
+class TaskStepExecutionTest {
 
     @Test
-    public void stopShouldNotThrowException() throws Exception {
+    void stopShouldNotThrowException() throws Exception {
         TaskStepExecution execution = new TaskStepExecution();
         execution.stop(new IllegalStateException("Test provoked exception"));
     }

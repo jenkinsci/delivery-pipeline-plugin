@@ -17,33 +17,32 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.sort;
 
+import com.google.common.collect.Lists;
+import org.joda.time.DateTime;
+import org.junit.jupiter.api.Test;
+import se.diabol.jenkins.pipeline.domain.Component;
+import se.diabol.jenkins.pipeline.domain.status.SimpleStatus;
+import se.diabol.jenkins.pipeline.domain.status.Status;
+import se.diabol.jenkins.pipeline.domain.status.StatusType;
+import se.diabol.jenkins.workflow.model.WorkflowStatus;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static se.diabol.jenkins.pipeline.domain.status.StatusType.FAILED;
 import static se.diabol.jenkins.pipeline.domain.status.StatusType.SUCCESS;
 import static se.diabol.jenkins.pipeline.test.PipelineUtil.createComponent;
 import static se.diabol.jenkins.pipeline.test.PipelineUtil.createDeliveryPipelineComponentWithNoRuns;
 import static se.diabol.jenkins.pipeline.test.PipelineUtil.createWorkflowPipelineComponentWithNoRuns;
 
-import com.google.common.collect.Lists;
-import org.joda.time.DateTime;
-import org.junit.Test;
-import se.diabol.jenkins.pipeline.domain.Component;
-import se.diabol.jenkins.pipeline.domain.status.SimpleStatus;
-import se.diabol.jenkins.pipeline.domain.status.Status;
-import se.diabol.jenkins.pipeline.domain.status.StatusType;
-import se.diabol.jenkins.pipeline.domain.status.promotion.PromotionStatus;
-import se.diabol.jenkins.workflow.model.WorkflowStatus;
-
-import java.util.ArrayList;
-import java.util.List;
-
-public class FailedJobComparatorTest {
+class FailedJobComparatorTest {
 
     @Test
-    public void shouldSortFailedBeforeSuccessful() {
+    void shouldSortFailedBeforeSuccessful() {
 
         Component failedComponent = createComponent(status(FAILED, new DateTime().minusDays(1)));
         Component successfulComponent = createComponent(status(SUCCESS, new DateTime().minusDays(1)));
@@ -58,7 +57,7 @@ public class FailedJobComparatorTest {
     }
 
     @Test
-    public void shouldSortRecentlyRunFirstIfSameStatus() {
+    void shouldSortRecentlyRunFirstIfSameStatus() {
 
         Component failedComponentRunLongAgo = createComponent(status(FAILED, new DateTime().minusDays(10)));
         Component failedComponent = createComponent(status(FAILED, new DateTime().minusDays(1)));
@@ -75,7 +74,7 @@ public class FailedJobComparatorTest {
     }
 
     @Test
-    public void shouldSortNotRunJobLast() {
+    void shouldSortNotRunJobLast() {
         Component notRunComponent = createDeliveryPipelineComponentWithNoRuns();
         Component successfulComponent = createComponent(status(SUCCESS, new DateTime().minusDays(1)));
         Component failedComponent = createComponent(status(FAILED, new DateTime().minusDays(1)));
@@ -91,7 +90,7 @@ public class FailedJobComparatorTest {
     }
 
     @Test
-    public void shouldSortFailedWorkflowPipelinesBeforeSuccessful() {
+    void shouldSortFailedWorkflowPipelinesBeforeSuccessful() {
         se.diabol.jenkins.workflow.model.Component failedComponent = createComponent(
                 new WorkflowStatus(StatusType.FAILED, 1000, 100));
         se.diabol.jenkins.workflow.model.Component successfulComponent = createComponent(
@@ -107,7 +106,7 @@ public class FailedJobComparatorTest {
     }
 
     @Test
-    public void shouldSortRecentlyRunWorkflowPipelinesFirstIfSameStatus() {
+    void shouldSortRecentlyRunWorkflowPipelinesFirstIfSameStatus() {
         se.diabol.jenkins.workflow.model.Component failedComponentRunLongAgo = createComponent(
                 new WorkflowStatus(StatusType.FAILED, 1000, 100));
         se.diabol.jenkins.workflow.model.Component failedComponent = createComponent(
@@ -127,7 +126,7 @@ public class FailedJobComparatorTest {
     }
 
     @Test
-    public void shouldSortNotRunWorkflowPipelineLast() {
+    void shouldSortNotRunWorkflowPipelineLast() {
         se.diabol.jenkins.workflow.model.Component notRunComponent = createWorkflowPipelineComponentWithNoRuns();
         se.diabol.jenkins.workflow.model.Component successfulComponent = createComponent(
                 new WorkflowStatus(StatusType.SUCCESS, 1000, 100));
@@ -146,12 +145,12 @@ public class FailedJobComparatorTest {
     }
 
     @Test
-    public void shouldHandleNullParameters() {
-        assertTrue(new FailedJobComparator().compare(null, null) == 0);
+    void shouldHandleNullParameters() {
+        assertEquals(0, new FailedJobComparator().compare(null, null));
     }
 
     @Test
-    public void shouldBeAbleToCompareWithNull() {
+    void shouldBeAbleToCompareWithNull() {
         FailedJobComparator comparator = new FailedJobComparator();
         Component successfulComponent = createComponent(status(SUCCESS, new DateTime()));
         assertTrue(comparator.compare(successfulComponent, null) < 0);
@@ -159,7 +158,6 @@ public class FailedJobComparatorTest {
     }
 
     private Status status(StatusType statusType, DateTime lastRunAt) {
-        return new SimpleStatus(statusType, lastRunAt.getMillis(), 10, false, Lists.<PromotionStatus>newArrayList());
+        return new SimpleStatus(statusType, lastRunAt.getMillis(), 10, false, Lists.newArrayList());
     }
-
 }

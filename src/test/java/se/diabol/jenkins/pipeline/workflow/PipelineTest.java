@@ -17,27 +17,33 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.workflow;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.workflow.WorkflowPipelineView;
 import se.diabol.jenkins.workflow.model.Pipeline;
 
-public class PipelineTest {
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class PipelineTest {
+
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void simplePipeline() throws Exception {
+    void simplePipeline() throws Exception {
         final String pipelineName = "Pipeline";
         WorkflowJob pipelineProject = jenkins.jenkins.createProject(WorkflowJob.class, pipelineName);
         pipelineProject.setDefinition(new CpsFlowDefinition("node {stage 'Build' \n stage 'CI' }"));
@@ -61,7 +67,7 @@ public class PipelineTest {
     }
 
     @Test
-    public void simplePipelineTasks() throws Exception {
+    void simplePipelineTasks() throws Exception {
         String pipelineName = "Pipeline";
         WorkflowJob pipelineProject = jenkins.jenkins.createProject(WorkflowJob.class, pipelineName);
         String script = "node {\n stage('Build') {\n echo 'Compiled'\n }\n stage('CI') {\n echo 'Deployed'\n }\n}\n";

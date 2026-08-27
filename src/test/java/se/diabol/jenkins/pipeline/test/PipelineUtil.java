@@ -26,7 +26,6 @@ import se.diabol.jenkins.pipeline.domain.Stage;
 import se.diabol.jenkins.pipeline.domain.status.SimpleStatus;
 import se.diabol.jenkins.pipeline.domain.status.Status;
 import se.diabol.jenkins.pipeline.domain.status.StatusType;
-import se.diabol.jenkins.pipeline.domain.status.promotion.PromotionStatus;
 import se.diabol.jenkins.pipeline.domain.task.Task;
 import se.diabol.jenkins.workflow.model.WorkflowStatus;
 
@@ -93,6 +92,6 @@ public class PipelineUtil {
     }
 
     public static Status status(StatusType statusType, DateTime lastRunedAt) {
-        return new SimpleStatus(statusType, lastRunedAt.getMillis(), 10, false, Lists.<PromotionStatus>newArrayList());
+        return new SimpleStatus(statusType, lastRunedAt.getMillis(), 10, false, Lists.newArrayList());
     }
 }

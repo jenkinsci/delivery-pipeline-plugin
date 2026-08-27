@@ -22,23 +22,29 @@ import jenkins.branch.MultiBranchProject;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNull;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class NameTest {
+@WithJenkins
+class NameTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void shouldReturnNameOfWorkflowRun() throws Exception {
+    void shouldReturnNameOfWorkflowRun() throws Exception {
         String expectedName = "expectedJobName";
         WorkflowJob workflowJob = jenkins.jenkins.createProject(WorkflowJob.class, expectedName);
         WorkflowRun workflowRun = new WorkflowRun(workflowJob);
@@ -46,7 +52,7 @@ public class NameTest {
     }
 
     @Test
-    public void shouldIncludeFolderNameOfWorkflowRunLocatedInFolder() throws IOException {
+    void shouldIncludeFolderNameOfWorkflowRunLocatedInFolder() throws IOException {
         String jobName = "expectedJobName";
         String folderName = "myfolder";
         Folder folder = jenkins.jenkins.createProject(Folder.class, folderName);
@@ -56,7 +62,7 @@ public class NameTest {
     }
 
     @Test
-    public void shouldIncludeParentNameOfWorkflowRunWhenParentIsMultiBranch() throws Exception {
+    void shouldIncludeParentNameOfWorkflowRunWhenParentIsMultiBranch() throws Exception {
         String folderName = "folder";
         Folder folder = jenkins.jenkins.createProject(Folder.class, folderName);
         MultiBranchProject multiBranch = new WorkflowMultiBranchProject(folder, "mb");
@@ -65,9 +71,9 @@ public class NameTest {
 
         assertThat(Name.of(workflowRun), is("folder/mb/wf"));
     }
-    
+
     @Test
-    public void shouldIncludeParentNameOfWorkflowRunLocatedInFolderLocatedInFolder()
+    void shouldIncludeParentNameOfWorkflowRunLocatedInFolderLocatedInFolder()
             throws IOException {
         String jobName = "expectedJobName";
         String rootFolderName = "myroot";
@@ -82,8 +88,7 @@ public class NameTest {
 
     @Test
     @SuppressWarnings("AccessStaticViaInstance")
-    public void nullNameShouldReturnNull() {
+    void nullNameShouldReturnNull() {
         assertNull(new Name().of(null));
     }
-
 }

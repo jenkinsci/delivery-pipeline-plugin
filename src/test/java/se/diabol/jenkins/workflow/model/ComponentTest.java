@@ -17,15 +17,12 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
-
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.kohsuke.stapler.export.Exported;
 
 import java.lang.annotation.Annotation;
@@ -33,19 +30,28 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class ComponentTest {
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class ComponentTest {
+
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
     @WithoutJenkins
-    public void shouldBeConsideredWorkflowComponent() {
+    void shouldBeConsideredWorkflowComponent() {
         assertTrue(new Component(null, null, null).isWorkflowComponent());
     }
 
     @Test
-    public void shouldProperlyFormatExpectedWorkflowUrl() {
+    void shouldProperlyFormatExpectedWorkflowUrl() {
         final String expectedName = "JobName";
         WorkflowJob workflowJob = new WorkflowJob(jenkins.jenkins, expectedName);
         Component component = new Component("Workflow component", workflowJob, null);
@@ -54,7 +60,7 @@ public class ComponentTest {
 
     @Test
     @WithoutJenkins
-    public void shouldExposeWorkflowJob() {
+    void shouldExposeWorkflowJob() {
         final WorkflowJob workflowJob = new WorkflowJob(null, "Name");
         Component component = new Component("Component", workflowJob, null);
         assertThat(component.getWorkflowJob(), is(workflowJob));
@@ -62,7 +68,7 @@ public class ComponentTest {
 
     @Test
     @WithoutJenkins
-    public void shouldExposePipelines() {
+    void shouldExposePipelines() {
         final List<Pipeline> pipelines = new ArrayList<>();
         Component component = new Component("Component", null, pipelines);
         assertThat(component.getPipelines(), is(pipelines));
@@ -70,9 +76,9 @@ public class ComponentTest {
 
     @Test
     @WithoutJenkins
-    public void shouldHaveProperToString() {
+    void shouldHaveProperToString() {
         final String componentName = "Component Name";
-        Component component = new Component(componentName, null, Collections.<Pipeline>emptyList());
+        Component component = new Component(componentName, null, Collections.emptyList());
         final String toString = component.toString();
         assertTrue(toString.contains(componentName));
         assertTrue(toString.contains("pipelines"));
@@ -80,7 +86,7 @@ public class ComponentTest {
 
     @Test
     @WithoutJenkins
-    public void shouldHaveExportedProperties() throws NoSuchMethodException {
+    void shouldHaveExportedProperties() throws NoSuchMethodException {
         assertTrue(methodHasExportedAnnoation("isWorkflowComponent"));
         assertTrue(methodHasExportedAnnoation("getWorkflowUrl"));
         assertTrue(methodHasExportedAnnoation("getWorkflowJob"));

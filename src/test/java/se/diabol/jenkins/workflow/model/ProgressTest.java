@@ -17,17 +17,17 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
 
-public class ProgressTest {
+class ProgressTest {
 
     @Test
-    public void shouldCalculateProgressWhenHalfwayThroughEstimatedDuration() {
+    void shouldCalculateProgressWhenHalfwayThroughEstimatedDuration() {
         long buildTimestamp = System.currentTimeMillis() - 10000L;
         long estimatedDuration = 20000L;
         int progress = Progress.calculate(buildTimestamp, estimatedDuration);
@@ -36,7 +36,7 @@ public class ProgressTest {
     }
 
     @Test
-    public void shouldCalculateProgressWhenExceedingEstimatedDuration() {
+    void shouldCalculateProgressWhenExceedingEstimatedDuration() {
         long buildTimestamp = System.currentTimeMillis() - 11000L;
         long estimatedDuration = 5000L;
         int progress = Progress.calculate(buildTimestamp, estimatedDuration);

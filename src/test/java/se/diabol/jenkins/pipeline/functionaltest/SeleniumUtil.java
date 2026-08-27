@@ -23,7 +23,6 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
-import java.util.function.Function;
 
 public class SeleniumUtil {
     public static WebElement waitForElement(WebDriver driver, String id) {
@@ -31,12 +30,6 @@ public class SeleniumUtil {
     }
 
     public static WebElement waitForElement(WebDriver driver, By by) {
-        return new WebDriverWait(driver, Duration.ofSeconds(30)).until(new Function<>() {
-            @Override
-            public WebElement apply(WebDriver webDriver) {
-                return webDriver.findElement(by);
-            }
-        });
+        return new WebDriverWait(driver, Duration.ofSeconds(30)).until(webDriver -> webDriver.findElement(by));
     }
-
 }

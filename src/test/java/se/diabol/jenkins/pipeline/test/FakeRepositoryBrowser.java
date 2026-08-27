@@ -21,10 +21,12 @@ import hudson.scm.RepositoryBrowser;
 import org.jvnet.hudson.test.FakeChangeLogSCM;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.net.URL;
 
 public class FakeRepositoryBrowser extends RepositoryBrowser<FakeChangeLogSCM.EntryImpl> {
 
+    @Serial
     private static final long serialVersionUID = -5144842224743489576L;
 
     @Override

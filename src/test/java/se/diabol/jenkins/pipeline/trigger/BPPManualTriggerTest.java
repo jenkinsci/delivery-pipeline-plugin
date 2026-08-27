@@ -17,27 +17,32 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.trigger;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import jenkins.model.Jenkins;
-
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class BPPManualTriggerTest {
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class BPPManualTriggerTest {
+
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void triggerManualWithFolders() throws Exception {
+    void triggerManualWithFolders() throws Exception {
         final BPPManualTrigger trigger = new BPPManualTrigger();
         MockFolder folder = jenkins.createFolder("folder");
         final FreeStyleProject projectA = folder.createProject(FreeStyleProject.class, "a");
@@ -58,7 +63,7 @@ public class BPPManualTriggerTest {
 
     @Test
     @Issue("JENKINS-24392")
-    public void triggerManualWithFoldersViewInRoot() throws Exception {
+    void triggerManualWithFoldersViewInRoot() throws Exception {
         final BPPManualTrigger trigger = new BPPManualTrigger();
         MockFolder folder = jenkins.createFolder("SubFolder");
         final FreeStyleProject projectA = folder.createProject(FreeStyleProject.class, "JobA");
@@ -75,22 +80,23 @@ public class BPPManualTriggerTest {
         assertNotNull(projectB.getLastBuild());
     }
 
-    @Test(expected = TriggerException.class)
-    public void triggerManualWhenProjectNull() throws Exception {
+    @Test
+    void triggerManualWhenProjectNull() throws Exception {
         BPPManualTrigger trigger = new BPPManualTrigger();
         FreeStyleProject projectB = jenkins.createFreeStyleProject("b");
-        trigger.triggerManual(projectB, null, "1", Jenkins.getInstance());
-        fail("Should throw exception");
+
+        assertThrows(TriggerException.class, () ->
+                trigger.triggerManual(projectB, null, "1", Jenkins.getInstance()));
     }
 
-    @Test(expected = TriggerException.class)
-    public void triggerInvalidBuild() throws Exception {
+    @Test
+    void triggerInvalidBuild() throws Exception {
         BPPManualTrigger trigger = new BPPManualTrigger();
         FreeStyleProject projectA = jenkins.createFreeStyleProject("a");
         FreeStyleProject projecB = jenkins.createFreeStyleProject("b");
         FreeStyleBuild build = jenkins.buildAndAssertSuccess(projectA);
 
-        trigger.triggerManual(projecB,projectA , build.getId(), Jenkins.getInstance());
-        fail("Should throw exception");
+        assertThrows(TriggerException.class, () ->
+                trigger.triggerManual(projecB, projectA, build.getId(), Jenkins.getInstance()));
     }
 }

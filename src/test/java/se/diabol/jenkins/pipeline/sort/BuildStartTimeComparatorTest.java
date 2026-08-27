@@ -17,14 +17,15 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.sort;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BuildStartTimeComparatorTest {
+class BuildStartTimeComparatorTest {
 
     @Test
-    public void shouldCompareBuildTimes() throws Exception {
+    void shouldCompareBuildTimes() {
         long first = 10L;
         long second = 20L;
         assertTrue(new BuildStartTimeComparator().compare(first, second) < 0);
@@ -33,7 +34,6 @@ public class BuildStartTimeComparatorTest {
         assertTrue(new BuildStartTimeComparator().compare(first, second) > 0);
 
         first = second;
-        assertTrue(new BuildStartTimeComparator().compare(first, second) == 0);
+        assertEquals(0, new BuildStartTimeComparator().compare(first, second));
     }
-
 }

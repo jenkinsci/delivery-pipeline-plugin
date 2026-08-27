@@ -50,5 +50,4 @@ public class NewJobPage {
         webDriver.findElement(By.id("ok-button")).click();
         return new ConfigureJobPage(webDriver);
     }
-
 }

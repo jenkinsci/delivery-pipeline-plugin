@@ -17,14 +17,13 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain.status;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import se.diabol.jenkins.pipeline.test.TestUtil;
 
-public class StatusFactoryTest {
+class StatusFactoryTest {
 
     @Test
-    public void testValidUtilClass() throws Exception {
+    void testValidUtilClass() throws Exception {
         TestUtil.assertUtilityClassWellDefined(StatusFactory.class);
     }
-
 }

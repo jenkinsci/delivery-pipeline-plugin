@@ -22,11 +22,12 @@ import hudson.matrix.Axis;
 import hudson.matrix.AxisList;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.PipelineProperty;
 import se.diabol.jenkins.pipeline.domain.status.StatusFactory;
 import se.diabol.jenkins.pipeline.domain.task.Task;
@@ -36,32 +37,37 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class StageTest {
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class StageTest {
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
     @Issue("JENKINS-22211")
     @WithoutJenkins
-    public void testSortByRowsCols() {
+    void testSortByRowsCols() {
         List<Stage> stages = new ArrayList<>();
-        Stage stage1 = new Stage("1", Collections.<Task>emptyList());
+        Stage stage1 = new Stage("1", Collections.emptyList());
         stage1.setRow(3);
         stage1.setColumn(2);
-        Stage stage2 = new Stage("2", Collections.<Task>emptyList());
+        Stage stage2 = new Stage("2", Collections.emptyList());
         stage2.setRow(3);
         stage2.setColumn(3);
-        Stage stage3 = new Stage("3", Collections.<Task>emptyList());
+        Stage stage3 = new Stage("3", Collections.emptyList());
         stage3.setRow(1);
         stage3.setColumn(1);
-        Stage stage4 = new Stage("4", Collections.<Task>emptyList());
+        Stage stage4 = new Stage("4", Collections.emptyList());
         stage4.setRow(2);
         stage4.setColumn(1);
-        Stage stage5 = new Stage("5", Collections.<Task>emptyList());
+        Stage stage5 = new Stage("5", Collections.emptyList());
         stage5.setRow(1);
         stage5.setColumn(2);
 
@@ -92,48 +98,48 @@ public class StageTest {
      */
     @Test
     @WithoutJenkins
-    public void testSortByRowsCols2() {
+    void testSortByRowsCols2() {
         List<Stage> stages = new ArrayList<>();
-        Stage stageA = new Stage("A", Collections.<Task>emptyList());
+        Stage stageA = new Stage("A", Collections.emptyList());
         stageA.setRow(0);
         stageA.setColumn(0);
-        Stage stageB = new Stage("B", Collections.<Task>emptyList());
+        Stage stageB = new Stage("B", Collections.emptyList());
         stageB.setRow(0);
         stageB.setColumn(1);
-        Stage stageC = new Stage("C", Collections.<Task>emptyList());
+        Stage stageC = new Stage("C", Collections.emptyList());
         stageC.setRow(0);
         stageC.setColumn(2);
-        Stage stageD = new Stage("D", Collections.<Task>emptyList());
+        Stage stageD = new Stage("D", Collections.emptyList());
         stageD.setRow(0);
         stageD.setColumn(3);
-        Stage stageE = new Stage("E", Collections.<Task>emptyList());
+        Stage stageE = new Stage("E", Collections.emptyList());
         stageE.setRow(0);
         stageE.setColumn(4);
-        Stage stageF = new Stage("F", Collections.<Task>emptyList());
+        Stage stageF = new Stage("F", Collections.emptyList());
         stageF.setRow(0);
         stageF.setColumn(5);
-        Stage stageG = new Stage("G", Collections.<Task>emptyList());
+        Stage stageG = new Stage("G", Collections.emptyList());
         stageG.setRow(0);
         stageG.setColumn(6);
-        Stage stageH = new Stage("H", Collections.<Task>emptyList());
+        Stage stageH = new Stage("H", Collections.emptyList());
         stageH.setRow(1);
         stageH.setColumn(3);
-        Stage stageI = new Stage("I", Collections.<Task>emptyList());
+        Stage stageI = new Stage("I", Collections.emptyList());
         stageI.setRow(2);
         stageI.setColumn(2);
-        Stage stageJ = new Stage("J", Collections.<Task>emptyList());
+        Stage stageJ = new Stage("J", Collections.emptyList());
         stageJ.setRow(2);
         stageJ.setColumn(3);
-        Stage stageK = new Stage("K", Collections.<Task>emptyList());
+        Stage stageK = new Stage("K", Collections.emptyList());
         stageK.setRow(3);
         stageK.setColumn(3);
-        Stage stageL = new Stage("L", Collections.<Task>emptyList());
+        Stage stageL = new Stage("L", Collections.emptyList());
         stageL.setRow(2);
         stageL.setColumn(4);
-        Stage stageM = new Stage("M", Collections.<Task>emptyList());
+        Stage stageM = new Stage("M", Collections.emptyList());
         stageM.setRow(2);
         stageM.setColumn(5);
-        Stage stageN = new Stage("N", Collections.<Task>emptyList());
+        Stage stageN = new Stage("N", Collections.emptyList());
         stageN.setRow(2);
         stageN.setColumn(6);
 
@@ -174,8 +180,8 @@ public class StageTest {
 
     @Test
     @WithoutJenkins
-    public void testFindStageForJob() {
-        Task task1 = new Task(null, "build", "Build", StatusFactory.idle(), null, null, Collections.<String>emptyList(), true, "description");
+    void testFindStageForJob() {
+        Task task1 = new Task(null, "build", "Build", StatusFactory.idle(), null, null, Collections.emptyList(), true, "description");
         List<Stage> stages = Lists.newArrayList(new Stage("QA", Lists.newArrayList(task1)));
         assertNull(Stage.findStageForJob("nofind", stages));
         assertNotNull(Stage.findStageForJob("build", stages));
@@ -183,7 +189,7 @@ public class StageTest {
 
     @Test
     @Issue("JENKINS-22654")
-    public void testStageNameForMultiConfiguration() throws Exception {
+    void testStageNameForMultiConfiguration() throws Exception {
         MatrixProject project = jenkins.createProject(MatrixProject.class,"Multi");
         project.setAxes(new AxisList(new Axis("axis", "foo", "bar")));
         project.addProperty(new PipelineProperty("task", "stage", ""));
@@ -195,8 +201,6 @@ public class StageTest {
             assertEquals(1, stages.size());
             Stage stage = stages.get(0);
             assertEquals("stage", stage.getName());
-
         }
-
     }
 }
