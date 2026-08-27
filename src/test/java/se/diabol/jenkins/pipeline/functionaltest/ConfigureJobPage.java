@@ -29,7 +29,7 @@ public class ConfigureJobPage {
     }
 
     public void submit() {
-        webDriver.findElement(By.xpath("//button[@name=\"Submit\"]")).click();
+        webDriver.findElement(By.name("Submit")).click();
     }
 
 }

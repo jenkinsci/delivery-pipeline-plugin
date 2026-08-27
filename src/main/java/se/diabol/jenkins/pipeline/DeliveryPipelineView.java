@@ -73,8 +73,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
+import jakarta.annotation.Nonnull;
+import jakarta.servlet.ServletException;
 
 public class DeliveryPipelineView extends View implements PipelineView {
 
@@ -634,18 +634,26 @@ public class DeliveryPipelineView extends View implements PipelineView {
     }
 
     @Override
-    protected void submit(StaplerRequest req) throws IOException, ServletException, Descriptor.FormException {
-        req.bindJSON(this, req.getSubmittedForm());
-        componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
-        regexpFirstJobs = req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs"));
+    protected void submit(StaplerRequest req) throws IOException, Descriptor.FormException {
+        try {
+            req.bindJSON(this, req.getSubmittedForm());
+            componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
+            regexpFirstJobs = req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs"));
+        } catch (javax.servlet.ServletException e) {
+            throw new IOException(e);
+        }
     }
 
     @Override
-    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-        if (!isDefault()) {
-            return getOwner().getPrimaryView().doCreateItem(req, rsp);
-        } else {
-            return JenkinsUtil.getInstance().doCreateItem(req, rsp);
+    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        try {
+            if (!isDefault()) {
+                return getOwner().getPrimaryView().doCreateItem(req, rsp);
+            } else {
+                return JenkinsUtil.getInstance().doCreateItem(req, rsp);
+            }
+        } catch (javax.servlet.ServletException e) {
+            throw new IOException(e);
         }
     }
 

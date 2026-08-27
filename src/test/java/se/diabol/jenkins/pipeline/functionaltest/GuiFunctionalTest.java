@@ -20,32 +20,32 @@ package se.diabol.jenkins.pipeline.functionaltest;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.xml.transform.stream.StreamSource;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-
-import com.cloudbees.hudson.plugins.folder.Folder;
-
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 import hudson.model.View;
 import hudson.plugins.view.dashboard.Dashboard;
 import hudson.tasks.BuildTrigger;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.transform.stream.StreamSource;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import se.diabol.jenkins.pipeline.DeliveryPipelineView;
 
-public class GuiFunctionalIT {
+public class GuiFunctionalTest {
 
     private static final boolean DO_NOT_SHOW_UPSTREAM = false;
     private WebDriver webDriver;
@@ -54,10 +54,38 @@ public class GuiFunctionalIT {
     public JenkinsRule jenkins = new JenkinsRule();
     private static final String NONE = null;
 
+    private static boolean isCi() {
+        String ci = System.getenv("CI");
+        return ci != null && !ci.isBlank();
+    }
+
+    @BeforeClass
+    public static void setUpClass() {
+        if (isCi()) {
+            // The browserVersion needs to match what is provided by the Jenkins Infrastructure
+            // If you see an exception like this:
+            //
+            // org.openqa.selenium.SessionNotCreatedException: Could not start a new session. Response code 500. Message: session not created: This version of ChromeDriver only supports Chrome version 114
+            // Current browser version is 112.0.5615.49 with binary path /usr/bin/chromium-browser
+            //
+            // Then that means you need to update the version here to match the current browser version.
+            WebDriverManager.chromedriver().browserVersion("112").setup();
+        } else {
+            WebDriverManager.chromedriver().setup();
+        }
+    }
+
     @Before
     public void before() {
-        webDriver = new ChromeDriver();
-        //webDriver.
+        try {
+            if (isCi()) {
+                webDriver = new ChromeDriver(new ChromeOptions().addArguments("--headless", "--disable-dev-shm-usage", "--no-sandbox"));
+            } else {
+                webDriver = new ChromeDriver(new ChromeOptions());
+            }
+        } catch (Exception e) {
+            Assume.assumeNoException("Chrome binary not found, skipping GUI functional tests", e);
+        }
     }
 
     @After
@@ -299,8 +327,8 @@ public class GuiFunctionalIT {
 
         Dashboard view = new Dashboard("Dashboard");
         jenkins.getInstance().addView(view);
-        view.updateByXml(new StreamSource(GuiFunctionalIT.class.getResourceAsStream(
-                "/se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalIT/DashboardViewPage.xml")));
+        view.updateByXml(new StreamSource(GuiFunctionalTest.class.getResourceAsStream(
+                "/se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalTest/DashboardViewPage.xml")));
         view.save();
 
         DeliveryPipelinePage page =

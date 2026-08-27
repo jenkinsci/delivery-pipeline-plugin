@@ -17,6 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.util;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.EnvVars;
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
@@ -79,18 +80,18 @@ public class ProjectUtilTest {
 
     @Test
     public void testGetProjectsInFolders() throws Exception {
-        jenkins.createFolder("folder1");
-        jenkins.createFolder("folder2");
+        Folder folder1 = jenkins.jenkins.createProject(Folder.class, "folder1");
+        Folder folder2 = jenkins.jenkins.createProject(Folder.class, "folder2");
 
-        jenkins.createFreeStyleProject("folder1_project");
-        jenkins.createFreeStyleProject("folder1_otherProject");
-        jenkins.createFreeStyleProject("folder2_project");
-        jenkins.createFreeStyleProject("folder2_otherProject");
+        folder1.createProject(FreeStyleProject.class, "project");
+        folder1.createProject(FreeStyleProject.class, "otherProject");
+        folder2.createProject(FreeStyleProject.class, "project");
+        folder2.createProject(FreeStyleProject.class, "otherProject");
 
         Map<String, AbstractProject> result = ProjectUtil.getProjects("^(project)");
         assertEquals(0, result.size());
 
-        Map<String, AbstractProject> result2 = ProjectUtil.getProjects("^(.+)_project");
+        Map<String, AbstractProject> result2 = ProjectUtil.getProjects("^(.+)/project");
         assertEquals(2, result2.size());
     }
 

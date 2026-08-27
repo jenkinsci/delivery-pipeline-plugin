@@ -17,23 +17,23 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.functionaltest;
 
+import java.time.Duration;
+import java.util.function.Function;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import javax.annotation.Nullable;
-import java.time.Duration;
-
 public class SeleniumUtil {
     public static WebElement waitForElement(WebDriver driver, String id) {
+        return waitForElement(driver, By.id(id));
+    }
 
-        return new WebDriverWait(driver, Duration.ofSeconds(30)).until(
-                new com.google.common.base.Function<WebDriver, WebElement>() {
-                    @Nullable
+    public static WebElement waitForElement(WebDriver driver, By by) {
+        return new WebDriverWait(driver, Duration.ofSeconds(30)).until(new Function<>() {
                     @Override
-                    public WebElement apply(@Nullable WebDriver webDriver) {
-                return webDriver.findElement(By.id(id));
+            public WebElement apply(WebDriver webDriver) {
+                return webDriver.findElement(by);
             }
         });
     }

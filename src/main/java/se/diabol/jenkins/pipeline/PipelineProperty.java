@@ -34,7 +34,7 @@ import se.diabol.jenkins.pipeline.util.JenkinsUtil;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public class PipelineProperty extends JobProperty<AbstractProject<?, ?>> {
 

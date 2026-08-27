@@ -21,9 +21,6 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedCondition;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class DeliveryPipelinePage {
 
@@ -63,7 +60,7 @@ public class DeliveryPipelinePage {
     public void triggerNewParameterizedPipelineBuild(String no) {
         SeleniumUtil.waitForElement(webDriver,"startpipeline-" + no).sendKeys(Keys.RETURN);
         /* this build requires parameter */
-        webDriver.findElement(By.xpath("//button[@class=\"jenkins-button jenkins-button--primary jenkins-!-build-color\"]")).click();
+        SeleniumUtil.waitForElement(webDriver, By.className("jenkins-button--primary")).click();
     }
 
     public String getJsPlumbUtilityVariable() {

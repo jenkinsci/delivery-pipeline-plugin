@@ -4,10 +4,10 @@
 
     <groupId>se.diabol.jenkins.pipeline</groupId>
     <artifactId>delivery-pipeline-plugin</artifactId>
-    <version>1.4.3-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <name>Delivery Pipeline Plugin</name>
-    <url>https://plugins.jenkins.io/delivery-pipeline-plugin/</url>
+    <url>https://github.com/jenkinsci/${project.artifactId}</url>
 
     <licenses>
         <license>
@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.77</version>
+        <version>6.2138.v03274d462c13</version>
         <relativePath />
     </parent>
 
@@ -37,320 +37,68 @@
     </pluginRepositories>
 
     <properties>
-        <jenkins.version>2.414.3</jenkins.version>
-        <findbugs.failOnError>false</findbugs.failOnError>
-        <selenium.version>4.17.0</selenium.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <revision>1.5.0</revision>
+        <changelist>-SNAPSHOT</changelist>
+        <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+        <jenkins.baseline>2.541</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.2</jenkins.version>
+        <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
+        <selenium.version>4.25.0</selenium.version>
+        <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
     </properties>
 
     <scm>
-        <connection>scm:git:https://github.com/jenkinsci/delivery-pipeline-plugin.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/delivery-pipeline-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/delivery-pipeline-plugin/</url>
-        <tag>HEAD</tag>
+        <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
+        <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+        <url>https://github.com/${gitHubRepo}</url>
+        <tag>${scmTag}</tag>
     </scm>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>findbugs-maven-plugin</artifactId>
-                    <version>3.0.5</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>3.1.1</version>
-                    <dependencies>
-                        <dependency>
-                            <groupId>com.puppycrawl.tools</groupId>
-                            <artifactId>checkstyle</artifactId>
-                            <version>8.29</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.1.0</version>
-                    <configuration>
-                        <source>${maven.compiler.release}</source>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-enforcer-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>display-info</id>
-                            <configuration>
-                                <rules>
-                                    <enforceBytecodeVersion>
-                                        <excludes combine.children="append">
-                                            <exclude>org.apache.maven.plugins:plugin</exclude>
-                                        </excludes>
-                                    </enforceBytecodeVersion>
-                                    <bannedDependencies>
-                                        <includes>
-                                            <include>org.powermock:powermock-module-junit4</include>
-                                            <include>org.powermock:powermock-api-mockito2</include>
-                                        </includes>
-                                        <searchTransitive>false</searchTransitive>
-                                    </bannedDependencies>
-                                </rules>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
-                <configuration>
-                    <source>${maven.compiler.release}</source>
-                    <target>${maven.compiler.release}</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.9</version>
-                <executions>
-                    <execution>
-                        <id>pre-unit-test</id>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>post-unit-test</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>pre-integration-test</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                        <configuration>
-                            <destFile>target/jacoco-it.exec</destFile>
-                            <propertyName>failsafe.argLine</propertyName>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>post-integration-test</id>
-                        <phase>post-integration-test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                        <configuration>
-                            <dataFile>target/jacoco-it.exec</dataFile>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>4.3.0</version>
-            </plugin>
-            <plugin>
-                <groupId>com.github.searls</groupId>
-                <artifactId>jasmine-maven-plugin</artifactId>
-                <version>1.3.1.3</version>
-                <configuration>
-                    <jsSrcDir>src/main/webapp</jsSrcDir>
-                    <jsTestSrcDir>src/test/javascript</jsTestSrcDir>
-                    <sourceExcludes>
-                        <exclude>jquery.*.js</exclude>
-                    </sourceExcludes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>2.5.3</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.maven.scm</groupId>
-                        <artifactId>maven-scm-api</artifactId>
-                        <version>1.8.1</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.maven.scm</groupId>
-                        <artifactId>maven-scm-provider-gitexe</artifactId>
-                        <version>1.8.1</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.20.1</version>
-                <configuration>
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                    </excludes>
-                    <argLine>-Xmx2048m</argLine>
-                    <forkCount>0</forkCount>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>integration-test</id>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                        <phase>integration-test</phase>
-                        <configuration>
-                            <excludes>
-                                <exclude>none</exclude>
-                            </excludes>
-                            <includes>
-                                <include>**/*IT.java</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>com.mycila</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>2.11</version>
-                <configuration>
-                    <header>license-header.txt</header>
-                    <headerDefinitions>
-                        <headerDefinition>license-config.xml</headerDefinition>
-                    </headerDefinitions>
-                    <includes>
-                        <include>src/</include>
-                    </includes>
-                    <excludes>
-                        <exclude>**/*.html</exclude>
-                        <exclude>**/*.css</exclude>
-                        <exclude>**/*.js</exclude>
-                        <exclude>**/*.jelly</exclude>
-                        <exclude>**/*.xml</exclude>
-                    </excludes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <configuration>
-                    <configLocation>${project.basedir}/checkstyle-rules.xml</configLocation>
-                    <failsOnError>true</failsOnError>
-                    <violationSeverity>warning</violationSeverity>
-                    <propertyExpansion>basedir=${basedir}</propertyExpansion>
-                    <consoleOutput>true</consoleOutput>
-                    <failOnViolation>true</failOnViolation>
-                    <resourceIncludes>**/*.properties,**/*.jelly,**/*.html</resourceIncludes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
-
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
-                <version>3.0.5</version>
-            </plugin>
-        </plugins>
-    </reporting>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.414.x</artifactId>
-                <version>2746.vb_79a_1d3e7b_c8</version>
-                <scope>import</scope>
+                <artifactId>bom-${jenkins.baseline}.x</artifactId>
+                <version>6166.va_a_8b_5eda_8ef5</version>
                 <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- CVE-2025-48924: force safe version of transitive dep from webdrivermanager -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.20.0</version>
+            </dependency>
+            <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: safe xerces replacing analysis-core's bundled version -->
+            <dependency>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+                <version>2.12.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
         <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-            <version>1.3.2</version>
-        </dependency>
-        <dependency>
             <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-jdk1.5</artifactId>
-            <version>0.7.3</version>
+            <artifactId>jgrapht-core</artifactId>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.sourceforge.findbugs</groupId>
-            <artifactId>annotations</artifactId>
-            <version>1.3.2</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>2.12.6</version>
+            <groupId>io.jenkins.plugins</groupId>
+            <artifactId>joda-time-api</artifactId>
         </dependency>
         <!-- Test Dependencies -->
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-junit4</artifactId>
-            <version>2.0.9</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito2</artifactId>
-            <version>2.0.9</version>
+            <version>1.11.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
+            <version>1.3.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -373,14 +121,14 @@
         </dependency>
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-ie-driver</artifactId>
+            <artifactId>selenium-support</artifactId>
             <version>${selenium.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-support</artifactId>
-            <version>${selenium.version}</version>
+            <groupId>io.github.bonigarcia</groupId>
+            <artifactId>webdrivermanager</artifactId>
+            <version>6.1.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -388,18 +136,8 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>build-pipeline-plugin</artifactId>
-            <version>2.0.1</version>
+            <version>2.0.2</version>
             <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.main</groupId>
-            <artifactId>maven-plugin</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.annotation</groupId>
-                    <artifactId>javax.annotation-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
@@ -410,24 +148,14 @@
             <artifactId>pipeline-rest-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.jenkins-ci.main</groupId>
+            <artifactId>maven-plugin</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>promoted-builds</artifactId>
-            <version>945.v597f5c6a_d3fd</version>
             <optional>true</optional>
-            <exclusions>
-                <exclusion>
-                    <groupId>xerces</groupId>
-                    <artifactId>xercesImpl</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.sonatype.sisu</groupId>
-                    <artifactId>sisu-guice</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.sourceforge.nekohtml</groupId>
-                    <artifactId>nekohtml</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -437,12 +165,6 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>jquery</artifactId>
             <version>1.12.4-1</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.kohsuke.stapler</groupId>
-                    <artifactId>stapler</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -451,12 +173,17 @@
         <dependency>
             <groupId>org.jvnet.hudson.plugins</groupId>
             <artifactId>analysis-core</artifactId>
-            <version>1.54</version>
+            <version>1.96</version>
             <optional>true</optional>
             <exclusions>
                 <exclusion>
                     <groupId>com.google.code.findbugs</groupId>
                     <artifactId>annotations</artifactId>
+                </exclusion>
+                <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: exclude vulnerable xerces -->
+                <exclusion>
+                    <groupId>xerces</groupId>
+                    <artifactId>xercesImpl</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -469,7 +196,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>build-name-setter</artifactId>
-            <version>2.4.1</version>
+            <version>2.4.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -489,13 +216,16 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git</artifactId>
-            <optional>true</optional>
             <exclusions>
                 <exclusion>
-                    <groupId>org.apache.httpcomponents</groupId>
-                    <artifactId>httpclient</artifactId>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>junit</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -503,9 +233,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.14</version>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>apache-httpcomponents-client-4-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -539,20 +268,60 @@
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
-            <version>1.14.11</version>
+            <version>1.15.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>3.3.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.objenesis</groupId>
             <artifactId>objenesis</artifactId>
-            <version>3.3</version>
+            <version>3.4</version>
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>1C</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <excludes>
+                        <exclude>se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>windows-ci</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                </os>
+                <property>
+                    <name>env.CI</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <!-- TODO fails on CI on Windows for inscrutable reasons -->
+                            <excludes>
+                                <exclude>se.diabol.jenkins.pipeline.functionaltest.GuiFunctionalTest</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

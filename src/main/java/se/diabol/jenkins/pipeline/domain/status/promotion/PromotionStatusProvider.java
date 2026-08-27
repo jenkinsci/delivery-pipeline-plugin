@@ -27,7 +27,6 @@ import hudson.plugins.promoted_builds.PromotedBuildAction;
 import hudson.plugins.promoted_builds.Promotion;
 import hudson.plugins.promoted_builds.Status;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -87,7 +86,8 @@ public class PromotionStatusProvider extends AbstractPromotionStatusProvider {
         final Promotion promotion = (Promotion) promotionObj;
         for (ParameterValue value : promotion.getParameterValues()) {
             if (value instanceof StringParameterValue) {
-                if (StringUtils.isNotBlank((String)((StringParameterValue) value).getValue())) {
+                String stringValue = (String) ((StringParameterValue) value).getValue();
+                if (stringValue != null && !stringValue.isBlank()) {
                     params.add("<strong>" + value.getName() + "</strong>: " + ((StringParameterValue)value).getValue());
                 }
             } else if (value instanceof FileParameterValue) {

@@ -42,8 +42,8 @@ public final class JenkinsUtil {
      *
      * @param shortName
      *            the plug-in to check
-     * @return <code>true</code> if the specified plug-in is installed,
-     *         <code>false</code> if not.
+     * @return true if the specified plug-in is installed,
+     *         false if not.
      */
     public static boolean isPluginInstalled(final String shortName) {
         return getInstance().getPlugin(shortName) != null;
