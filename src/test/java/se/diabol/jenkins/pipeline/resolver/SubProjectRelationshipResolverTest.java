@@ -22,20 +22,26 @@ import hudson.model.FreeStyleProject;
 import hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig;
 import hudson.plugins.parameterizedtrigger.BlockingBehaviour;
 import hudson.plugins.parameterizedtrigger.TriggerBuilder;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SubProjectRelationshipResolverTest {
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+@WithJenkins
+class SubProjectRelationshipResolverTest {
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testExtractPipelineWithSubProjects() throws Exception {
+    void testExtractPipelineWithSubProjects() throws Exception {
         FreeStyleProject build = jenkins.createFreeStyleProject("build");
         FreeStyleProject sonar = jenkins.createFreeStyleProject("sonar");
 
@@ -46,8 +52,5 @@ public class SubProjectRelationshipResolverTest {
         List<AbstractProject> downStreams = resolver.getDownstreamProjects(build);
         assertEquals(1, downStreams.size());
         assertEquals(sonar, downStreams.get(0));
-
-
     }
-
 }

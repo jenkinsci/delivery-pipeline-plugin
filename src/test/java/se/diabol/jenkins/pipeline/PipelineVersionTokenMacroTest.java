@@ -23,25 +23,31 @@ import hudson.tasks.BuildTrigger;
 import hudson.util.StreamTaskListener;
 import org.jenkinsci.plugins.buildnamesetter.BuildNameSetter;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.nio.charset.Charset;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class PipelineVersionTokenMacroTest {
+@WithJenkins
+class PipelineVersionTokenMacroTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testWithBuildNameSetterPlugin() throws Exception {
+    void testWithBuildNameSetterPlugin() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         FreeStyleProject b = jenkins.createFreeStyleProject("b");
 
@@ -58,27 +64,25 @@ public class PipelineVersionTokenMacroTest {
 
         assertEquals("1.0.0.1", a.getLastBuild().getDisplayName());
         assertEquals("1.0.0.1", b.getLastBuild().getDisplayName());
-
     }
 
-    @Test(expected=MacroEvaluationException.class)
-    public void testNoPipelineVersionExists() throws Exception {
+    @Test
+    void testNoPipelineVersionExists() throws Exception {
         PipelineVersionTokenMacro macro = new PipelineVersionTokenMacro();
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         jenkins.setQuietPeriod(0);
         FreeStyleBuild build = jenkins.buildAndAssertSuccess(a);
 
-        macro.evaluate(build, new StreamTaskListener(System.err, Charset.defaultCharset()), "PIPELINE_VERSION");
-        fail("Should throw exception");
+        assertThrows(MacroEvaluationException.class, () ->
+                macro.evaluate(build, new StreamTaskListener(System.err, Charset.defaultCharset()), "PIPELINE_VERSION"));
     }
 
     @Test
     @WithoutJenkins
-    public void testAcceptsMacroName() {
+    void testAcceptsMacroName() {
         PipelineVersionTokenMacro macro = new PipelineVersionTokenMacro();
         assertTrue(macro.acceptsMacroName("PIPELINE_VERSION"));
         assertFalse(macro.acceptsMacroName("pipeline_version"));
         assertFalse(macro.acceptsMacroName("BANANA"));
     }
-
 }

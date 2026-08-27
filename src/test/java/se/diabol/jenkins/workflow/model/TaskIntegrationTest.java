@@ -17,57 +17,65 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import org.htmlunit.Page;
 import hudson.cli.BuildCommand;
 import hudson.model.Result;
+import org.htmlunit.Page;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.workflow.WorkflowPipelineView;
 
 import java.net.URL;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
-public class TaskIntegrationTest {
+@WithJenkins
+class TaskIntegrationTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void shouldHandleClosureTaskInClosureStage() throws Exception {
+    void shouldHandleClosureTaskInClosureStage() throws Exception {
         shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                + "stage('Stage1') {\n"
-                + "    task('Task1') {\n"
-                + "        echo 'Task1'\n"
-                + "    }\n"
-                + "}\n"
-                + "stage('Stage2') {\n"
-                + "    task('Task2') {\n"
-                + "        echo 'Task2'\n"
-                + "    }\n"
-                + "}\n"
-                + "}"
+                """
+                        node {
+                        stage('Stage1') {
+                            task('Task1') {
+                                echo 'Task1'
+                            }
+                        }
+                        stage('Stage2') {
+                            task('Task2') {
+                                echo 'Task2'
+                            }
+                        }
+                        }"""
         );
     }
 
     @Test
-    public void shouldHandleClosureTaskInNonClosureStage() throws Exception {
+    void shouldHandleClosureTaskInNonClosureStage() throws Exception {
         shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                + "stage 'Stage1'\n"
-                + "task('Task1') {\n"
-                + "    echo 'Task1'\n"
-                + "}\n"
-                + "stage 'Stage2'\n"
-                + "task('Task2') {\n"
-                + "    echo 'Task2'\n"
-                + "}\n"
-                + "}"
+                """
+                        node {
+                        stage 'Stage1'
+                        task('Task1') {
+                            echo 'Task1'
+                        }
+                        stage 'Stage2'
+                        task('Task2') {
+                            echo 'Task2'
+                        }
+                        }"""
         );
     }
 

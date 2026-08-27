@@ -42,9 +42,7 @@ public class DeliveryPipelinePage {
 
 
     public void triggerManual(String build) {
-
         SeleniumUtil.waitForElement(webDriver,"manual-task-" + build).click();
-
     }
 
     public void triggerRebuild(String build) {

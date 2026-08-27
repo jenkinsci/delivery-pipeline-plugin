@@ -12,7 +12,7 @@
     <licenses>
         <license>
             <name>GNU General Public License (GPL)</name>
-            <url>http://www.gnu.org/licenses/gpl.txt</url>
+            <url>https://www.gnu.org/licenses/gpl.txt</url>
         </license>
     </licenses>
 
@@ -45,6 +45,7 @@
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
         <selenium.version>4.47.0</selenium.version>
         <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
+        <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     </properties>
 
     <scm>

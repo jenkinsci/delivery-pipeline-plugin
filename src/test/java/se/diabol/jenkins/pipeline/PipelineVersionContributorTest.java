@@ -17,12 +17,6 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import au.com.centrumsystems.hudson.plugin.buildpipeline.extension.StandardBuildCard;
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import hudson.EnvVars;
@@ -42,25 +36,36 @@ import hudson.tasks.BuildTrigger;
 import hudson.util.StreamTaskListener;
 import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.buildnamesetter.BuildNameSetter;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 
-public class PipelineVersionContributorTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@WithJenkins
+class PipelineVersionContributorTest {
 
     private static final String PIPELINE_VERSION = "PIPELINE_VERSION";
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testVersionContributorNotConfigured() throws Exception {
+    void testVersionContributorNotConfigured() throws Exception {
         final FreeStyleProject firstProject = jenkins.createFreeStyleProject("firstProject");
         final FreeStyleProject secondProject = jenkins.createFreeStyleProject("secondProject");
         firstProject.getPublishersList().add(new BuildTrigger("secondProject", false));
@@ -79,7 +84,7 @@ public class PipelineVersionContributorTest {
     }
 
     @Test
-    public void testVersionNoDisplayname() throws Exception {
+    void testVersionNoDisplayname() throws Exception {
         FreeStyleProject firstProject = jenkins.createFreeStyleProject("firstProject");
         FreeStyleProject secondProject = jenkins.createFreeStyleProject("secondProject");
         firstProject.getPublishersList().add(new BuildTrigger("secondProject", false));
@@ -100,7 +105,7 @@ public class PipelineVersionContributorTest {
     }
 
     @Test
-    public void testVersionContributorConfigured() throws Exception {
+    void testVersionContributorConfigured() throws Exception {
         FreeStyleProject firstProject = jenkins.createFreeStyleProject("firstProject");
         FreeStyleProject secondProject = jenkins.createFreeStyleProject("secondProject");
         firstProject.getPublishersList().add(new BuildTrigger("secondProject", false));
@@ -121,7 +126,7 @@ public class PipelineVersionContributorTest {
     }
 
     @Test
-    public void testVersionContributorConfiguredManualTrigger() throws Exception {
+    void testVersionContributorConfiguredManualTrigger() throws Exception {
         FreeStyleProject firstProject = jenkins.createFreeStyleProject("firstProject");
         FreeStyleProject secondProject = jenkins.createFreeStyleProject("secondProject");
         firstProject.getPublishersList().add(new BuildPipelineTrigger("secondProject", null));
@@ -152,14 +157,14 @@ public class PipelineVersionContributorTest {
     }
 
     @Test
-    public void testIsApplicable() throws Exception {
+    void testIsApplicable() throws Exception {
         PipelineVersionContributor.DescriptorImpl d = new PipelineVersionContributor.DescriptorImpl();
         assertTrue(d.isApplicable(jenkins.createFreeStyleProject("a")));
     }
 
     @Test
     @Issue("JENKINS-21070")
-    public void testVersionContributorErrorInPattern() throws Exception {
+    void testVersionContributorErrorInPattern() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("firstProject");
 
         project.getBuildWrappersList().add(new PipelineVersionContributor(true, "${GFGFGFG}"));
@@ -175,7 +180,7 @@ public class PipelineVersionContributorTest {
 
     @Test
     @Issue("JENKINS-34805")
-    public void shouldGetPipelineVersionFromBuildAction() throws Exception {
+    void shouldGetPipelineVersionFromBuildAction() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("firstProject");
         FreeStyleBuild build = project.scheduleBuild2(0, new BuildCommand.CLICause(),
                                                       new ParametersAction(new StringParameterValue("HEPP", "HOPP")),
@@ -184,7 +189,7 @@ public class PipelineVersionContributorTest {
     }
 
     @Test
-    public void testGetVersionNotFound() throws Exception {
+    void testGetVersionNotFound() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("firstProject");
         FreeStyleBuild build = project.scheduleBuild2(0, new BuildCommand.CLICause(), new ParametersAction(new StringParameterValue("HEPP", "HOPP"))).get();
         assertNull(PipelineVersionContributor.getVersion(build));
@@ -192,7 +197,7 @@ public class PipelineVersionContributorTest {
 
     @Test
     @Issue({"JENKINS-28848", "JENKINS-38062", "JENKINS-59651"})
-    public void testWithBuildNameSetterPluginAndAdditionalParameters() throws Exception {
+    void testWithBuildNameSetterPluginAndAdditionalParameters() throws Exception {
         try {
             System.setProperty(ParametersAction.SAFE_PARAMETERS_SYSTEM_PROPERTY_NAME, PIPELINE_VERSION);
 
@@ -223,7 +228,7 @@ public class PipelineVersionContributorTest {
     }
 
     @Test
-    public void testVersionContributorIsNotBreakingParametersPassing() throws Exception {
+    void testVersionContributorIsNotBreakingParametersPassing() throws Exception {
         try {
             System.setProperty(ParametersAction.SAFE_PARAMETERS_SYSTEM_PROPERTY_NAME, PIPELINE_VERSION +"," + "test");
 

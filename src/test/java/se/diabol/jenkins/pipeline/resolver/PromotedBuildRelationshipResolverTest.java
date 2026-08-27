@@ -28,22 +28,28 @@ import hudson.plugins.promoted_builds.JobPropertyImpl;
 import hudson.plugins.promoted_builds.PromotionProcess;
 import hudson.plugins.promoted_builds.conditions.DownstreamPassCondition;
 import hudson.tasks.BuildTrigger;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class PromotedBuildRelationshipResolverTest {
+@WithJenkins
+class PromotedBuildRelationshipResolverTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testResolveWithSimpleTrigger() throws Exception {
+    void testResolveWithSimpleTrigger() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         jenkins.createFreeStyleProject("b");
         jenkins.createFreeStyleProject("c");
@@ -62,7 +68,7 @@ public class PromotedBuildRelationshipResolverTest {
     }
 
     @Test
-    public void testResolveWithParamTrigger() throws Exception {
+    void testResolveWithParamTrigger() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         jenkins.createFreeStyleProject("b");
         jenkins.createFreeStyleProject("c");
@@ -82,7 +88,7 @@ public class PromotedBuildRelationshipResolverTest {
 
     @Test
     @Issue("JENKINS-28347")
-    public void testResolveWithBuildTrigger() throws Exception {
+    void testResolveWithBuildTrigger() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         jenkins.createFreeStyleProject("b");
         jenkins.createFreeStyleProject("c");

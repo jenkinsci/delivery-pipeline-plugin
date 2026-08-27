@@ -18,24 +18,24 @@ If not, see <http://www.gnu.org/licenses/>.
 package se.diabol.jenkins.workflow.api;
 
 import org.joda.time.DateTime;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class RunTests {
+class RunTests {
 
     private static final List<Stage> stages = stageFixture();
     private static final Run run = runFixture();
 
     @Test
-    public void shouldHaveStage() {
+    void shouldHaveStage() {
         assertTrue(run.hasStage("Stage1"));
         assertTrue(run.hasStage("Stage2"));
         assertTrue(run.hasStage("Stage3"));
@@ -44,14 +44,14 @@ public class RunTests {
     }
 
     @Test
-    public void shouldNotHaveStage() {
+    void shouldNotHaveStage() {
         assertFalse(run.hasStage("Stage0"));
         assertFalse(run.hasStage("Stage6"));
         assertFalse(run.hasStage("ArbitraryNonExistingName"));
     }
 
     @Test
-    public void shouldFindStageByName() {
+    void shouldFindStageByName() {
         assertThat(run.getStageByName("Stage1"), is(stages.get(0)));
         assertThat(run.getStageByName("Stage2"), is(stages.get(1)));
         assertThat(run.getStageByName("Stage3"), is(stages.get(2)));
@@ -60,7 +60,7 @@ public class RunTests {
     }
 
     @Test
-    public void shouldNotFindNonExistingStageByName() {
+    void shouldNotFindNonExistingStageByName() {
         assertThat(run.getStageByName("Stage0"), is(nullValue()));
         assertThat(run.getStageByName("Stage6"), is(nullValue()));
         assertThat(run.getStageByName("ArbitraryNonExistingName"), is(nullValue()));
@@ -88,6 +88,4 @@ public class RunTests {
         }
         return stages;
     }
-
-
 }

@@ -17,19 +17,19 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.resolver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import hudson.model.Cause;
 import hudson.plugins.git.GitStatus;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import se.diabol.jenkins.pipeline.domain.TriggerCause;
 
-public class GitCauseResolverTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+class GitCauseResolverTest {
 
     @Test
-    public void withCorrectCause() {
+    void withCorrectCause() {
         TriggerCause cause = new GitCauseResolver().resolveCause(new GitStatus.CommitHookCause("sha1"));
         assertNotNull(cause);
         assertEquals(TriggerCause.TYPE_SCM, cause.getType());
@@ -37,9 +37,7 @@ public class GitCauseResolverTest {
     }
 
     @Test
-    public void withUnknownCause() {
+    void withUnknownCause() {
         assertNull(new GitCauseResolver().resolveCause(new Cause.RemoteCause("hostname", "note")));
     }
-
-
 }

@@ -17,15 +17,15 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.domain.status;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class StatusTypeTest {
+class StatusTypeTest {
 
     @Test
-    public void testValueOf() {
+    void testValueOf() {
         assertEquals(StatusType.CANCELLED, StatusType.valueOf("CANCELLED"));
         assertEquals(StatusType.DISABLED, StatusType.valueOf("DISABLED"));
         assertEquals(StatusType.FAILED, StatusType.valueOf("FAILED"));
@@ -39,7 +39,7 @@ public class StatusTypeTest {
     }
 
     @Test
-    public void testValue() {
+    void testValue() {
         StatusType[] values = StatusType.values();
         assertNotNull(values);
         assertEquals(10, values.length);

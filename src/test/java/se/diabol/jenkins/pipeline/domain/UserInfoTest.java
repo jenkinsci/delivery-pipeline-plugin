@@ -20,28 +20,34 @@ package se.diabol.jenkins.pipeline.domain;
 import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.FreeStyleProject;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.test.FakeRepositoryBrowserSCM;
 
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class UserInfoTest {
+@WithJenkins
+class UserInfoTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testGetContributorsEmpty() throws Exception {
+    void testGetContributorsEmpty() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         jenkins.setQuietPeriod(0);
         project.scheduleBuild(new Cause.UserIdCause());
@@ -51,7 +57,7 @@ public class UserInfoTest {
     }
 
     @Test
-    public void testGetContributorsMultiple() throws Exception {
+    void testGetContributorsMultiple() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user1").withMsg("Fixed bug1");
@@ -67,7 +73,7 @@ public class UserInfoTest {
     }
 
     @Test
-    public void testGetTriggeredByWithCulprits() throws Exception {
+    void testGetTriggeredByWithCulprits() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("build");
         FakeRepositoryBrowserSCM scm = new FakeRepositoryBrowserSCM();
         scm.addChange().withAuthor("test-user-fail").withMsg("Fixed bug");
@@ -101,14 +107,14 @@ public class UserInfoTest {
     @Test
     @WithoutJenkins
     @SuppressWarnings("all")
-    public void testEqualsHashCode() {
+    void testEqualsHashCode() {
         UserInfo userInfo1 = new UserInfo("name", null);
-        assertTrue(userInfo1.equals(userInfo1));
+        assertEquals(userInfo1, userInfo1);
         UserInfo userInfo2 = new UserInfo("name", "http://nowhere.com");
-        assertTrue(userInfo2.equals(userInfo1));
+        assertEquals(userInfo2, userInfo1);
 
         assertFalse(userInfo2.equals(null));
-        assertFalse(userInfo2.equals("name"));
+        assertNotEquals("name", userInfo2);
 
 
         UserInfo userInfo3 = new UserInfo("name1", "http://nowhere.com");
@@ -116,5 +122,4 @@ public class UserInfoTest {
         assertNotEquals(userInfo1.hashCode(), userInfo3.hashCode());
         assertNotEquals(userInfo1, userInfo3);
     }
-
 }

@@ -37,31 +37,36 @@ import hudson.util.OneShotEvent;
 import jenkins.model.Jenkins;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.DeliveryPipelineView;
 import se.diabol.jenkins.pipeline.PipelineProperty;
 
-import java.io.IOException;
 import java.util.Collection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TaskTest {
+@WithJenkins
+class TaskTest {
 
-    @Rule
-    public JenkinsRule jenkins = new JenkinsRule();
+    private JenkinsRule jenkins;
+    
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        jenkins = rule;
+    }
 
     @Test
-    public void testGetAg() throws Exception {
+    void testGetAg() throws Exception {
         FreeStyleProject project = jenkins.createFreeStyleProject("test");
         jenkins.getInstance().setQuietPeriod(0);
 
@@ -84,7 +89,7 @@ public class TaskTest {
     }
 
     @Test
-    public void testManualTask() throws Exception {
+    void testManualTask() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         FreeStyleProject b = jenkins.createFreeStyleProject("b");
         a.getPublishersList().add(new BuildPipelineTrigger("b", null));
@@ -95,7 +100,7 @@ public class TaskTest {
     }
 
     @Test
-    public void testGetLatestRunning() throws Exception {
+    void testGetLatestRunning() throws Exception {
         final String mockDescription = "some description";
 
         final OneShotEvent buildStarted = new OneShotEvent();
@@ -104,7 +109,7 @@ public class TaskTest {
         FreeStyleProject project = jenkins.createFreeStyleProject("test");
         project.getBuildersList().add(new TestBuilder() {
             public boolean perform(AbstractBuild<?, ?> build, Launcher launcher,
-                                   BuildListener listener) throws InterruptedException, IOException {
+                                   BuildListener listener) throws InterruptedException {
                 buildStarted.signal();
                 buildBuilding.block();
                 return true;
@@ -130,7 +135,7 @@ public class TaskTest {
 
     @Test
     @Issue("JENKINS-22654")
-    public void testTaskNameForMultiConfiguration() throws Exception {
+    void testTaskNameForMultiConfiguration() throws Exception {
         MatrixProject project = jenkins.createProject(MatrixProject.class, "Multi");
         project.setAxes(new AxisList(new Axis("axis", "foo", "bar")));
         project.addProperty(new PipelineProperty("task", "stage", ""));
@@ -146,7 +151,7 @@ public class TaskTest {
 
 
     @Test
-    public void testFailedThenQueued() throws Exception {
+    void testFailedThenQueued() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("a");
         FreeStyleProject b = jenkins.createFreeStyleProject("b");
         jenkins.setQuietPeriod(0);
@@ -168,7 +173,7 @@ public class TaskTest {
     }
 
     @Test
-    public void testIsRebuildable() throws Exception {
+    void testIsRebuildable() throws Exception {
         jenkins.setQuietPeriod(0);
         FreeStyleProject project = jenkins.createFreeStyleProject("project");
         Task task = Task.getPrototypeTask(project, false);
@@ -189,7 +194,7 @@ public class TaskTest {
 
     @Test
     @Issue("JENKINS-28845")
-    public void testIsRebuildableNoPermission() throws Exception {
+    void testIsRebuildableNoPermission() throws Exception {
         FreeStyleProject a = jenkins.createFreeStyleProject("A");
         FreeStyleProject b = jenkins.createFreeStyleProject("B");
         b.getBuildersList().add(new FailureBuilder());
@@ -199,7 +204,7 @@ public class TaskTest {
         FreeStyleBuild firstBuild = jenkins.buildAndAssertSuccess(a);
         jenkins.waitUntilNoActivity();
         assertNotNull(b.getLastBuild());
-        assertTrue(b.getLastBuild().getResult().equals(Result.FAILURE));
+        assertEquals(Result.FAILURE, b.getLastBuild().getResult());
 
         jenkins.getInstance().setSecurityRealm(jenkins.createDummySecurityRealm());
         GlobalMatrixAuthorizationStrategy gmas = new GlobalMatrixAuthorizationStrategy();
@@ -218,18 +223,18 @@ public class TaskTest {
 
     @Test
     @Issue("JENKINS-30170")
-    public void testTaskName() throws Exception {
+    void testTaskName() throws Exception {
         testSimplePipelineTaskNames("Build", "Deploy", "Build", "Deploy", "Build", "Deploy");
     }
 
     @Test
-    public void testTaskNameMacro() throws Exception {
+    void testTaskNameMacro() throws Exception {
         testSimplePipelineTaskNames("Build ${BUILD_NUMBER}", "Deploy ${BUILD_NUMBER}", "Build ...",
                 "Deploy ...", "Build 1", "Deploy 1");
     }
 
     @Test
-    public void testTaskNameMacroOnly() throws Exception {
+    void testTaskNameMacroOnly() throws Exception {
         testSimplePipelineTaskNames("${BUILD_NUMBER}", "${BUILD_NUMBER}", "...",
                 "...", "1", "1");
     }
@@ -261,5 +266,4 @@ public class TaskTest {
         assertEquals(expectedAfterA, taskA.getName());
         assertEquals(expectedAfterB, taskB.getName());
     }
-
 }
