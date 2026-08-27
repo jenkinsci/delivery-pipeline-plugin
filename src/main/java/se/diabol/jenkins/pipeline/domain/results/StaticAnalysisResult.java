@@ -19,10 +19,8 @@ package se.diabol.jenkins.pipeline.domain.results;
 
 import hudson.model.AbstractBuild;
 import hudson.model.Action;
-import hudson.plugins.analysis.core.AbstractResultAction;
-import hudson.plugins.analysis.core.BuildResult;
-import hudson.plugins.analysis.core.MavenResultAction;
-import hudson.plugins.analysis.core.ResultAction;
+import io.jenkins.plugins.analysis.core.model.AnalysisResult;
+import io.jenkins.plugins.analysis.core.model.ResultAction;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.pipeline.util.JenkinsUtil;
 
@@ -32,22 +30,17 @@ import java.util.List;
 
 public class StaticAnalysisResult extends Result {
 
-    private static final String ANALYSIS_CORE_PLUGIN = "analysis-core";
+    private static final String WARNINGS_NG_PLUGIN = "warnings-ng";
 
-    private int high;
-    private int normal;
-    private int low;
+    private final int high;
+    private final int normal;
+    private final int low;
 
     public StaticAnalysisResult(String name, String url, int high, int normal, int low) {
         super(name, url);
         this.high = high;
         this.normal = normal;
         this.low = low;
-    }
-
-    @Exported
-    public String getName() {
-        return name;
     }
 
     @Exported
@@ -65,26 +58,19 @@ public class StaticAnalysisResult extends Result {
         return low;
     }
 
-    @Exported
-    public String getUrl() {
-        return url;
-    }
-
-    @SuppressWarnings("deprecation")
     public static List<StaticAnalysisResult> getResults(AbstractBuild<?, ?> build) {
         if (build != null) {
-            if (JenkinsUtil.isPluginInstalled(ANALYSIS_CORE_PLUGIN)) {
+            if (JenkinsUtil.isPluginInstalled(WARNINGS_NG_PLUGIN)) {
                 List<StaticAnalysisResult> result = new ArrayList<>();
-                for (Action action : build.getActions()) {
-                    if (AbstractResultAction.class.isInstance(action) || MavenResultAction.class.isInstance(action)) {
-                        @SuppressWarnings("rawtypes")
-                        final BuildResult r = ((ResultAction) action).getResult();
+                for (Action action : build.getAllActions()) {
+                    if (action instanceof ResultAction resultAction) {
+                        final AnalysisResult r = resultAction.getResult();
                         result.add(new StaticAnalysisResult(
                                 action.getDisplayName(),
                                 build.getUrl() + action.getUrlName(),
-                                r.getNumberOfHighPriorityWarnings(),
-                                r.getNumberOfNormalPriorityWarnings(),
-                                r.getNumberOfLowPriorityWarnings()));
+                                r.getTotalHighPrioritySize(),
+                                r.getTotalNormalPrioritySize(),
+                                r.getTotalLowPrioritySize()));
                     }
                 }
                 return result;
