@@ -17,6 +17,9 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+
 import hudson.cli.BuildCommand;
 import hudson.model.Result;
 import org.htmlunit.Page;
@@ -29,9 +32,6 @@ import se.diabol.jenkins.workflow.WorkflowPipelineView;
 
 import java.net.URL;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-
 public class TaskIntegrationTest {
 
     @Rule
@@ -39,35 +39,37 @@ public class TaskIntegrationTest {
 
     @Test
     public void shouldHandleClosureTaskInClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                        + "stage('Stage1') {\n"
-                        + "    task('Task1') {\n"
-                        + "        echo 'Task1'\n"
-                        + "    }\n"
-                        + "}\n"
-                        + "stage('Stage2') {\n"
-                        + "    task('Task2') {\n"
-                        + "        echo 'Task2'\n"
-                        + "    }\n"
-                        + "}\n"
-                        + "}"
+        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition("""
+                node {
+                    stage('Stage1') {
+                        task('Task1') {
+                            echo 'Task1'
+                        }
+                    }
+                    stage('Stage2') {
+                        task('Task2') {
+                            echo 'Task2'
+                        }
+                    }
+                }
+                """.stripIndent()
         );
     }
 
     @Test
     public void shouldHandleClosureTaskInNonClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                "node {\n"
-                        + "stage 'Stage1'\n"
-                        + "task('Task1') {\n"
-                        + "    echo 'Task1'\n"
-                        + "}\n"
-                        + "stage 'Stage2'\n"
-                        + "task('Task2') {\n"
-                        + "    echo 'Task2'\n"
-                        + "}\n"
-                        + "}"
+        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition("""
+                node {
+                    stage 'Stage1'
+                        task('Task1') {
+                            echo 'Task1'
+                        }
+                    stage 'Stage2'
+                        task('Task2') {
+                            echo 'Task2'
+                        }
+                }
+                """.stripIndent()
         );
     }
 
@@ -86,12 +88,13 @@ public class TaskIntegrationTest {
 
         jenkins.getInstance().addView(view);
 
-        JenkinsRule.WebClient client = jenkins.createWebClient();
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
 
-        Page viewPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName));
-        assertThat(viewPage.getWebResponse().getStatusCode(), is(200));
+            Page viewPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName));
+            assertThat(viewPage.getWebResponse().getStatusCode(), is(200));
 
-        Page apiPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName + "/api/json"));
-        assertThat(apiPage.getWebResponse().getStatusCode(), is(200));
+            Page apiPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName + "/api/json"));
+            assertThat(apiPage.getWebResponse().getStatusCode(), is(200));
+        }
     }
 }

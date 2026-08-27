@@ -17,9 +17,9 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.sort;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static se.diabol.jenkins.pipeline.domain.status.StatusType.FAILED;
 import static se.diabol.jenkins.pipeline.domain.status.StatusType.SUCCESS;
