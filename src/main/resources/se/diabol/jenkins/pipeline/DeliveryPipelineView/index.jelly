@@ -24,15 +24,16 @@
 
                     <script src="${resURL}/scripts/hudson-behavior.js" type="text/javascript"></script>
                     <script src="${resURL}/scripts/sortable.js" type="text/javascript"/>
-                    <script>
-                        crumb.init("${h.getCrumbRequestField()}", "${h.getCrumb(request)}");
-                    </script>
+                    <span class="fullscreen-data-holder" data-crumb-field="${h.getCrumbRequestField()}"
+                          data-crumb-value="${h.getCrumb(request)}"
+                          data-run-as-test="${h.isUnitTest}"
+                          data-root-url="${rootURL}"
+                          data-res-url="${resURL}" style="display: none"/>
+                    <st:adjunct includes="se.diabol.jenkins.pipeline.DeliveryPipelineView.view-fullscreen"/>
                     <st:adjunct includes="org.kohsuke.stapler.jquery"/>
-                    <script>var Q=jQuery.noConflict()</script>
                     <j:forEach var="pd" items="${h.pageDecorators}">
                         <st:include it="${pd}" page="header.jelly" optional="true" />
                     </j:forEach>
-                    <script>var isRunAsTest=${h.isUnitTest}; var rootURL="${rootURL}"; var resURL="${resURL}";</script>
                 </head>
                 <body>
                 <st:include page="main.jelly"/>
