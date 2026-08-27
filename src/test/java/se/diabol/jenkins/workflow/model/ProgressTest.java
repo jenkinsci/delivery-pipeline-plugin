@@ -19,10 +19,10 @@ package se.diabol.jenkins.workflow.model;
 
 import org.junit.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.*;
 
 public class ProgressTest {
 

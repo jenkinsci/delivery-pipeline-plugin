@@ -17,13 +17,13 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.resolver;
 
-import hudson.Extension;
 import hudson.model.Cause;
 import hudson.plugins.git.GitStatus;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 import se.diabol.jenkins.pipeline.CauseResolver;
 import se.diabol.jenkins.pipeline.domain.TriggerCause;
 
-@Extension(optional = true)
+@OptionalExtension
 public class GitCauseResolver extends CauseResolver {
 
     // Force a classloading error plugin isn't available

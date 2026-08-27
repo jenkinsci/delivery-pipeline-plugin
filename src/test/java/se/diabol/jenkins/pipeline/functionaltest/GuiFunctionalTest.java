@@ -29,9 +29,6 @@ import hudson.model.View;
 import hudson.plugins.view.dashboard.Dashboard;
 import hudson.tasks.BuildTrigger;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import java.util.ArrayList;
-import java.util.List;
-import javax.xml.transform.stream.StreamSource;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -44,6 +41,10 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import se.diabol.jenkins.pipeline.DeliveryPipelineView;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.transform.stream.StreamSource;
 
 public class GuiFunctionalTest {
 
@@ -199,7 +200,7 @@ public class GuiFunctionalTest {
         FreeStyleProject start = jenkins.createFreeStyleProject("Start");
         start.addProperty(new ParametersDefinitionProperty(
                 new StringParameterDefinition("key2", "value2")
-                ));
+        ));
         jenkins.createFreeStyleProject("End");
         start.getPublishersList().add(new BuildTrigger("End", true));
 
@@ -253,7 +254,7 @@ public class GuiFunctionalTest {
 
     @Test
     public void testTriggerNewPipelineFolders() throws Exception {
-        Folder folder =  jenkins.getInstance().createProject(Folder.class, "Folder");
+        Folder folder = jenkins.getInstance().createProject(Folder.class, "Folder");
         assertNotNull(folder);
 
         FreeStyleProject start = jenkins.createFreeStyleProject("Start");

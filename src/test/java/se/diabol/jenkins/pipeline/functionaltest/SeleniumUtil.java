@@ -17,12 +17,13 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.functionaltest;
 
-import java.time.Duration;
-import java.util.function.Function;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.time.Duration;
+import java.util.function.Function;
 
 public class SeleniumUtil {
     public static WebElement waitForElement(WebDriver driver, String id) {
