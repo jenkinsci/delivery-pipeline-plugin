@@ -528,7 +528,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
         }
 
         @Extension
-        public static class DescriptorImpl extends Descriptor<WorkflowPipelineView.ComponentSpec> {
+        public static class DescriptorImpl extends Descriptor<ComponentSpec> {
 
             @Nonnull
             @Override

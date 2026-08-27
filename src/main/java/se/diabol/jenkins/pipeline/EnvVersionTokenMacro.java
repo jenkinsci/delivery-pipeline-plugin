@@ -17,15 +17,15 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
-import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 
 import java.io.IOException;
 import java.util.Map;
 
-@Extension(optional = true)
+@OptionalExtension
 public class EnvVersionTokenMacro extends DataBoundTokenMacro {
 
     private static final String NAME = "ENV_VERSION";

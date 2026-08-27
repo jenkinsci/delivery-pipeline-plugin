@@ -17,7 +17,6 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.resolver;
 
-import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.DependencyGraph;
 import hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig;
@@ -28,12 +27,13 @@ import hudson.plugins.promoted_builds.JobPropertyImpl;
 import hudson.plugins.promoted_builds.PromotionProcess;
 import hudson.tasks.BuildStep;
 import jenkins.model.DependencyDeclarer;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 import se.diabol.jenkins.pipeline.RelationshipResolver;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Extension(optional = true, ordinal = 150)
+@OptionalExtension(ordinal = 150)
 public class PromotedBuildRelationshipResolver extends RelationshipResolver {
 
     // Force a classloading error plugin isn't available

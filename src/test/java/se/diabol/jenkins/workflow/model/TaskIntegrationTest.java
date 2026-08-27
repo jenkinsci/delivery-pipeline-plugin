@@ -44,38 +44,38 @@ class TaskIntegrationTest {
     }
 
     @Test
-    void shouldHandleClosureTaskInClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                """
-                        node {
-                        stage('Stage1') {
-                            task('Task1') {
-                                echo 'Task1'
-                            }
+    public void shouldHandleClosureTaskInClosureStage() throws Exception {
+        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition("""
+                node {
+                    stage('Stage1') {
+                        task('Task1') {
+                            echo 'Task1'
                         }
-                        stage('Stage2') {
-                            task('Task2') {
-                                echo 'Task2'
-                            }
+                    }
+                    stage('Stage2') {
+                        task('Task2') {
+                            echo 'Task2'
                         }
-                        }"""
+                    }
+                }
+                """.stripIndent()
         );
     }
 
     @Test
-    void shouldHandleClosureTaskInNonClosureStage() throws Exception {
-        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition(
-                """
-                        node {
-                        stage 'Stage1'
+    public void shouldHandleClosureTaskInNonClosureStage() throws Exception {
+        shouldCreatePipelineAndViewAndSuccessfullyBuildDefinition("""
+                node {
+                    stage 'Stage1'
                         task('Task1') {
                             echo 'Task1'
                         }
-                        stage 'Stage2'
+                    stage 'Stage2'
                         task('Task2') {
                             echo 'Task2'
                         }
-                        }"""
+                }
+                """.stripIndent()
         );
     }
 
@@ -94,12 +94,13 @@ class TaskIntegrationTest {
 
         jenkins.getInstance().addView(view);
 
-        JenkinsRule.WebClient client = jenkins.createWebClient();
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
 
-        Page viewPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName));
-        assertThat(viewPage.getWebResponse().getStatusCode(), is(200));
+            Page viewPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName));
+            assertThat(viewPage.getWebResponse().getStatusCode(), is(200));
 
-        Page apiPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName + "/api/json"));
-        assertThat(apiPage.getWebResponse().getStatusCode(), is(200));
+            Page apiPage = client.getPage(new URL(jenkins.getURL(), "/jenkins/view/" + viewName + "/api/json"));
+            assertThat(apiPage.getWebResponse().getStatusCode(), is(200));
+        }
     }
 }
