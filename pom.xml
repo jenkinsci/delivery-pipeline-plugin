@@ -43,7 +43,7 @@
         <jenkins.baseline>2.541</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.2</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
-        <selenium.version>4.47.0</selenium.version>
+        <selenium.version>4.48.0</selenium.version>
         <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
         <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     </properties>
