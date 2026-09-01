@@ -191,16 +191,17 @@ function pipelineUtils() {
                             );
 
                             if (data.allowManualTriggers && task.manual && task.manualStep.enabled && task.manualStep.permission) {
-                                html.push('<div class="task-manual" id="manual-' + id + '" title="Trigger manual build" onclick="triggerManual(\'' + id + '\', \'' + task.id + '\', \'' + task.manualStep.upstreamProject + '\', \'' + task.manualStep.upstreamId + '\', \'' + view.viewUrl + '\')">');
+                                html.push('<div class="task-manual" id="manual-' + id + '" title="Trigger manual build"' +
+                                            ` data-task-id="${id}" data-downstream-project="${task.id}" data-upstream-project="${task.manualStep.upstreamProject}" data-upstream-build="${task.manualStep.upstreamId}" data-view-url="${view.viewUrl}">`);
                                 html.push('</div>');
                             } else if (!pipeline.aggregated) {
                                 if (data.allowRebuild && task.rebuildable) {
-                                    html.push('<div class="task-rebuild" id="rebuild-' + id + '" title="Trigger rebuild" onclick="triggerRebuild(\'' + id + '\', \'' + task.id + '\', \'' + task.buildId + '\', \'' + view.viewUrl + '\')">');
+                                    html.push('<div class="task-rebuild" id="rebuild-' + id + '" title="Trigger rebuild"' + ` data-task-id="${id}" data-project="${task.id}" data-build-id="${task.buildId}" data-view-url="${view.viewUrl}">`);
                                     html.push('</div>');
                                 }
                                 if (task.requiringInput) {
                                     showAbortButton = true;
-                                    html.push('<div class="task-manual" id="input-' + id + '" title="Specify input" onclick="specifyInput(\'' + id + '\', \'' + component.fullJobName + '\', \'' + task.buildId + '\', \'' + view.viewUrl + '\')">');
+                                    html.push('<div class="task-manual-specify" id="input-' + id + '" title="Specify input"' + ` data-task-id="${id}" data-project="${component.fullJobName}" data-build-id="${task.buildId}" data-view-url="${view.viewUrl}">`);
                                     html.push('</div>');
                                 }
                                 if (showAbortButton) {
@@ -208,7 +209,7 @@ function pipelineUtils() {
                                     if (typeof projectName === "undefined") {
                                         projectName = task.id;
                                     }
-                                    html.push('<div class="task-abort" id="abort-' + id + '" title="Abort progress" onclick="abortBuild(\'' + id + '\', \'' + projectName + '\', \'' + task.buildId + '\', \'' + view.viewUrl + '\')">');
+                                    html.push('<div class="task-abort" id="abort-' + id + '" title="Abort progress"' + ` data-task-id="${id}" data-project-name="${projectName}" data-build-id="${task.buildId}" data-view-url="${view.viewUrl}">`);
                                     html.push('</div>');
                                 }
                             }
@@ -311,6 +312,7 @@ function pipelineUtils() {
         }
 
         jsplumb.repaintEverything();
+        initEventListeners();
     }
 }
 
@@ -318,11 +320,11 @@ function addPipelineHeader(html, component, data, c, resURL) {
     html.push('<h1>' + htmlEncode(component.name));
     if (data.allowPipelineStart) {
         if (component.workflowComponent) {
-            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link" href="#" onclick="triggerBuild(\'' + component.workflowUrl + '\', \'' + data.name + '\')">');
+            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${component.workflowUrl}" data-task-id="${data.name}">`);
         } else if (component.firstJobParameterized) {
-            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link" href="#" onclick="triggerParameterizedBuild(\'' + component.firstJobUrl + '\', \'' + data.name + '\')">');
+            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-parametrized-build" href="#"' + ` data-first-job-url="${component.firstJobUrl}">`);
         } else {
-            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link" href="#" onclick="triggerBuild(\'' + component.firstJobUrl + '\', \'' + data.name + '\')">');
+            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${component.firstJobUrl}" data-task-id="${data.name}">`);
         }
         html.push('<img class="icon-clock icon-md" title="Build now" src="' + resURL + '/plugin/delivery-pipeline-plugin/themes/default/clock.svg">');
         html.push('</a>');
@@ -710,7 +712,7 @@ function abortBuild(taskId, project, buildId, viewUrl) {
     });
 }
 
-function triggerParameterizedBuild(url, taskId) {
+function triggerParameterizedBuild(url) {
     console.info('Job is parameterized');
     window.location.href = rootURL + '/' + url + 'build?delay=0sec';
 }
@@ -779,4 +781,55 @@ function equalheight(container) {
             row.divs[i].height(row.maxHeight);
         }
     });
+}
+
+const EVENT_HANDLING = {
+    ".task-trigger-build": _triggerBuild,
+    ".task-trigger-parametrized-build": _triggerParametrizedBuild,
+    ".task-manual": _triggerManual,
+    ".task-rebuild": _triggerRebuild,
+    ".task-manual-specify": _specifyInput,
+    ".task-abort": _abortBuild
+}
+
+function _triggerBuild(event) {
+    event.preventDefault();
+
+    const { workflowUrl, taskId } = event.target.closest(".task-trigger-build").dataset;
+    triggerBuild(workflowUrl, taskId);
+}
+
+function _triggerParametrizedBuild(event) {
+    event.preventDefault();
+
+    const { firstJobUrl } = event.target.closest(".task-trigger-parametrized-build").dataset;
+    triggerParameterizedBuild(firstJobUrl);
+}
+
+function _triggerManual(event) {
+    const { taskId, downstreamProject, upstreamProject, upstreamBuild, viewUrl } = event.target.dataset;
+    triggerManual(taskId, downstreamProject, upstreamProject, upstreamBuild, viewUrl);
+}
+
+function _triggerRebuild(event) {
+    const { taskId, project, buildId, viewUrl } = event.target.dataset;
+    triggerRebuild(taskId, project, buildId, viewUrl);
+}
+
+function _specifyInput(event) {
+    const { taskId, project, buildId, viewUrl } = event.target.dataset;
+    specifyInput(taskId, project, buildId, viewUrl);
+}
+
+function _abortBuild(event) {
+    const { taskId, projectName, buildId, viewUrl } = event.target.dataset;
+    abortBuild(taskId, projectName, buildId, viewUrl);
+}
+
+function initEventListeners() {
+    for (const [selector, handler] of Object.entries(EVENT_HANDLING)) {
+        document.querySelectorAll(selector).forEach(function (button) {
+            button.addEventListener("click", handler);
+        });
+    }
 }

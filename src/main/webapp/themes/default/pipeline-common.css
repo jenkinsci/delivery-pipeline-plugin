@@ -149,7 +149,7 @@ div.taskname {
     display: table-cell;
 }
 
-div.task-manual {
+div.task-manual, div.task-manual-specify {
     display: table-cell;
     background: url("play.png") no-repeat;
     background-size: 75%;
