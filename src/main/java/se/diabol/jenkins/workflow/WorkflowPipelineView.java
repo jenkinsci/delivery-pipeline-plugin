@@ -20,7 +20,7 @@ package se.diabol.jenkins.workflow;
 import com.google.common.collect.Sets;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.Api;
 import hudson.model.Descriptor;
 import hudson.model.Descriptor.FormException;
@@ -34,8 +34,8 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.RunList;
 import jenkins.model.Jenkins;
-import org.acegisecurity.AuthenticationException;
-import org.acegisecurity.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
@@ -339,7 +339,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
 
         WorkflowJob workflowJob;
         try {
-            workflowJob = ProjectUtil.getWorkflowJob(projectName, getOwnerItemGroup());
+            workflowJob = ProjectUtil.getWorkflowJob(projectName, ownerItemGroup());
             RunList<WorkflowRun> builds = workflowJob.getBuilds();
             for (WorkflowRun run : builds) {
                 if (Integer.toString(run.getNumber()).equals(buildId)) {
@@ -362,7 +362,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
     @Override
     public void abortBuild(String projectName, String buildId) throws TriggerException {
         try {
-            WorkflowJob workflowJob = ProjectUtil.getWorkflowJob(projectName, getOwnerItemGroup());
+            WorkflowJob workflowJob = ProjectUtil.getWorkflowJob(projectName, ownerItemGroup());
             if (!workflowJob.hasAbortPermission()) {
                 throw new BadCredentialsException("Not authorized to abort build");
             }
@@ -402,12 +402,9 @@ public class WorkflowPipelineView extends View implements PipelineView {
         return getItems().contains(item);
     }
 
-    @Override
-    public ItemGroup<? extends TopLevelItem> getOwnerItemGroup() {
-        if (getOwner() == null) {
-            return null;
-        }
-        return super.getOwnerItemGroup();
+    private ItemGroup<? extends TopLevelItem> ownerItemGroup() {
+        ViewGroup owner = getOwner();
+        return owner == null ? null : owner.getItemGroup();
     }
 
     @Override
@@ -440,7 +437,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
     }
 
     private WorkflowJob getWorkflowJob(final String projectName) throws PipelineException {
-        WorkflowJob job = ProjectUtil.getWorkflowJob(projectName, getOwnerItemGroup());
+        WorkflowJob job = ProjectUtil.getWorkflowJob(projectName, ownerItemGroup());
         if (job == null) {
             throw new PipelineException("Failed to resolve job with name: " + projectName);
         }
@@ -505,7 +502,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
         }
     }
 
-    public static class ComponentSpec extends AbstractDescribableImpl<ComponentSpec> {
+    public static class ComponentSpec implements Describable<ComponentSpec> {
         private String name;
         private String job;
 

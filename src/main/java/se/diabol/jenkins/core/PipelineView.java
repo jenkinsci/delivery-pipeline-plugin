@@ -17,7 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.core;
 
-import org.acegisecurity.AuthenticationException;
+import org.springframework.security.core.AuthenticationException;
 import se.diabol.jenkins.pipeline.trigger.TriggerException;
 
 import java.util.List;

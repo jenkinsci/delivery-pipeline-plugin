@@ -27,7 +27,7 @@ import hudson.util.FormValidation;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.pipeline.util.JenkinsUtil;
 
@@ -140,7 +140,7 @@ public class PipelineProperty extends JobProperty<AbstractProject<?, ?>> {
         }
 
         @Override
-        public PipelineProperty newInstance(@Nonnull StaplerRequest sr, JSONObject formData) throws FormException {
+        public PipelineProperty newInstance(@Nonnull StaplerRequest2 sr, JSONObject formData) throws FormException {
             boolean configEnabled = sr.getParameter("enabled") != null;
             if (!configEnabled) {
                 return null;

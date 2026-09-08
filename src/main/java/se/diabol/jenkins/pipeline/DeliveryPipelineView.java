@@ -21,7 +21,7 @@ import com.google.common.collect.Sets;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.AbstractProject;
 import hudson.model.Api;
 import hudson.model.Cause;
@@ -38,14 +38,14 @@ import hudson.model.listeners.ItemListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
-import org.acegisecurity.AuthenticationException;
-import org.acegisecurity.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.core.PipelineView;
 import se.diabol.jenkins.core.TimestampFormat;
@@ -282,7 +282,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
     }
 
     public boolean isFullScreenView() {
-        return FullScreen.isFullScreenRequest(Stapler.getCurrentRequest());
+        return FullScreen.isFullScreenRequest(Stapler.getCurrentRequest2());
     }
 
     public void onProjectRenamed(Item item, String oldName, String newName) {
@@ -452,11 +452,11 @@ public class DeliveryPipelineView extends View implements PipelineView {
             throws TriggerException, AuthenticationException {
         try {
             LOG.fine("Trigger manual build " + projectName + " " + upstreamName + " " + buildId);
-            AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.getInstance());
+            AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.get());
             if (!project.hasPermission(Item.BUILD)) {
                 throw new BadCredentialsException("Not authorized to trigger build");
             }
-            AbstractProject upstream = ProjectUtil.getProject(upstreamName, Jenkins.getInstance());
+            AbstractProject upstream = ProjectUtil.getProject(upstreamName, Jenkins.get());
             ManualTrigger trigger = ManualTriggerFactory.getManualTrigger(project, upstream);
             if (trigger != null) {
                 trigger.triggerManual(project, upstream, buildId, getOwner().getItemGroup());
@@ -474,7 +474,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
 
     @Override
     public void triggerRebuild(String projectName, String buildId) {
-        AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.getInstance());
+        AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.get());
         if (!project.hasPermission(Item.BUILD)) {
             throw new BadCredentialsException("Not authorized to trigger build");
         }
@@ -496,7 +496,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
 
     @Override
     public void abortBuild(String projectName, String buildId) throws TriggerException {
-        AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.getInstance());
+        AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.get());
         if (!project.hasPermission(Item.CANCEL)) {
             throw new BadCredentialsException("Not authorized to abort build");
         }
@@ -530,8 +530,8 @@ public class DeliveryPipelineView extends View implements PipelineView {
             List<Component> components = new ArrayList<>();
             if (componentSpecs != null) {
                 for (ComponentSpec componentSpec : componentSpecs) {
-                    AbstractProject firstJob = ProjectUtil.getProject(componentSpec.getFirstJob(), getOwnerItemGroup());
-                    AbstractProject lastJob = ProjectUtil.getProject(componentSpec.getLastJob(), getOwnerItemGroup());
+                    AbstractProject firstJob = ProjectUtil.getProject(componentSpec.getFirstJob(), ownerItemGroup());
+                    AbstractProject lastJob = ProjectUtil.getProject(componentSpec.getLastJob(), ownerItemGroup());
                     if (firstJob != null) {
                         components.add(getComponent(componentSpec.getName(), firstJob,
                                 lastJob, showAggregatedPipeline, (componentSpecs.indexOf(componentSpec) + 1),
@@ -579,10 +579,10 @@ public class DeliveryPipelineView extends View implements PipelineView {
                 noOfPipelines, pagingEnabled, componentNumber);
         List<Pipeline> pipelines = new ArrayList<>();
         if (showAggregatedPipeline) {
-            pipelines.add(pipeline.createPipelineAggregated(getOwnerItemGroup(), showAggregatedChanges));
+            pipelines.add(pipeline.createPipelineAggregated(ownerItemGroup(), showAggregatedChanges));
         }
         pipelines.addAll(pipeline
-                .createPipelineLatest(noOfPipelines, getOwnerItemGroup(), showPaging(), showChanges, component));
+                .createPipelineLatest(noOfPipelines, ownerItemGroup(), showPaging(), showChanges, component));
         component.setPipelines(pipelines);
         return component;
     }
@@ -604,8 +604,8 @@ public class DeliveryPipelineView extends View implements PipelineView {
             return;
         }
         for (ComponentSpec spec : componentSpecs) {
-            AbstractProject first = ProjectUtil.getProject(spec.getFirstJob(), getOwnerItemGroup());
-            AbstractProject last = ProjectUtil.getProject(spec.getLastJob(), getOwnerItemGroup());
+            AbstractProject first = ProjectUtil.getProject(spec.getFirstJob(), ownerItemGroup());
+            AbstractProject last = ProjectUtil.getProject(spec.getLastJob(), ownerItemGroup());
             Collection<AbstractProject<?, ?>> downstreamProjects =
                     ProjectUtil.getAllDownstreamProjects(first, last).values();
             for (AbstractProject project : downstreamProjects) {
@@ -626,31 +626,36 @@ public class DeliveryPipelineView extends View implements PipelineView {
         }
     }
 
+    private ItemGroup<? extends TopLevelItem> ownerItemGroup() {
+        ViewGroup owner = getOwner();
+        return owner == null ? null : owner.getItemGroup();
+    }
+
     @Override
     public boolean contains(TopLevelItem item) {
         return getItems().contains(item);
     }
 
     @Override
-    protected void submit(StaplerRequest req) throws IOException, Descriptor.FormException {
+    protected void submit(StaplerRequest2 req) throws IOException, Descriptor.FormException {
         try {
             req.bindJSON(this, req.getSubmittedForm());
             componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
             regexpFirstJobs = req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs"));
-        } catch (javax.servlet.ServletException e) {
+        } catch (jakarta.servlet.ServletException e) {
             throw new IOException(e);
         }
     }
 
     @Override
-    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public Item doCreateItem(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         try {
             if (!isDefault()) {
                 return getOwner().getPrimaryView().doCreateItem(req, rsp);
             } else {
                 return JenkinsUtil.getInstance().doCreateItem(req, rsp);
             }
-        } catch (javax.servlet.ServletException e) {
+        } catch (jakarta.servlet.ServletException e) {
             throw new IOException(e);
         }
     }
@@ -704,7 +709,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
         }
     }
 
-    public static class RegExpSpec extends AbstractDescribableImpl<RegExpSpec> {
+    public static class RegExpSpec implements Describable<RegExpSpec> {
 
         private String regexp;
         private boolean showUpstream;
@@ -759,7 +764,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
         }
     }
 
-    public static class ComponentSpec extends AbstractDescribableImpl<ComponentSpec> {
+    public static class ComponentSpec implements Describable<ComponentSpec> {
         private String name;
         private String firstJob;
         private String lastJob;

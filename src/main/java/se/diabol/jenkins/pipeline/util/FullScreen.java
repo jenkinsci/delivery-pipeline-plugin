@@ -17,20 +17,20 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.util;
 
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 public class FullScreen {
 
-    public static boolean isFullScreenRequest(StaplerRequest request) {
+    public static boolean isFullScreenRequest(StaplerRequest2 request) {
         return request != null && hasFullScreenParameter(request)
                 && Boolean.parseBoolean(getFullScreenParameter(request));
     }
 
-    static boolean hasFullScreenParameter(StaplerRequest request) {
+    static boolean hasFullScreenParameter(StaplerRequest2 request) {
         return getFullScreenParameter(request) != null;
     }
 
-    static String getFullScreenParameter(StaplerRequest request) {
+    static String getFullScreenParameter(StaplerRequest2 request) {
         return request.getParameter("fullscreen");
     }
 
