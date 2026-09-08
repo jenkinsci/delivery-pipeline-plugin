@@ -23,6 +23,7 @@ import hudson.model.Result;
 import hudson.tasks.BuildTrigger;
 import org.htmlunit.Page;
 import org.htmlunit.html.DomElement;
+import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -34,10 +35,14 @@ import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
+import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -361,6 +366,73 @@ class DeliveryPipelineViewPageTest {
             Thread.sleep(200);
         }
         throw new AssertionError("build never reached the input step");
+    }
+
+    @Test
+    void parallelStagesOfAPipelineBecomeTasksOfTheirStage() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "parallel");
+        flow.setDefinition(new CpsFlowDefinition("node { stage('Test') { parallel("
+                + "'Unit': { stage('Unit') { echo 'u' } }, "
+                + "'Integration': { stage('Integration') { echo 'i' } }) } }", true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = pipelineView("Parallel", "parallel");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat("nested stages are not stages of their own", page.querySelectorAll(".stage").size(), is(1));
+            assertThat(page.querySelector(".stage-name").asNormalizedText(), is("Test"));
+            assertThat(taskNames(page), containsInAnyOrder("Unit", "Integration"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(2));
+        }
+    }
+
+    @Test
+    void failedParallelBranchIsShownAsAFailedTask() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "branches");
+        flow.setDefinition(new CpsFlowDefinition(
+                "node { stage('Test') { parallel('ok': { echo 'fine' }, 'bad': { error 'boom' }) } }", true));
+        jenkins.buildAndAssertStatus(Result.FAILURE, flow);
+        DeliveryPipelineView view = pipelineView("Branches", "branches");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage").size(), is(1));
+            assertThat(taskNames(page), containsInAnyOrder("ok", "bad"));
+            assertThat(page.querySelector(".stage-task.FAILED .taskname").asNormalizedText(), is("bad"));
+            assertThat(page.querySelector(".stage-task.SUCCESS .taskname").asNormalizedText(), is("ok"));
+        }
+    }
+
+    @Test
+    void nestedSequentialStagesBecomeTasks() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "nested");
+        flow.setDefinition(new CpsFlowDefinition(
+                "node { stage('Build') { stage('Compile') { echo 'c' }; stage('Package') { echo 'p' } } }", true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = pipelineView("Nested", "nested");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage").size(), is(1));
+            assertThat(page.querySelector(".stage-name").asNormalizedText(), is("Build"));
+            assertThat(taskNames(page), contains("Compile", "Package"));
+        }
+    }
+
+    private DeliveryPipelineView pipelineView(String name, String job) throws IOException {
+        DeliveryPipelineView view = new DeliveryPipelineView(name);
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec(name, job, null, false)));
+        view.setNoOfPipelines(1);
+        jenkins.getInstance().addView(view);
+        return view;
+    }
+
+    private static List<String> taskNames(HtmlPage page) {
+        List<String> names = new ArrayList<>();
+        for (DomNode node : page.querySelectorAll(".stage-task .taskname")) {
+            names.add(node.asNormalizedText());
+        }
+        return names;
     }
 
     private JenkinsRule.WebClient jsClient() {

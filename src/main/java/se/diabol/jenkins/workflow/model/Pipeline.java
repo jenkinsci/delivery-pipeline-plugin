@@ -18,6 +18,9 @@ If not, see <http://www.gnu.org/licenses/>.
 package se.diabol.jenkins.workflow.model;
 
 import com.cloudbees.workflow.flownode.FlowNodeUtil;
+import java.util.ArrayList;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
+import com.cloudbees.workflow.rest.external.StageNodeExt;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -136,10 +139,28 @@ public class Pipeline extends GenericPipeline {
         return result;
     }
 
+    /** Stages nested in another stage are shown as tasks of that stage, not as stages of their own. */
+    static List<FlowNode> topLevelStages(List<FlowNode> stageNodes) {
+        List<FlowNode> result = new ArrayList<>();
+        for (FlowNode node : stageNodes) {
+            boolean nested = false;
+            for (BlockStartNode enclosing : node.getEnclosingBlocks()) {
+                if (StageNodeExt.isStageNode(enclosing)) {
+                    nested = true;
+                    break;
+                }
+            }
+            if (!nested) {
+                result.add(node);
+            }
+        }
+        return result;
+    }
+
     public static Pipeline resolve(WorkflowJob project, WorkflowRun build) throws PipelineException {
         String pipelineTimestamp = TimestampFormat.formatTimestamp(build.getTimeInMillis());
 
-        List<FlowNode> stageNodes = FlowNodeUtil.getStageNodes(build.getExecution());
+        List<FlowNode> stageNodes = topLevelStages(FlowNodeUtil.getStageNodes(build.getExecution()));
         return new Pipeline(project.getName(),
                 build.getDisplayName(),
                 Stage.extractStages(build, stageNodes),

@@ -29,6 +29,7 @@ Recent Changes
 - **JDK 25 support** — build and CI updated to support Java 25.
 - **Dependency updates** — upgraded build-pipeline-plugin, analysis-core, build-name-setter, byte-buddy, objenesis, and commons-logging to current versions.
 - **UI fixes** — corrected missing arrow graphics and clock rendering in the pipeline view.
+- **Declarative-friendly stages** — stages nested inside a stage and parallel branches are shown as tasks of that stage without the `task` step; Declarative `parallel` and `matrix` blocks render one task per branch.
 - **Pipeline jobs in the standard view** — a component of a Delivery Pipeline View can point at a Pipeline (Jenkinsfile) job; the separate "Delivery Pipeline View for Jenkins Pipelines" is deprecated and no longer offered for new views.
 
 Requirements
