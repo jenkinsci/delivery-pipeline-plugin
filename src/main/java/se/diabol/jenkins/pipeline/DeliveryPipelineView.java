@@ -47,7 +47,10 @@ import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import se.diabol.jenkins.core.GenericComponent;
 import se.diabol.jenkins.core.PipelineView;
+import se.diabol.jenkins.workflow.WorkflowRuns;
 import se.diabol.jenkins.core.TimestampFormat;
 import se.diabol.jenkins.pipeline.domain.Component;
 import se.diabol.jenkins.pipeline.domain.Pipeline;
@@ -450,6 +453,12 @@ public class DeliveryPipelineView extends View implements PipelineView {
     @Override
     public void triggerManual(String projectName, String upstreamName, String buildId)
             throws TriggerException, AuthenticationException {
+        WorkflowJob workflowJob = findWorkflowJob(projectName, Jenkins.get());
+        if (workflowJob != null) {
+            LOG.fine("Proceeding input step of Pipeline job " + projectName + " build " + buildId);
+            WorkflowRuns.proceedInput(workflowJob, buildId);
+            return;
+        }
         try {
             LOG.fine("Trigger manual build " + projectName + " " + upstreamName + " " + buildId);
             AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.get());
@@ -474,6 +483,10 @@ public class DeliveryPipelineView extends View implements PipelineView {
 
     @Override
     public void triggerRebuild(String projectName, String buildId) {
+        if (findWorkflowJob(projectName, Jenkins.get()) != null) {
+            LOG.log(Level.SEVERE, "Rebuild not implemented for Pipeline jobs");
+            return;
+        }
         AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.get());
         if (!project.hasPermission(Item.BUILD)) {
             throw new BadCredentialsException("Not authorized to trigger build");
@@ -496,6 +509,11 @@ public class DeliveryPipelineView extends View implements PipelineView {
 
     @Override
     public void abortBuild(String projectName, String buildId) throws TriggerException {
+        WorkflowJob workflowJob = findWorkflowJob(projectName, Jenkins.get());
+        if (workflowJob != null) {
+            WorkflowRuns.abort(workflowJob, buildId);
+            return;
+        }
         AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.get());
         if (!project.hasPermission(Item.CANCEL)) {
             throw new BadCredentialsException("Not authorized to abort build");
@@ -524,10 +542,10 @@ public class DeliveryPipelineView extends View implements PipelineView {
 
     @Exported
     @Override
-    public List<Component> getPipelines() {
+    public List<GenericComponent> getPipelines() {
         try {
             LOG.fine("Getting pipelines");
-            List<Component> components = new ArrayList<>();
+            List<GenericComponent> components = new ArrayList<>();
             if (componentSpecs != null) {
                 for (ComponentSpec componentSpec : componentSpecs) {
                     AbstractProject firstJob = ProjectUtil.getProject(componentSpec.getFirstJob(), ownerItemGroup());
@@ -537,7 +555,12 @@ public class DeliveryPipelineView extends View implements PipelineView {
                                 lastJob, showAggregatedPipeline, (componentSpecs.indexOf(componentSpec) + 1),
                                 componentSpec.isShowUpstream()));
                     } else {
-                        throw new PipelineException("Could not find project: " + componentSpec.getFirstJob());
+                        WorkflowJob workflowJob = findWorkflowJob(componentSpec.getFirstJob(), ownerItemGroup());
+                        if (workflowJob == null) {
+                            throw new PipelineException("Could not find project: " + componentSpec.getFirstJob());
+                        }
+                        components.add(se.diabol.jenkins.workflow.model.Component.resolve(
+                                componentSpec.getName(), workflowJob, noOfPipelines, showChanges));
                     }
                 }
             }
@@ -605,6 +628,13 @@ public class DeliveryPipelineView extends View implements PipelineView {
         }
         for (ComponentSpec spec : componentSpecs) {
             AbstractProject first = ProjectUtil.getProject(spec.getFirstJob(), ownerItemGroup());
+            if (first == null) {
+                WorkflowJob workflowJob = findWorkflowJob(spec.getFirstJob(), ownerItemGroup());
+                if (workflowJob != null) {
+                    jobs.add(workflowJob);
+                }
+                continue;
+            }
             AbstractProject last = ProjectUtil.getProject(spec.getLastJob(), ownerItemGroup());
             Collection<AbstractProject<?, ?>> downstreamProjects =
                     ProjectUtil.getAllDownstreamProjects(first, last).values();
@@ -624,6 +654,14 @@ public class DeliveryPipelineView extends View implements PipelineView {
                 jobs.add((TopLevelItem) project);
             }
         }
+    }
+
+    /** A Pipeline job named as the first job of a component, or null. */
+    private WorkflowJob findWorkflowJob(String name, ItemGroup<?> context) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        return JenkinsUtil.getInstance().getItem(name, context == null ? Jenkins.get() : context, WorkflowJob.class);
     }
 
     private ItemGroup<? extends TopLevelItem> ownerItemGroup() {
@@ -816,7 +854,9 @@ public class DeliveryPipelineView extends View implements PipelineView {
             }
 
             public ListBoxModel doFillFirstJobItems(@AncestorInPath ItemGroup<?> context) {
-                return ProjectUtil.fillAllProjects(context, AbstractProject.class);
+                ListBoxModel options = ProjectUtil.fillAllProjects(context, AbstractProject.class);
+                options.addAll(ProjectUtil.fillAllProjects(context, WorkflowJob.class));
+                return options;
             }
 
             public ListBoxModel doFillLastJobItems(@AncestorInPath ItemGroup<?> context) {

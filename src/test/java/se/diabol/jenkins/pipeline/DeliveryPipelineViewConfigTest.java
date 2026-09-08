@@ -19,6 +19,7 @@ package se.diabol.jenkins.pipeline;
 
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlPage;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
@@ -40,9 +41,12 @@ class DeliveryPipelineViewConfigTest {
     void settingsSurviveTheConfigureForm(JenkinsRule jenkins) throws Exception {
         jenkins.createFreeStyleProject("build");
         jenkins.createFreeStyleProject("deploy");
+        jenkins.getInstance().createProject(WorkflowJob.class, "wf");
 
         DeliveryPipelineView view = new DeliveryPipelineView("Pipeline");
-        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Comp", "build", "deploy", true)));
+        view.setComponentSpecs(List.of(
+                new DeliveryPipelineView.ComponentSpec("Comp", "build", "deploy", true),
+                new DeliveryPipelineView.ComponentSpec("Flow", "wf", null, false)));
         view.setRegexpFirstJobs(List.of(new DeliveryPipelineView.RegExpSpec("build.*", true)));
         view.setNoOfPipelines(4);
         view.setNoOfColumns(2);
@@ -81,6 +85,7 @@ class DeliveryPipelineViewConfigTest {
         assertThat(spec.getFirstJob(), is("build"));
         assertThat(spec.getLastJob(), is("deploy"));
         assertThat(spec.isShowUpstream(), is(true));
+        assertThat("a Pipeline job survives the job picker", saved.getComponentSpecs().get(1).getFirstJob(), is("wf"));
         assertThat(saved.getRegexpFirstJobs().get(0).getRegexp(), is("build.*"));
         assertThat(saved.getRegexpFirstJobs().get(0).isShowUpstream(), is(true));
         assertThat(saved.getNoOfPipelines(), is(4));

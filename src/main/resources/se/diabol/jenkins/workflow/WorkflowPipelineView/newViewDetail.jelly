@@ -1,5 +1,5 @@
 <?jelly escape-by-default='true'?>
 <div>
-    Continuous Delivery pipelines, perfect for visualization on information radiators.
-    Shows one or more delivery pipeline instances, based on Jenkins pipelines (created using the Pipeline or Workflow plugin).
+    Deprecated: create a Delivery Pipeline View instead and add your Pipeline jobs as components.
+    Existing views of this type keep working.
 </div>

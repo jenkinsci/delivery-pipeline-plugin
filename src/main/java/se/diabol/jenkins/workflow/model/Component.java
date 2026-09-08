@@ -21,10 +21,15 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 
 import com.google.common.collect.ImmutableList;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 import se.diabol.jenkins.core.AbstractItem;
 import se.diabol.jenkins.core.GenericComponent;
+import se.diabol.jenkins.pipeline.domain.Change;
+import se.diabol.jenkins.pipeline.domain.PipelineException;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +47,33 @@ public class Component extends GenericComponent {
         } else {
             this.pipelines = Collections.emptyList();
         }
+    }
+
+    /**
+     * Builds the component for a Pipeline job from its most recent runs.
+     *
+     * @param name          component name shown in the view
+     * @param job           the Pipeline job
+     * @param noOfPipelines how many of the latest runs to include
+     * @param showChanges   whether to attach the change sets of each run
+     * @return the component with one pipeline per run
+     * @throws PipelineException if a run cannot be resolved
+     */
+    public static Component resolve(String name, WorkflowJob job, int noOfPipelines, boolean showChanges)
+            throws PipelineException {
+        List<Pipeline> pipelines = new ArrayList<>();
+        if (job.getBuilds() != null) {
+            Iterator<WorkflowRun> it = job.getBuilds().iterator();
+            for (int i = 0; i < noOfPipelines && it.hasNext(); i++) {
+                WorkflowRun build = it.next();
+                Pipeline pipeline = Pipeline.resolve(job, build);
+                if (showChanges) {
+                    pipeline.setChanges(Change.getChanges(build.getChangeSets()));
+                }
+                pipelines.add(pipeline);
+            }
+        }
+        return new Component(name, job, pipelines);
     }
 
     @Exported

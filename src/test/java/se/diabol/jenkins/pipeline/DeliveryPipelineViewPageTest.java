@@ -25,6 +25,10 @@ import org.htmlunit.Page;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -291,6 +295,72 @@ class DeliveryPipelineViewPageTest {
         }
         jenkins.waitUntilNoActivity();
         assertThat("clicking the manual trigger built deploy", deploy.getBuilds().size(), is(1));
+    }
+
+    @Test
+    void pipelineJobsRenderNextToFreestyleChains() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "wf");
+        flow.setDefinition(new CpsFlowDefinition("node { stage('Compile') { echo 'compiling' } }", true));
+        jenkins.buildAndAssertSuccess(flow);
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Mixed");
+        view.setComponentSpecs(List.of(
+                new DeliveryPipelineView.ComponentSpec("Comp", "build", null, false),
+                new DeliveryPipelineView.ComponentSpec("Flow", "wf", null, false)));
+        view.setNoOfPipelines(1);
+        view.setAllowPipelineStart(true);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            String json = client.getPage(new URL(jenkins.getURL(), view.getViewUrl() + "api/json"))
+                    .getWebResponse().getContentAsString();
+            assertThat(json, containsString("\"workflowComponent\":true"));
+
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".pipeline-component").size(), is(2));
+            DomElement pipelines = page.getElementById("pipelines-1-0");
+            assertThat(pipelines.asNormalizedText(), containsString("Flow"));
+            assertThat(pipelines.asNormalizedText(), containsString("Compile"));
+            DomElement start = page.getElementById("startpipeline-1");
+            assertThat(start.getAttribute("data-workflow-url"), containsString("job/wf/"));
+        }
+        assertThat("the Pipeline job counts as an item of the view", view.contains(flow), is(true));
+    }
+
+    @Test
+    void inputStepOfAPipelineJobCanBeProceededFromTheView() throws Exception {
+        WorkflowJob gate = jenkins.getInstance().createProject(WorkflowJob.class, "gate");
+        gate.setDefinition(new CpsFlowDefinition(
+                "node { stage('Build') { echo 'built' }; stage('Deploy') { input 'Deploy?' } }", true));
+        WorkflowRun run = gate.scheduleBuild2(0).waitForStart();
+        waitForInput(run);
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Gate");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Gate", "gate", null, false)));
+        view.setNoOfPipelines(1);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            HtmlElement input = page.querySelector(".task-manual-specify");
+            assertThat("the paused Deploy stage offers the input button", input, notNullValue());
+            assertThat(input.getAttribute("data-project"), is("gate"));
+            input.click();
+            client.waitForBackgroundJavaScript(5000);
+        }
+        jenkins.waitUntilNoActivity();
+        jenkins.assertBuildStatusSuccess(run);
+    }
+
+    private static void waitForInput(WorkflowRun run) throws Exception {
+        for (int i = 0; i < 150; i++) {
+            InputAction action = run.getAction(InputAction.class);
+            if (action != null && !action.getExecutions().isEmpty()) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        throw new AssertionError("build never reached the input step");
     }
 
     private JenkinsRule.WebClient jsClient() {
