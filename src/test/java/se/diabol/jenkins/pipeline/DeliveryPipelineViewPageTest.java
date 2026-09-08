@@ -18,6 +18,8 @@ If not, see <http://www.gnu.org/licenses/>.
 package se.diabol.jenkins.pipeline;
 
 import hudson.model.FreeStyleProject;
+import hudson.model.Result;
+import hudson.tasks.BuildTrigger;
 import org.htmlunit.Page;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlPage;
@@ -149,6 +151,33 @@ class DeliveryPipelineViewPageTest {
             assertThat(error, not(containsString("Error communicating")));
             assertThat(page.getElementById("pipelines-1-0").asXml(), containsString("Comp"));
             assertThat(page.getElementById("pipelines-1-0").getAttribute("style"), containsString("width"));
+        }
+    }
+
+    @Test
+    void connectorsAreDrawnBetweenChainedJobs() throws Exception {
+        FreeStyleProject build = jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class);
+        FreeStyleProject deploy = jenkins.createFreeStyleProject("deploy");
+        build.getPublishersList().add(new BuildTrigger(deploy.getName(), Result.SUCCESS));
+        jenkins.getInstance().rebuildDependencyGraph();
+        jenkins.buildAndAssertSuccess(build);
+        jenkins.waitUntilNoActivity();
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Chain");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Chain", "build", null, false)));
+        view.setNoOfPipelines(1);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.getOptions().setThrowExceptionOnFailingStatusCode(false);
+            client.getOptions().setThrowExceptionOnScriptError(false);
+            HtmlPage page = client.getPage(new URL(jenkins.getURL(), view.getViewUrl()));
+            client.waitForBackgroundJavaScript(15000);
+
+            assertThat(page.getElementById("pipelineerror-0").getTextContent(), not(containsString("Error")));
+            assertThat(page.querySelectorAll(".stage").size(), is(2));
+            assertThat("jsPlumb drew a connector between the two stages",
+                    page.querySelectorAll("._jsPlumb_connector, .relation").size(), is(1));
         }
     }
 
