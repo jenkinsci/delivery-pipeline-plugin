@@ -23,6 +23,11 @@ This plugin has been contributed to the community by [Diabol AB](https://www.dia
 
 Recent Changes
 ---
+- **1.6**: the view renders without third-party scripts (jQuery, jsPlumb and moment are gone), a Delivery Pipeline
+  View component can be a Pipeline (Jenkinsfile) job, nested stages and parallel branches show as tasks of their
+  stage, names are escaped everywhere in the generated markup, no inline styles (Content-Security-Policy), theme-aware
+  colours, jquery-plugin dependency dropped, Joda-Time and deprecated Stapler/Acegi APIs replaced, continuous
+  delivery set up. The "Delivery Pipeline View for Jenkins Pipelines" is deprecated.
 - **1.5.0**: Version bump; continued modernization and dependency maintenance.
 - **Plugin modernized** — updated build tooling, POM structure, and CI configuration to current Jenkins plugin standards.
 - **Browser-level tests** — the views are rendered with JavaScript in HtmlUnit as part of the regular test suite.
@@ -34,7 +39,7 @@ Recent Changes
 
 Requirements
 ---
-Delivery Pipeline plugin 1.5.0 and later requires Java 17 and Jenkins core 2.541.2 or later (Java 21 is used in CI; Java 25 works for plugin development).
+Delivery Pipeline plugin 1.5 and later requires Java 17 and Jenkins core 2.541.2 or later (Java 21 is used in CI; Java 25 works for plugin development).
 
 Delivery Pipeline plugin 1.4.0 and later requires Java 8 and Jenkins core 2.164 or later (Java 11 required for plugin development).
 
