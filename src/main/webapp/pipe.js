@@ -386,7 +386,9 @@ var DeliveryPipeline = (function () {
             var stages = [];
             Array.prototype.forEach.call(row.children, function (cell) {
                 Array.prototype.forEach.call(cell.children, function (child) {
-                    if (child.classList && child.classList.contains('stage')) {
+                    // Placeholders (.stage.hide) only keep the column; stretching them would move the
+                    // row's real boxes down by their height because table cells align on the baseline.
+                    if (child.classList && child.classList.contains('stage') && !child.classList.contains('hide')) {
                         stages.push(child);
                     }
                 });

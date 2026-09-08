@@ -419,6 +419,29 @@ class DeliveryPipelineViewPageTest {
         }
     }
 
+    @Test
+    void placeholderStagesDoNotStretchRows() throws Exception {
+        FreeStyleProject build = jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class);
+        jenkins.createFreeStyleProject("deploy");
+        jenkins.createFreeStyleProject("deploy2");
+        build.getPublishersList().add(new BuildTrigger("deploy, deploy2", Result.SUCCESS));
+        jenkins.getInstance().rebuildDependencyGraph();
+        jenkins.buildAndAssertSuccess(build);
+        jenkins.waitUntilNoActivity();
+        DeliveryPipelineView view = pipelineView("Fan", "build");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat("two downstream jobs are laid out in two rows", page.querySelectorAll(".pipeline-row").size(), is(2));
+            DomElement placeholder = page.querySelector(".stage.hide");
+            assertThat("the second row starts with an invisible placeholder", placeholder, notNullValue());
+            assertThat("placeholders keep their natural height", placeholder.getAttribute("style"), is(""));
+            Object verticalAlign = page.executeJavaScript(
+                    "getComputedStyle(document.querySelector('.pipeline-cell')).verticalAlign").getJavaScriptResult();
+            assertThat(String.valueOf(verticalAlign), is("top"));
+        }
+    }
+
     private DeliveryPipelineView pipelineView(String name, String job) throws IOException {
         DeliveryPipelineView view = new DeliveryPipelineView(name);
         view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec(name, job, null, false)));

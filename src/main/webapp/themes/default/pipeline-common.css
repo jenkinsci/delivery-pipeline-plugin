@@ -86,6 +86,7 @@ div.pipeline-row {
 
 div.pipeline-cell {
     display: table-cell;
+    vertical-align: top;
     padding-bottom: 30px;
 }
 
