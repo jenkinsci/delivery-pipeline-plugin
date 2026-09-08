@@ -46,7 +46,6 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.bind.JavaScriptMethod;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.core.PipelineView;
 import se.diabol.jenkins.core.TimestampFormat;
@@ -448,7 +447,6 @@ public class DeliveryPipelineView extends View implements PipelineView {
         this.description = description;
     }
 
-    @JavaScriptMethod
     @Override
     public void triggerManual(String projectName, String upstreamName, String buildId)
             throws TriggerException, AuthenticationException {

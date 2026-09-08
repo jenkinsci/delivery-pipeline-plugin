@@ -1,7 +1,6 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
 
-    <st:bind var="view" value="${it}"/>
     <j:set var="fullscreen" value='${request.getParameter("fullscreen") == "true" ? "true" : "false"}'/>
 
     <j:set var="page" value='${request.getParameter("page") == null ? 1 : request.getParameter("page")}'/>
