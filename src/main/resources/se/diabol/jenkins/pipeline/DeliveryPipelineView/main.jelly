@@ -2,15 +2,10 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
 
     <st:bind var="view" value="${it}"/>
-    <st:bind var="fullscreen" value='${request.getParameter("fullscreen") == null ? null :
-        (request.getParameter("fullscreen") == "true" ? "true" : "false")}'/>
-
     <j:set var="fullscreen" value='${request.getParameter("fullscreen") == "true" ? "true" : "false"}'/>
 
-    <st:bind var="page" value='${request.getParameter("page")}'/>
     <j:set var="page" value='${request.getParameter("page") == null ? 1 : request.getParameter("page")}'/>
 
-    <st:bind var="component" value='${request.getParameter("component")}'/>
     <j:set var="component" value='${request.getParameter("component") == null ? 1 : request.getParameter("component")}'/>
 
     <link rel="stylesheet" href="${resURL}/plugin/delivery-pipeline-plugin/themes/default/pipeline-common.css"/>
@@ -65,10 +60,11 @@
             </j:forEach>
             <div class="clear"></div>
 
-            <span class="dpv-data-holder" data-it-id="${it.id}" data-number-of-columns="${it.noOfColumns}"
+            <span class="dpv-data-holder" data-it-id="${it.id == null ? 0 : it.id}" data-number-of-columns="${it.noOfColumns}"
                   data-show-changes="${it.isShowChanges()}" data-view-url="${it.getViewUrl()}"
                   data-aggregated-changes-grouping-pattern="${it.getAggregatedChangesGroupingPattern()}"
-                  data-update-interval="${it.updateInterval}"/>
+                  data-update-interval="${it.updateInterval}"
+                  data-fullscreen="${fullscreen}" data-page="${page}" data-component="${component}"/>
         </div>
     </div>
     <!--<st:include page="legend.jelly"/>-->
