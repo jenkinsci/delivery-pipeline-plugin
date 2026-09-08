@@ -4,7 +4,7 @@
 
     <groupId>se.diabol.jenkins.pipeline</groupId>
     <artifactId>delivery-pipeline-plugin</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>${revision}.${changelist}</version>
     <packaging>hpi</packaging>
     <name>Delivery Pipeline Plugin</name>
     <url>https://github.com/jenkinsci/${project.artifactId}</url>
@@ -37,8 +37,8 @@
     </pluginRepositories>
 
     <properties>
-        <revision>1.5.0</revision>
-        <changelist>-SNAPSHOT</changelist>
+        <revision>1.5</revision>
+        <changelist>999999-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
         <jenkins.baseline>2.541</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.2</jenkins.version>
