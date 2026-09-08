@@ -43,7 +43,6 @@
         <jenkins.baseline>2.541</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.2</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
-        <selenium.version>4.48.0</selenium.version>
         <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
         <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     </properties>
@@ -63,12 +62,6 @@
                 <version>6166.va_a_8b_5eda_8ef5</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <!-- CVE-2025-48924: force safe version of transitive dep from webdrivermanager -->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>3.20.0</version>
             </dependency>
             <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: safe xerces replacing analysis-core's bundled version -->
             <dependency>
@@ -100,36 +93,6 @@
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
             <version>1.4.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-firefox-driver</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <artifactId>commons-io</artifactId>
-                    <groupId>commons-io</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-chrome-driver</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-support</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.github.bonigarcia</groupId>
-            <artifactId>webdrivermanager</artifactId>
-            <version>6.1.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -280,38 +243,9 @@
                 <configuration>
                     <forkCount>1C</forkCount>
                     <reuseForks>true</reuseForks>
-                    <excludes>
-                        <exclude>se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalTest.java</exclude>
-                    </excludes>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
-    <profiles>
-        <profile>
-            <id>windows-ci</id>
-            <activation>
-                <os>
-                    <family>Windows</family>
-                </os>
-                <property>
-                    <name>env.CI</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <!-- TODO fails on CI on Windows for inscrutable reasons -->
-                            <excludes>
-                                <exclude>se.diabol.jenkins.pipeline.functionaltest.GuiFunctionalTest</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
