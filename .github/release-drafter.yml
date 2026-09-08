@@ -1,5 +1,34 @@
-# https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
----
-_extends: .github
-tag-template: delivery-pipeline-plugin-$NEXT_MINOR_VERSION
-version-template: $MAJOR.$MINOR.$PATCH
+name-template: '$RESOLVED_VERSION 🌈'
+tag-template: '$RESOLVED_VERSION'
+categories:
+  - title: '🚀 Features'
+    semver-increment: minor
+    when:
+      labels:
+        - 'feature'
+        - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    when:
+      labels:
+        - 'fix'
+        - 'bugfix'
+        - 'bug'
+  - title: '🧰 Maintenance'
+    when:
+      label: 'chore'
+  - type: 'pre-exclude'
+    when:
+      label: 'skip-changelog'
+  - type: 'version-resolver'
+    semver-increment: 'major'
+    when:
+      label: 'major'
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+change-template: '- $TITLE (#$NUMBER) $AUTHORS'
+# Add # and @ to prevent mentions. Add ` to prevent code blocks.
+change-title-escapes: '\<*_&'
+template: |
+  ## Changes
+
+  $CHANGES
