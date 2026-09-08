@@ -75,7 +75,7 @@ function pipelineUtils() {
                         triggered = '';
                         for (var y = 0; y < pipeline.triggeredBy.length; y++) {
                             trigger = pipeline.triggeredBy[y];
-                            triggered = triggered + ' <span class="' + trigger.type + '">' + htmlEncode(trigger.description) + '</span>';
+                            triggered = triggered + ' <span class="' + attr(trigger.type) + '">' + htmlEncode(trigger.description) + '</span>';
                             if (y < pipeline.triggeredBy.length - 1) {
                                 triggered = triggered + ', ';
                             }
@@ -99,7 +99,7 @@ function pipelineUtils() {
                             html.push(' triggered by ' + triggered);
                         }
 
-                        html.push(' started <span id="' + pipeline.id + '\">' + formatDate(pipeline.timestamp, lastUpdate, showAbsoluteDateTime) + '</span></h2>');
+                        html.push(' started <span id="' + attr(pipeline.id) + '">' + formatDate(pipeline.timestamp, lastUpdate, showAbsoluteDateTime) + '</span></h2>');
 
                         if (data.showTotalBuildTime) {
                             html.push('<h3>Total build time: ' + formatDuration(pipeline.totalBuildTime) + '</h3>');
@@ -136,7 +136,7 @@ function pipelineUtils() {
                         }
 
                         html.push('<div class="pipeline-cell">');
-                        html.push('<div id="' + getStageId(stage.id + '', i) + '" class="stage ' + getStageClassName(stage.name) + '">');
+                        html.push('<div id="' + attr(getStageId(stage.id + '', i)) + '" class="stage ' + getStageClassName(stage.name) + '">');
                         html.push('<div class="stage-header"><div class="stage-name">' + htmlEncode(stage.name) + '</div>');
 
                         if (!pipeline.aggregated) {
@@ -181,27 +181,27 @@ function pipelineUtils() {
                             }
 
                             html.push(
-                                '<div id="' + id + '" class="status stage-task ' + task.status.type + '">'
+                                '<div id="' + id + '" class="status stage-task ' + attr(task.status.type) + '">'
                                 + '<div class="task-progress ' + progressClass + '" style="width: ' + progress + '%">'
                                 + '<div class="task-content">'
                                 + '<div class="task-header">'
                                 + '<div class="taskname">'
-                                + '<a href="' + getLink(data, task.link) + consoleLogLink + '">' + htmlEncode(task.name) + '</a>'
+                                + '<a href="' + attr(getLink(data, task.link) + consoleLogLink) + '">' + htmlEncode(task.name) + '</a>'
                                 + '</div>'
                             );
 
                             if (data.allowManualTriggers && task.manual && task.manualStep.enabled && task.manualStep.permission) {
                                 html.push('<div class="task-manual" id="manual-' + id + '" title="Trigger manual build"' +
-                                            ` data-task-id="${id}" data-downstream-project="${task.id}" data-upstream-project="${task.manualStep.upstreamProject}" data-upstream-build="${task.manualStep.upstreamId}" data-view-url="${view.viewUrl}">`);
+                                            ` data-task-id="${attr(id)}" data-downstream-project="${attr(task.id)}" data-upstream-project="${attr(task.manualStep.upstreamProject)}" data-upstream-build="${attr(task.manualStep.upstreamId)}" data-view-url="${attr(view.viewUrl)}">`);
                                 html.push('</div>');
                             } else if (!pipeline.aggregated) {
                                 if (data.allowRebuild && task.rebuildable) {
-                                    html.push('<div class="task-rebuild" id="rebuild-' + id + '" title="Trigger rebuild"' + ` data-task-id="${id}" data-project="${task.id}" data-build-id="${task.buildId}" data-view-url="${view.viewUrl}">`);
+                                    html.push('<div class="task-rebuild" id="rebuild-' + id + '" title="Trigger rebuild"' + ` data-task-id="${attr(id)}" data-project="${attr(task.id)}" data-build-id="${attr(task.buildId)}" data-view-url="${attr(view.viewUrl)}">`);
                                     html.push('</div>');
                                 }
                                 if (task.requiringInput) {
                                     showAbortButton = true;
-                                    html.push('<div class="task-manual-specify" id="input-' + id + '" title="Specify input"' + ` data-task-id="${id}" data-project="${component.fullJobName}" data-build-id="${task.buildId}" data-view-url="${view.viewUrl}">`);
+                                    html.push('<div class="task-manual-specify" id="input-' + id + '" title="Specify input"' + ` data-task-id="${attr(id)}" data-project="${attr(component.fullJobName)}" data-build-id="${attr(task.buildId)}" data-view-url="${attr(view.viewUrl)}">`);
                                     html.push('</div>');
                                 }
                                 if (showAbortButton) {
@@ -209,7 +209,7 @@ function pipelineUtils() {
                                     if (typeof projectName === "undefined") {
                                         projectName = task.id;
                                     }
-                                    html.push('<div class="task-abort" id="abort-' + id + '" title="Abort progress"' + ` data-task-id="${id}" data-project-name="${projectName}" data-build-id="${task.buildId}" data-view-url="${view.viewUrl}">`);
+                                    html.push('<div class="task-abort" id="abort-' + id + '" title="Abort progress"' + ` data-task-id="${attr(id)}" data-project-name="${attr(projectName)}" data-build-id="${attr(task.buildId)}" data-view-url="${attr(view.viewUrl)}">`);
                                     html.push('</div>');
                                 }
                             }
@@ -320,11 +320,11 @@ function addPipelineHeader(html, component, data, c, resURL) {
     html.push('<h1>' + htmlEncode(component.name));
     if (data.allowPipelineStart) {
         if (component.workflowComponent) {
-            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${component.workflowUrl}" data-task-id="${data.name}">`);
+            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${attr(component.workflowUrl)}" data-task-id="${attr(data.name)}">`);
         } else if (component.firstJobParameterized) {
-            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-parametrized-build" href="#"' + ` data-first-job-url="${component.firstJobUrl}">`);
+            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-parametrized-build" href="#"' + ` data-first-job-url="${attr(component.firstJobUrl)}">`);
         } else {
-            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${component.firstJobUrl}" data-task-id="${data.name}">`);
+            html.push('&nbsp;<a id="startpipeline-' + c  +'" class="task-icon-link task-trigger-build" href="#"' + ` data-workflow-url="${attr(component.firstJobUrl)}" data-task-id="${attr(data.name)}">`);
         }
         html.push('<img class="icon-clock icon-md" title="Build now" src="' + resURL + '/plugin/delivery-pipeline-plugin/themes/default/clock.svg">');
         html.push('</a>');
@@ -335,7 +335,7 @@ function addPipelineHeader(html, component, data, c, resURL) {
 function displayErrorIfAvailable(data, errrorDivId) {
     var cErrorDiv = Q('#' + errrorDivId);
     if (data.error) {
-        cErrorDiv.html('Error: ' + data.error).show();
+        cErrorDiv.html('Error: ' + htmlEncode(data.error)).show();
     } else {
         cErrorDiv.hide().html('');
     }
@@ -384,7 +384,7 @@ function generateTestInfo(data, task) {
     var html = ['<div class="infoPanelOuter">'];
     Q.each(task.testResults, function(i, analysis) {
         html.push('<div class="infoPanel"><div class="infoPanelInner">');
-        html.push('<a href=' + getLink(data,analysis.url) + '>' + analysis.name + '</a>');
+        html.push('<a href="' + attr(getLink(data, analysis.url)) + '">' + htmlEncode(analysis.name) + '</a>');
         html.push('<table id="priority.summary" class="pane">');
         html.push('<tbody>');
         html.push('<tr>');
@@ -428,7 +428,7 @@ function generateStaticAnalysisInfo(data, task) {
 
     Q.each(task.staticAnalysisResults, function(i, analysis) {
         html.push('<tr>');
-            html.push('<td class="pane"><a href=' + getLink(data,analysis.url) + '>' + trimWarningsFromString(analysis.name) + '</a></td>');
+            html.push('<td class="pane"><a href="' + attr(getLink(data, analysis.url)) + '">' + htmlEncode(trimWarningsFromString(analysis.name)) + '</a></td>');
             html.push('<td class="pane" style="text-align: center">' + analysis.high + '</td>');
             html.push('<td class="pane" style="text-align: center">' + analysis.normal + '</td>');
             html.push('<td class="pane" style="text-align: center">' + analysis.low + '</td>');
@@ -455,17 +455,17 @@ function generatePromotionsInfo(data, task) {
     var html = ['<div class="infoPanelOuter">'];
     Q.each(task.status.promotions, function(i, promo) {
         html.push('<div class="infoPanel"><div class="infoPanelInner"><div class="promo-layer">');
-        html.push('<img class="promo-icon" height="16" width="16" src="' + rootURL + promo.icon + '"/>');
-        html.push('<span class="promo-name"><a href="' + getLink(data,task.link) + 'promotion">' + htmlEncode(promo.name) + '</a></span><br/>');
+        html.push('<img class="promo-icon" height="16" width="16" src="' + attr(rootURL + promo.icon) + '"/>');
+        html.push('<span class="promo-name"><a href="' + attr(getLink(data, task.link) + 'promotion') + '">' + htmlEncode(promo.name) + '</a></span><br/>');
         if (promo.user !== 'anonymous') {
-            html.push('<span class="promo-user">' + promo.user + '</span>');
+            html.push('<span class="promo-user">' + htmlEncode(promo.user) + '</span>');
         }
         html.push('<span class="promo-time">' + formatDuration(promo.duration) + '</span><br/>');
         if (promo.params.length > 0) {
             html.push('<br/>');
         }
         Q.each(promo.params, function (j, param) {
-            html.push(param.replace(/\r\n/g, '<br/>') + '<br />');
+            html.push(htmlEncode(param) + '<br />');
         });
         html.push('</div></div></div>');
     });
@@ -484,7 +484,7 @@ function generateChangeLog(changes) {
         var change = changes[i];
 
         if (change.changeLink) {
-            html.push('<a href="' + change.changeLink + '">');
+            html.push('<a href="' + attr(change.changeLink) + '">');
         }
 
         html.push('<div class="change-commit-id">' + htmlEncode(change.commitId) + '</div>');
@@ -494,7 +494,7 @@ function generateChangeLog(changes) {
         }
 
         html.push('<div class="change-author">' + htmlEncode(change.author.name) + '</div>');
-        html.push('<div class="change-message">' + change.message + '</div>');
+        html.push('<div class="change-message">' + htmlEncode(change.message) + '</div>');
         html.push('</div>');
     }
     html.push('</div>');
@@ -536,13 +536,13 @@ function generateAggregatedChangelog(stageChanges, aggregatedChangesGroupingPatt
 
     keys.forEach(function(matchKey) {
         if (matchKey !== unmatchedChangesKey) {
-            html.push('<li class="aggregatedKey"><b>' + matchKey + '</b><ul>');
+            html.push('<li class="aggregatedKey"><b>' + htmlEncode(matchKey) + '</b><ul>');
         }
 
         if (changes[matchKey]) {
             changes[matchKey].forEach(function (change) {
                 html.push('<li>');
-                html.push(change.message || '&nbsp;');
+                html.push(change.message ? htmlEncode(change.message) : '&nbsp;');
                 html.push('</li>');
             });
         }
@@ -561,16 +561,20 @@ function generateAggregatedChangelog(stageChanges, aggregatedChangesGroupingPatt
 }
 
 function getStageClassName(stagename) {
-    return 'stage_' + replace(stagename, ' ', '_');
+    return 'stage_' + cssIdentifier(stagename);
 }
 
 function getTaskId(taskname, count) {
-    return 'task-' + replace(replace(taskname, ' ', '_'), '/', '_') + count;
+    return 'task-' + cssIdentifier(taskname) + count;
 }
 
-function replace(string, replace, replaceWith) {
-    var re = new RegExp(replace, 'g');
-    return string.replace(re, replaceWith);
+/**
+ * Reduces a job, stage or view name to characters that are safe in an id, a class name and a
+ * jQuery selector. Names may contain quotes, parentheses and other characters that would
+ * otherwise break out of the generated markup.
+ */
+function cssIdentifier(value) {
+    return String(value).replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 
@@ -748,9 +752,20 @@ function htmlEncode(html) {
         .replace(/\n/g, '<br/>');
 }
 
+/**
+ * Encodes a value for use inside a double-quoted HTML attribute. Unlike htmlEncode this also
+ * encodes quotes, and it never inserts markup.
+ */
+function attr(value) {
+    return String(value === undefined || value === null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 function getStageId(name, count) {
-    var re = / /g;
-    return name.replace(re, '_') + '_' + count;
+    return cssIdentifier(name) + '_' + count;
 }
 
 function equalheight(container) {

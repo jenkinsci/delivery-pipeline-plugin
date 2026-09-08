@@ -19,6 +19,7 @@ package se.diabol.jenkins.pipeline;
 
 import hudson.model.FreeStyleProject;
 import org.htmlunit.Page;
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Regression tests for the view page and its JSON API after the inline scripts were moved to
@@ -95,6 +97,40 @@ class DeliveryPipelineViewPageTest {
         try (JenkinsRule.WebClient client = staticClient()) {
             String json = body(client, VIEW_URL + "api/json?page=null&component=null&fullscreen=null");
             assertThat(json, containsString("\"Comp\""));
+        }
+    }
+
+    @Test
+    void namesWithQuotesAreRenderedAsDataNotMarkup() throws Exception {
+        FreeStyleProject odd = jenkins.createFreeStyleProject("job \"with\" 'quotes' (and parens)");
+        odd.addProperty(new PipelineProperty("Task \"q\"", "Stage \"q\"", ""));
+        jenkins.buildAndAssertSuccess(odd);
+
+        DeliveryPipelineView view = new DeliveryPipelineView("View \"with\" 'quotes'");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Odd", odd.getName(), null, false)));
+        view.setAllowPipelineStart(true);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.getOptions().setThrowExceptionOnFailingStatusCode(false);
+            client.getOptions().setThrowExceptionOnScriptError(false);
+            HtmlPage page = client.getPage(new URL(jenkins.getURL(), view.getViewUrl()));
+            client.waitForBackgroundJavaScript(15000);
+
+            assertThat(page.getElementById("pipelineerror-0").getTextContent(), not(containsString("Error")));
+            DomElement start = page.querySelector(".task-trigger-build");
+            assertThat(start, notNullValue());
+            assertThat(start.getAttribute("data-task-id"), is(view.getViewName()));
+            assertThat("only the attributes pipe.js writes, nothing injected by the name",
+                    start.getAttributes().getLength(), is(5));
+
+            DomElement pipelines = page.getElementById("pipelines-1-0");
+            assertThat(pipelines.asNormalizedText(), containsString("Task \"q\""));
+            assertThat(pipelines.asNormalizedText(), containsString("Stage \"q\""));
+            DomElement task = page.querySelector(".stage-task");
+            assertThat(task.getId(), is("task-job__with___quotes___and_parens_0"));
+            DomElement stage = page.querySelector(".stage");
+            assertThat(stage.getAttribute("class"), is("stage stage_Stage__q_"));
         }
     }
 
