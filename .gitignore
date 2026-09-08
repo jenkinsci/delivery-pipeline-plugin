@@ -13,3 +13,6 @@ work
 .settings
 .classpath
 .project
+
+# macOS Finder metadata
+.DS_Store
