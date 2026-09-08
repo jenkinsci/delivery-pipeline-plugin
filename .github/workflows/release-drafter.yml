@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'The version number to be used, passed from the caller'
+        description: 'The version number for the next release'
         required: false
         type: string
 
