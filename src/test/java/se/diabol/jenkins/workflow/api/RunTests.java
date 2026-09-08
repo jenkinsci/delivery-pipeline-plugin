@@ -17,7 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.api;
 
-import org.joda.time.DateTime;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -71,8 +71,8 @@ class RunTests {
                 "2014-04-27_20-40-00",
                        "#1",
                        "SUCCESS",
-                       new DateTime(System.currentTimeMillis()),
-                       new DateTime(System.currentTimeMillis()),
+                       Instant.ofEpochMilli(System.currentTimeMillis()),
+                       Instant.ofEpochMilli(System.currentTimeMillis()),
                        7500L,
                        stages);
     }
@@ -83,7 +83,7 @@ class RunTests {
             stages.add(new Stage("2014-04-27_20-40-00",
                                  "Stage" + i,
                                  "SUCCESS",
-                                 new DateTime(System.currentTimeMillis()),
+                                 Instant.ofEpochMilli(System.currentTimeMillis()),
                                  1500L));
         }
         return stages;

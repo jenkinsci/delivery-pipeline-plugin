@@ -19,7 +19,7 @@ package se.diabol.jenkins.workflow.api;
 
 import com.cloudbees.workflow.rest.external.RunExt;
 import com.cloudbees.workflow.rest.external.StageNodeExt;
-import org.joda.time.DateTime;
+import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,16 +29,16 @@ public class Run {
     public final String id;
     public final String name;
     public final String status;
-    public final DateTime startTimeMillis;
-    public final DateTime endTimeMillis;
+    public final Instant startTimeMillis;
+    public final Instant endTimeMillis;
     public final Long durationMillis;
     public final List<Stage> stages;
 
     public Run(String id,
                String name,
                String status,
-               DateTime startTimeMillis,
-               DateTime endTimeMillis,
+               Instant startTimeMillis,
+               Instant endTimeMillis,
                Long durationMillis,
                List<Stage> stages) {
         this.id = id;
@@ -54,8 +54,8 @@ public class Run {
         this.id = run.getId();
         this.name = run.getName();
         this.status = run.getStatus().toString();
-        this.startTimeMillis = new DateTime(run.getStartTimeMillis());
-        this.endTimeMillis = new DateTime(run.getEndTimeMillis());
+        this.startTimeMillis = Instant.ofEpochMilli(run.getStartTimeMillis());
+        this.endTimeMillis = Instant.ofEpochMilli(run.getEndTimeMillis());
         this.durationMillis = run.getDurationMillis();
         this.stages = asStages(run.getStages());
     }
@@ -87,7 +87,7 @@ public class Run {
                     stage.getId(),
                     stage.getName(),
                     stage.getStatus().toString(),
-                    new DateTime(stage.getStartTimeMillis()),
+                    Instant.ofEpochMilli(stage.getStartTimeMillis()),
                     stage.getDurationMillis()
             ));
         }

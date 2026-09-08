@@ -17,8 +17,8 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.api;
 
-import com.google.common.base.Objects;
-import org.joda.time.DateTime;
+import java.time.Instant;
+import java.util.Objects;
 
 import java.util.List;
 
@@ -27,13 +27,13 @@ public class Stage {
     public final String id;
     public final String name;
     public final String status;
-    public final DateTime startTimeMillis;
+    public final Instant startTimeMillis;
     public final Long durationMillis;
 
     public Stage(String id,
                  String name,
                  String status,
-                 DateTime startTimeMillis,
+                 Instant startTimeMillis,
                  Long durationMillis) {
         this.id = id;
         this.name = name;
@@ -69,16 +69,16 @@ public class Stage {
             return false;
         }
         Stage stage = (Stage) other;
-        return Objects.equal(id, stage.id)
-                && Objects.equal(name, stage.name)
-                && Objects.equal(status, stage.status)
-                && Objects.equal(startTimeMillis, stage.startTimeMillis)
-                && Objects.equal(durationMillis, stage.durationMillis);
+        return Objects.equals(id, stage.id)
+                && Objects.equals(name, stage.name)
+                && Objects.equals(status, stage.status)
+                && Objects.equals(startTimeMillis, stage.startTimeMillis)
+                && Objects.equals(durationMillis, stage.durationMillis);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id, name, status, startTimeMillis, durationMillis);
+        return Objects.hash(id, name, status, startTimeMillis, durationMillis);
     }
 
     @Override

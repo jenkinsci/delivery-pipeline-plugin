@@ -78,10 +78,6 @@
             <artifactId>jgrapht-core</artifactId>
             <version>1.5.3</version>
         </dependency>
-        <dependency>
-            <groupId>io.jenkins.plugins</groupId>
-            <artifactId>joda-time-api</artifactId>
-        </dependency>
         <!-- Test Dependencies -->
         <dependency>
             <groupId>commons-beanutils</groupId>

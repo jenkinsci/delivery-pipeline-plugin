@@ -18,7 +18,8 @@ If not, see <http://www.gnu.org/licenses/>.
 package se.diabol.jenkins.pipeline.sort;
 
 import com.google.common.collect.Lists;
-import org.joda.time.DateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import se.diabol.jenkins.pipeline.domain.Component;
 import se.diabol.jenkins.pipeline.domain.status.SimpleStatus;
@@ -44,8 +45,8 @@ class FailedJobComparatorTest {
     @Test
     void shouldSortFailedBeforeSuccessful() {
 
-        Component failedComponent = createComponent(status(FAILED, new DateTime().minusDays(1)));
-        Component successfulComponent = createComponent(status(SUCCESS, new DateTime().minusDays(1)));
+        Component failedComponent = createComponent(status(FAILED, Instant.now().minus(1, ChronoUnit.DAYS)));
+        Component successfulComponent = createComponent(status(SUCCESS, Instant.now().minus(1, ChronoUnit.DAYS)));
 
         List<Component> list = new ArrayList<>();
         list.add(successfulComponent);
@@ -59,9 +60,9 @@ class FailedJobComparatorTest {
     @Test
     void shouldSortRecentlyRunFirstIfSameStatus() {
 
-        Component failedComponentRunLongAgo = createComponent(status(FAILED, new DateTime().minusDays(10)));
-        Component failedComponent = createComponent(status(FAILED, new DateTime().minusDays(1)));
-        Component successfulComponent = createComponent(status(SUCCESS, new DateTime().minusDays(1)));
+        Component failedComponentRunLongAgo = createComponent(status(FAILED, Instant.now().minus(10, ChronoUnit.DAYS)));
+        Component failedComponent = createComponent(status(FAILED, Instant.now().minus(1, ChronoUnit.DAYS)));
+        Component successfulComponent = createComponent(status(SUCCESS, Instant.now().minus(1, ChronoUnit.DAYS)));
         List<Component> list = new ArrayList<>();
         list.add(successfulComponent);
         list.add(failedComponent);
@@ -76,8 +77,8 @@ class FailedJobComparatorTest {
     @Test
     void shouldSortNotRunJobLast() {
         Component notRunComponent = createDeliveryPipelineComponentWithNoRuns();
-        Component successfulComponent = createComponent(status(SUCCESS, new DateTime().minusDays(1)));
-        Component failedComponent = createComponent(status(FAILED, new DateTime().minusDays(1)));
+        Component successfulComponent = createComponent(status(SUCCESS, Instant.now().minus(1, ChronoUnit.DAYS)));
+        Component failedComponent = createComponent(status(FAILED, Instant.now().minus(1, ChronoUnit.DAYS)));
         List<Component> list = new ArrayList<>();
         list.add(notRunComponent);
         list.add(successfulComponent);
@@ -152,12 +153,12 @@ class FailedJobComparatorTest {
     @Test
     void shouldBeAbleToCompareWithNull() {
         FailedJobComparator comparator = new FailedJobComparator();
-        Component successfulComponent = createComponent(status(SUCCESS, new DateTime()));
+        Component successfulComponent = createComponent(status(SUCCESS, Instant.now()));
         assertTrue(comparator.compare(successfulComponent, null) < 0);
         assertTrue(comparator.compare(null, successfulComponent) > 0);
     }
 
-    private Status status(StatusType statusType, DateTime lastRunAt) {
-        return new SimpleStatus(statusType, lastRunAt.getMillis(), 10, false, Lists.newArrayList());
+    private Status status(StatusType statusType, Instant lastRunAt) {
+        return new SimpleStatus(statusType, lastRunAt.toEpochMilli(), 10, false, Lists.newArrayList());
     }
 }

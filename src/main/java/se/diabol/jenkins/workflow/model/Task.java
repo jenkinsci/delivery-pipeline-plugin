@@ -199,7 +199,7 @@ public class Task extends AbstractItem {
     }
 
     private static long getStageDuration(Stage stage) {
-        return stage.startTimeMillis.getMillis() + stage.durationMillis;
+        return stage.startTimeMillis.toEpochMilli() + stage.durationMillis;
     }
 
     private static long getTaskStartTime(FlowNode taskNode) {
@@ -237,7 +237,7 @@ public class Task extends AbstractItem {
             return 99;
         }
 
-        long stageStartTime = currentStage.startTimeMillis.getMillis();
+        long stageStartTime = currentStage.startTimeMillis.toEpochMilli();
         long estimatedStageDuration = Stage.getDurationOfStageFromRun(previousRun, currentStage);
         return Progress.calculate(stageStartTime, estimatedStageDuration);
     }
