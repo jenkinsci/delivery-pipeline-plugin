@@ -182,7 +182,7 @@ function pipelineUtils() {
 
                             html.push(
                                 '<div id="' + id + '" class="status stage-task ' + attr(task.status.type) + '">'
-                                + '<div class="task-progress ' + progressClass + '" style="width: ' + progress + '%">'
+                                + '<div class="task-progress ' + progressClass + '" data-progress="' + attr(progress) + '">'
                                 + '<div class="task-content">'
                                 + '<div class="task-header">'
                                 + '<div class="taskname">'
@@ -247,6 +247,7 @@ function pipelineUtils() {
                 html.push(getPagination(showAvatars, component));
                 html.push('</section>');
                 Q('#' + divNames[c % divNames.length]).append(html.join(''));
+                applyProgressWidths(divNames[c % divNames.length]);
                 Q('#pipeline-message-' + pipelineid).html('');
             }
 
@@ -330,6 +331,16 @@ function addPipelineHeader(html, component, data, c, resURL) {
         html.push('</a>');
     }
     html.push('</h1>');
+}
+
+/**
+ * Progress bars carry their percentage in data-progress; the width is applied through the CSSOM
+ * so that no style attribute is needed in the generated markup (Content-Security-Policy).
+ */
+function applyProgressWidths(containerId) {
+    Q('#' + containerId + ' .task-progress[data-progress]').each(function () {
+        this.style.width = this.getAttribute('data-progress') + '%';
+    });
 }
 
 function displayErrorIfAvailable(data, errrorDivId) {
@@ -419,9 +430,9 @@ function generateStaticAnalysisInfo(data, task) {
     html.push('<thead>');
     html.push('<tr>');
     html.push('<td class="pane-header">Warnings</td>');
-    html.push('<td class="pane-header" style="font-size: smaller; vertical-align: bottom">High</td>');
-    html.push('<td class="pane-header" style="font-size: smaller; vertical-align: bottom">Normal</td>');
-    html.push('<td class="pane-header" style="font-size: smaller; vertical-align: bottom">Low</td>');
+    html.push('<td class="pane-header analysis-header">High</td>');
+    html.push('<td class="pane-header analysis-header">Normal</td>');
+    html.push('<td class="pane-header analysis-header">Low</td>');
     html.push('</tr>');
     html.push('</thead>');
     html.push('<tbody>');
@@ -429,9 +440,9 @@ function generateStaticAnalysisInfo(data, task) {
     Q.each(task.staticAnalysisResults, function(i, analysis) {
         html.push('<tr>');
             html.push('<td class="pane"><a href="' + attr(getLink(data, analysis.url)) + '">' + htmlEncode(trimWarningsFromString(analysis.name)) + '</a></td>');
-            html.push('<td class="pane" style="text-align: center">' + analysis.high + '</td>');
-            html.push('<td class="pane" style="text-align: center">' + analysis.normal + '</td>');
-            html.push('<td class="pane" style="text-align: center">' + analysis.low + '</td>');
+            html.push('<td class="pane analysis-count">' + analysis.high + '</td>');
+            html.push('<td class="pane analysis-count">' + analysis.normal + '</td>');
+            html.push('<td class="pane analysis-count">' + analysis.low + '</td>');
         html.push('</tr>');
     });
 

@@ -330,6 +330,15 @@ div.clear {
     clear: both;
 }
 
+td.analysis-header {
+    font-size: smaller;
+    vertical-align: bottom;
+}
+
+td.analysis-count {
+    text-align: center;
+}
+
 div.pipelineerror {
     background-color: red;
     font-size: 22px;

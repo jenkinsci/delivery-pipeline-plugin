@@ -24,7 +24,14 @@ Q(document).ready(function() {
             jsPlumbUtilityVariable.push(jsplumb);
 
             for (let i = 1; i <= numberOfColumns; i++) {
-                pipelineContainers.push(`pipelines-${i}-${pipelineid}`);
+                const containerId = `pipelines-${i}-${pipelineid}`;
+                const container = document.getElementById(containerId);
+                if (container) {
+                    // Set through the CSSOM rather than a style attribute so that the page works
+                    // under a Content-Security-Policy without 'unsafe-inline' styles.
+                    container.style.width = (100 / numberOfColumns) + '%';
+                }
+                pipelineContainers.push(containerId);
             }
 
             var view = { "viewUrl" : viewUrl };

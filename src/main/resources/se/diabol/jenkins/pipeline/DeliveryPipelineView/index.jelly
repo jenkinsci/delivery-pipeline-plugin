@@ -25,7 +25,7 @@
                           data-crumb-value="${h.getCrumb(request)}"
                           data-run-as-test="${h.isUnitTest}"
                           data-root-url="${rootURL}"
-                          data-res-url="${resURL}" style="display: none"/>
+                          data-res-url="${resURL}" hidden="hidden"/>
                     <st:adjunct includes="se.diabol.jenkins.pipeline.DeliveryPipelineView.view-fullscreen"/>
                     <st:adjunct includes="org.kohsuke.stapler.jquery"/>
                     <j:forEach var="pd" items="${h.pageDecorators}">

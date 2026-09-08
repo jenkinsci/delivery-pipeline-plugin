@@ -55,7 +55,7 @@
             </div>
 
             <j:forEach begin="1" end="${it.noOfColumns}" indexVar="i">
-                <div id="pipelines-${i}-${it.id == null ? 0 : it.id}" class="left" style="width: ${100/it.noOfColumns}%;"></div>
+                <div id="pipelines-${i}-${it.id == null ? 0 : it.id}" class="left"></div>
             </j:forEach>
             <div class="clear"></div>
 

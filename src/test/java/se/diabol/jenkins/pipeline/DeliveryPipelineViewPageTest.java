@@ -75,6 +75,8 @@ class DeliveryPipelineViewPageTest {
             assertThat(html, not(containsString("bound/script/null?var=page")));
             assertThat(html, not(containsString("bound/script/null?var=component")));
             assertThat(html, not(containsString("bound/script/null?var=fullscreen")));
+            assertThat("column width is applied by script, not an inline style",
+                    html, containsString("id=\"pipelines-1-0\" class=\"left\"></div>"));
 
             String secondPage = body(client, VIEW_URL + "?page=2&component=1");
             assertThat(secondPage, containsString("data-page=\"2\""));
@@ -146,6 +148,7 @@ class DeliveryPipelineViewPageTest {
             String error = page.getElementById("pipelineerror-0").getTextContent();
             assertThat(error, not(containsString("Error communicating")));
             assertThat(page.getElementById("pipelines-1-0").asXml(), containsString("Comp"));
+            assertThat(page.getElementById("pipelines-1-0").getAttribute("style"), containsString("width"));
         }
     }
 
