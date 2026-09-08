@@ -43,7 +43,7 @@
         <jenkins.baseline>2.541</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.2</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
-        <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
+        <hpi.bundledArtifacts>jgrapht-core</hpi.bundledArtifacts>
         <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     </properties>
 
@@ -228,11 +228,6 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.objenesis</groupId>
-            <artifactId>objenesis</artifactId>
-            <version>3.4</version>
         </dependency>
     </dependencies>
 
