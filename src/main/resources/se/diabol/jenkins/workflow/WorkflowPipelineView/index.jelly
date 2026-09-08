@@ -27,7 +27,7 @@
                           data-root-url="${rootURL}"
                           data-res-url="${resURL}" hidden="hidden"/>
                     <st:adjunct includes="se.diabol.jenkins.workflow.WorkflowPipelineView.workflow-pipeline-fullscreen"/>
-                    <st:adjunct includes="org.kohsuke.stapler.jquery"/>
+                    <st:adjunct includes="io.jenkins.plugins.jquery3"/>
                     <j:forEach var="pd" items="${h.pageDecorators}">
                         <st:include it="${pd}" page="header.jelly" optional="true" />
                     </j:forEach>
