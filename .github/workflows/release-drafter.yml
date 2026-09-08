@@ -2,12 +2,11 @@
 # More Info: https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
 
 name: Release Drafter
-
 on:
   push:
     branches:
       - master
-      - main
+  workflow_dispatch:
 
 jobs:
   update_release_draft:
