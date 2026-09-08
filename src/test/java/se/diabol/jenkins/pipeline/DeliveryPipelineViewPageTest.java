@@ -17,11 +17,13 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
+import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.tasks.BuildTrigger;
 import org.htmlunit.Page;
 import org.htmlunit.html.DomElement;
+import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -179,6 +182,129 @@ class DeliveryPipelineViewPageTest {
             assertThat("jsPlumb drew a connector between the two stages",
                     page.querySelectorAll("._jsPlumb_connector, .relation").size(), is(1));
         }
+    }
+
+    @Test
+    void paginationLinksAreRenderedForOlderPipelines() throws Exception {
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, VIEW_URL);
+            assertThat("two builds, one pipeline per page: a link to page 2",
+                    page.querySelectorAll(".pagination a[href*='page=2']").size(), greaterThanOrEqualTo(1));
+        }
+    }
+
+    @Test
+    void aggregatedRowAndHtmlDescriptionAreRendered() throws Exception {
+        FreeStyleProject build = jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class);
+        build.addProperty(new PipelineProperty("Compile", "Build", "Deploys <b>everything</b> & more"));
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Described");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Comp", "build", null, false)));
+        view.setShowAggregatedPipeline(true);
+        view.setShowDescription(true);
+        view.setNoOfPipelines(1);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            DomElement pipelines = page.getElementById("pipelines-1-0");
+            assertThat(pipelines.asNormalizedText(), containsString("Aggregated view"));
+            assertThat("the description template is rendered as HTML on purpose",
+                    pipelines.querySelector(".infoPanelInner").asXml(), containsString("<b>"));
+            assertThat(pipelines.querySelector(".infoPanelInner").asNormalizedText(), containsString("everything & more"));
+        }
+    }
+
+    @Test
+    void rebuildButtonPostsToTheApi() throws Exception {
+        FreeStyleProject build = jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class);
+        FreeStyleProject deploy = jenkins.createFreeStyleProject("deploy");
+        build.getPublishersList().add(new BuildTrigger(deploy.getName(), Result.SUCCESS));
+        jenkins.getInstance().rebuildDependencyGraph();
+        jenkins.buildAndAssertSuccess(build);
+        jenkins.waitUntilNoActivity();
+        int deployBuilds = deploy.getBuilds().size();
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Rebuild");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Chain", "build", null, false)));
+        view.setNoOfPipelines(1);
+        view.setAllowRebuild(true);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            HtmlElement rebuild = page.querySelector(".task-rebuild");
+            assertThat(rebuild, notNullValue());
+            assertThat(rebuild.getAttribute("data-project"), is("deploy"));
+            rebuild.click();
+            client.waitForBackgroundJavaScript(5000);
+        }
+        jenkins.waitUntilNoActivity();
+        assertThat("clicking rebuild queued a new build of deploy", deploy.getBuilds().size(), is(deployBuilds + 1));
+    }
+
+    @Test
+    void startButtonPostsABuild() throws Exception {
+        FreeStyleProject build = jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class);
+        int builds = build.getBuilds().size();
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Start");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Comp", "build", null, false)));
+        view.setAllowPipelineStart(true);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            HtmlElement start = page.querySelector(".task-trigger-build");
+            assertThat(start, notNullValue());
+            start.click();
+            client.waitForBackgroundJavaScript(5000);
+        }
+        jenkins.waitUntilNoActivity();
+        assertThat("clicking Build now queued a new build", build.getBuilds().size(), is(builds + 1));
+    }
+
+    @Test
+    void manualTriggerButtonPostsToTheApi() throws Exception {
+        FreeStyleProject build = jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class);
+        FreeStyleProject deploy = jenkins.createFreeStyleProject("deploy");
+        build.getPublishersList().add(new BuildPipelineTrigger(deploy.getName(), null));
+        jenkins.getInstance().rebuildDependencyGraph();
+        jenkins.buildAndAssertSuccess(build);
+        jenkins.waitUntilNoActivity();
+        assertThat("a manual downstream job is not built automatically", deploy.getBuilds().size(), is(0));
+
+        DeliveryPipelineView view = new DeliveryPipelineView("Manual");
+        view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec("Chain", "build", null, false)));
+        view.setNoOfPipelines(1);
+        view.setAllowManualTriggers(true);
+        jenkins.getInstance().addView(view);
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            HtmlElement manual = page.querySelector(".task-manual");
+            assertThat(manual, notNullValue());
+            assertThat(manual.getAttribute("data-downstream-project"), is("deploy"));
+            assertThat(manual.getAttribute("data-upstream-project"), is("build"));
+            manual.click();
+            client.waitForBackgroundJavaScript(5000);
+        }
+        jenkins.waitUntilNoActivity();
+        assertThat("clicking the manual trigger built deploy", deploy.getBuilds().size(), is(1));
+    }
+
+    private JenkinsRule.WebClient jsClient() {
+        JenkinsRule.WebClient client = jenkins.createWebClient();
+        client.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        client.getOptions().setThrowExceptionOnScriptError(false);
+        return client;
+    }
+
+    private HtmlPage render(JenkinsRule.WebClient client, String relativeUrl) throws Exception {
+        HtmlPage page = client.getPage(new URL(jenkins.getURL(), relativeUrl));
+        client.waitForBackgroundJavaScript(15000);
+        assertThat(page.getElementById("pipelineerror-0").getTextContent(), not(containsString("Error")));
+        return page;
     }
 
     private JenkinsRule.WebClient staticClient() {
