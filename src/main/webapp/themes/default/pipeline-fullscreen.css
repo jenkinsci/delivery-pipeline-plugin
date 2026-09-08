@@ -143,9 +143,13 @@ div.task-details {
     border-left: 6px solid lightskyblue;
 }
 
-svg.relation path {
+svg.pipeline-connectors path.relation {
     stroke: #fefefe;
     stroke-width: 3;
+}
+
+svg.pipeline-connectors marker path {
+    fill: #fefefe;
 }
 
 div.infoPanel {

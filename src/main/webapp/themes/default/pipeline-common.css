@@ -359,14 +359,28 @@ div.pipeline-message {
     z-index: -50;
 }
 
-._jsPlumb_connector {
+div.pipeline-main {
+    position: relative;
+}
+
+/* Overlay on which pipe.js draws the arrows between stages */
+svg.pipeline-connectors {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
     z-index: 0;
 }
 
-/* Bootstrap resets svg overflow to hidden, which clips jsPlumb arrow heads */
-svg._jsPlumb_connector,
-svg._jsPlumb_overlay {
-    overflow: visible;
+svg.pipeline-connectors path.relation {
+    fill: none;
+    stroke: #767676;
+    stroke-width: 2;
+}
+
+svg.pipeline-connectors marker path {
+    fill: #767676;
 }
 
 div.infoPanel {

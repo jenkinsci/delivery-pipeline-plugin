@@ -12,6 +12,4 @@ document.addEventListener('DOMContentLoaded', function() {
     window.resURL = resURL;
 
     crumb.init(crumbRequestField, crumbValue);
-
-    var Q = jQuery.noConflict();
 });
