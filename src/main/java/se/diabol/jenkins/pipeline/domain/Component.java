@@ -106,15 +106,29 @@ public class Component extends GenericComponent {
 
     public int getCurrentPage() {
         StaplerRequest req = Stapler.getCurrentRequest();
-        int page = req == null ? 1 : req.getParameter("page") == null ? 1 :
-                Integer.parseInt(req.getParameter("page"));
-        page = Math.max(page, 1);
-        int component = req == null ? 1 : req.getParameter("component") == null ? 1 :
-                Integer.parseInt(req.getParameter("component"));
+        int page = Math.max(getIntParameter(req, "page", 1), 1);
+        int component = getIntParameter(req, "component", 1);
         if (component != componentNumber) {
             page = 1;
         }
         return page;
+    }
+
+    /**
+     * Reads an integer request parameter, falling back to the default when the parameter is absent or
+     * not a number, so that a malformed query string (for example {@code page=null}) does not fail the
+     * whole view API request.
+     */
+    static int getIntParameter(StaplerRequest req, String name, int defaultValue) {
+        String value = req == null ? null : req.getParameter(name);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     public boolean isFullScreenView() {
