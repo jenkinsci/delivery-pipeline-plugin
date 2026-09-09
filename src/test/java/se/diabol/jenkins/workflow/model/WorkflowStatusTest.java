@@ -17,7 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.model;
 
-import org.joda.time.DateTime;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import se.diabol.jenkins.pipeline.domain.status.StatusType;
@@ -72,6 +72,6 @@ class WorkflowStatusTest {
     }
 
     private static Stage getStageWithStatus(String status) {
-        return new Stage("id", "name", status, new DateTime(System.currentTimeMillis()), 100L);
+        return new Stage("id", "name", status, Instant.ofEpochMilli(System.currentTimeMillis()), 100L);
     }
 }

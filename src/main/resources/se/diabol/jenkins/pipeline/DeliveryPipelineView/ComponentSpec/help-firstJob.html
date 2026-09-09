@@ -1,4 +1,6 @@
 <div>
-    First job in the pipeline. Usually the build/compile job.
-    The build number/build display name will be used as the version in later tasks or stages.
+    First job in the pipeline, usually the build/compile job, or a Pipeline (Jenkinsfile) job.
+    For a chain of freestyle jobs the downstream jobs are discovered from here and the build number/display name
+    is used as the version in later tasks or stages. For a Pipeline job the stages of its latest runs are shown
+    and the final job setting is not used.
 </div>

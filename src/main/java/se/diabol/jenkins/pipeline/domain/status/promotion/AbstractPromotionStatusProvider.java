@@ -47,7 +47,7 @@ public abstract class AbstractPromotionStatusProvider implements ExtensionPoint 
 
     static class JenkinsInstanceProvider {
         public Jenkins getJenkinsInstance() {
-            return Jenkins.getInstance();
+            return Jenkins.get();
         }
     }
 }

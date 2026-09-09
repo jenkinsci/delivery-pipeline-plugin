@@ -17,16 +17,16 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
-import static javax.servlet.http.HttpServletResponse.SC_FORBIDDEN;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-import static javax.servlet.http.HttpServletResponse.SC_NOT_ACCEPTABLE;
-import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
+import static jakarta.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import static jakarta.servlet.http.HttpServletResponse.SC_NOT_ACCEPTABLE;
+import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 
 import hudson.model.Api;
-import org.acegisecurity.AuthenticationException;
+import org.springframework.security.core.AuthenticationException;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import se.diabol.jenkins.core.PipelineView;
 import se.diabol.jenkins.pipeline.trigger.TriggerException;
 
@@ -40,8 +40,8 @@ public class PipelineApi extends Api {
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public void doManualStep(StaplerRequest request,
-                             StaplerResponse response,
+    public void doManualStep(StaplerRequest2 request,
+                             StaplerResponse2 response,
                              @QueryParameter String project,
                              @QueryParameter String upstream,
                              @QueryParameter String buildId) {
@@ -60,8 +60,8 @@ public class PipelineApi extends Api {
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public void doRebuildStep(StaplerRequest request,
-                              StaplerResponse response,
+    public void doRebuildStep(StaplerRequest2 request,
+                              StaplerResponse2 response,
                               @QueryParameter String project,
                               @QueryParameter String buildId) {
         if (project != null && buildId != null) {
@@ -77,8 +77,8 @@ public class PipelineApi extends Api {
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public void doInputStep(StaplerRequest request,
-                             StaplerResponse response,
+    public void doInputStep(StaplerRequest2 request,
+                             StaplerResponse2 response,
                              @QueryParameter String project,
                              @QueryParameter String upstream,
                              @QueryParameter String buildId) {
@@ -86,8 +86,8 @@ public class PipelineApi extends Api {
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public void doAbortBuild(StaplerRequest request,
-                             StaplerResponse response,
+    public void doAbortBuild(StaplerRequest2 request,
+                             StaplerResponse2 response,
                              @QueryParameter String project,
                              @QueryParameter String buildId) {
         if (project != null && buildId != null) {

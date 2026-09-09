@@ -19,11 +19,6 @@
       exclusion from this section.
    -->
   <Match>
-    <Bug pattern="STCAL_INVOKE_ON_STATIC_DATE_FORMAT_INSTANCE" />
-    <Class name="se.diabol.jenkins.core.TimestampFormat" />
-    <Method name="formatTimestamp" />
-  </Match>
-  <Match>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE" />
     <Class name="se.diabol.jenkins.pipeline.PipelineProperty$DescriptorImpl" />
     <Parameter name="sr" />

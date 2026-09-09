@@ -21,7 +21,7 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 
 import com.google.common.collect.ImmutableList;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 import se.diabol.jenkins.core.AbstractItem;
@@ -105,7 +105,7 @@ public class Component extends GenericComponent {
     }
 
     public int getCurrentPage() {
-        StaplerRequest req = Stapler.getCurrentRequest();
+        StaplerRequest2 req = Stapler.getCurrentRequest2();
         int page = Math.max(getIntParameter(req, "page", 1), 1);
         int component = getIntParameter(req, "component", 1);
         if (component != componentNumber) {
@@ -119,7 +119,7 @@ public class Component extends GenericComponent {
      * not a number, so that a malformed query string (for example {@code page=null}) does not fail the
      * whole view API request.
      */
-    static int getIntParameter(StaplerRequest req, String name, int defaultValue) {
+    static int getIntParameter(StaplerRequest2 req, String name, int defaultValue) {
         String value = req == null ? null : req.getParameter(name);
         if (value == null) {
             return defaultValue;
@@ -132,7 +132,7 @@ public class Component extends GenericComponent {
     }
 
     public boolean isFullScreenView() {
-        return FullScreen.isFullScreenRequest(Stapler.getCurrentRequest());
+        return FullScreen.isFullScreenRequest(Stapler.getCurrentRequest2());
     }
 
     @Exported

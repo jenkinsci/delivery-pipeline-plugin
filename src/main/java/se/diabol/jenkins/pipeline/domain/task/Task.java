@@ -179,9 +179,9 @@ public class Task extends AbstractItem {
         List<AbstractProject> downStreams = ProjectUtil.getDownstreamProjects(project);
         List<String> downStreamTasks = new ArrayList<>();
         for (AbstractProject downstreamProject : downStreams) {
-            downStreamTasks.add(downstreamProject.getRelativeNameFrom(Jenkins.getInstance()));
+            downStreamTasks.add(downstreamProject.getRelativeNameFrom(Jenkins.get()));
         }
-        return new Task(project, project.getRelativeNameFrom(Jenkins.getInstance()), taskName, status,
+        return new Task(project, project.getRelativeNameFrom(Jenkins.get()), taskName, status,
                 project.getUrl(), ManualStep.resolveManualStep(project), downStreamTasks, initial, descriptionTemplate);
     }
 

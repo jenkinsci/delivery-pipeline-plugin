@@ -4,7 +4,7 @@
 
     <groupId>se.diabol.jenkins.pipeline</groupId>
     <artifactId>delivery-pipeline-plugin</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>${revision}.${changelist}</version>
     <packaging>hpi</packaging>
     <name>Delivery Pipeline Plugin</name>
     <url>https://github.com/jenkinsci/${project.artifactId}</url>
@@ -37,14 +37,13 @@
     </pluginRepositories>
 
     <properties>
-        <revision>1.5.0</revision>
-        <changelist>-SNAPSHOT</changelist>
+        <revision>1.6.1</revision>
+        <changelist>999999-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
         <jenkins.baseline>2.541</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.2</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}</gitHubRepo>
-        <selenium.version>4.48.0</selenium.version>
-        <hpi.bundledArtifacts>jgrapht-core,objenesis</hpi.bundledArtifacts>
+        <hpi.bundledArtifacts>jgrapht-core</hpi.bundledArtifacts>
         <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     </properties>
 
@@ -64,12 +63,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- CVE-2025-48924: force safe version of transitive dep from webdrivermanager -->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>3.20.0</version>
-            </dependency>
             <!-- CVE-2012-0881, CVE-2022-23437, CVE-2013-4002, CVE-2020-14338: safe xerces replacing analysis-core's bundled version -->
             <dependency>
                 <groupId>xerces</groupId>
@@ -85,10 +78,6 @@
             <artifactId>jgrapht-core</artifactId>
             <version>1.5.3</version>
         </dependency>
-        <dependency>
-            <groupId>io.jenkins.plugins</groupId>
-            <artifactId>joda-time-api</artifactId>
-        </dependency>
         <!-- Test Dependencies -->
         <dependency>
             <groupId>commons-beanutils</groupId>
@@ -102,36 +91,6 @@
             <version>1.4.0</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-firefox-driver</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <artifactId>commons-io</artifactId>
-                    <groupId>commons-io</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-chrome-driver</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-support</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.github.bonigarcia</groupId>
-            <artifactId>webdrivermanager</artifactId>
-            <version>6.1.0</version>
-            <scope>test</scope>
-        </dependency>
 
         <!-- Dependencies to other Jenkins plugins -->
         <dependency>
@@ -141,12 +100,8 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
-            <artifactId>pipeline-stage-view</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
-            <artifactId>pipeline-rest-api</artifactId>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>pipeline-graph-analysis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.main</groupId>
@@ -161,11 +116,6 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>token-macro</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>jquery</artifactId>
-            <version>1.12.4-3</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -252,6 +202,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.jenkinsci.plugins</groupId>
+            <artifactId>pipeline-model-definition</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
         </dependency>
@@ -266,11 +221,6 @@
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.objenesis</groupId>
-            <artifactId>objenesis</artifactId>
-            <version>3.4</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -280,38 +230,9 @@
                 <configuration>
                     <forkCount>1C</forkCount>
                     <reuseForks>true</reuseForks>
-                    <excludes>
-                        <exclude>se/diabol/jenkins/pipeline/functionaltest/GuiFunctionalTest.java</exclude>
-                    </excludes>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
-    <profiles>
-        <profile>
-            <id>windows-ci</id>
-            <activation>
-                <os>
-                    <family>Windows</family>
-                </os>
-                <property>
-                    <name>env.CI</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <!-- TODO fails on CI on Windows for inscrutable reasons -->
-                            <excludes>
-                                <exclude>se.diabol.jenkins.pipeline.functionaltest.GuiFunctionalTest</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>

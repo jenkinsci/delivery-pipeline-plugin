@@ -17,7 +17,8 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.sort;
 
-import org.joda.time.DateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import se.diabol.jenkins.pipeline.domain.Component;
 import se.diabol.jenkins.pipeline.domain.status.StatusType;
@@ -36,8 +37,8 @@ class LatestActivityComparatorTest {
 
     @Test
     void shouldSortRecentlyRunDeliveryPipelineFirst() {
-        Component componentRunLongAgo = createComponent(status(SUCCESS, new DateTime().minusDays(2)));
-        Component componentRunRecently = createComponent(status(SUCCESS, new DateTime().minusDays(1)));
+        Component componentRunLongAgo = createComponent(status(SUCCESS, Instant.now().minus(2, ChronoUnit.DAYS)));
+        Component componentRunRecently = createComponent(status(SUCCESS, Instant.now().minus(1, ChronoUnit.DAYS)));
         List<Component> list = new ArrayList<>();
         list.add(componentRunRecently);
         list.add(componentRunLongAgo);

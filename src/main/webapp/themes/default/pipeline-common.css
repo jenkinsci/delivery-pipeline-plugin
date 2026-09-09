@@ -86,13 +86,14 @@ div.pipeline-row {
 
 div.pipeline-cell {
     display: table-cell;
+    vertical-align: top;
     padding-bottom: 30px;
 }
 
 div.stage {
     margin-right: 60px;
     min-width: 180px;
-    border: solid 1px #C8C8C8;
+    border: solid 1px color-mix(in srgb, var(--text-color, #333333) 22%, transparent);
     border-radius: 5px;
 }
 
@@ -117,7 +118,7 @@ div.task-content {
 }
 
 div.stage-header {
-    background: #EEEEEE;
+    background: color-mix(in srgb, var(--text-color, #333333) 7%, transparent);
     font-size: 13px;
     font-weight: bold;
     display: table;
@@ -274,6 +275,7 @@ div.task-progress-running {
 .FAILED {
     border-left: 6px solid #8b0000;
     background-color: #ff6347;
+    color: #1f1f1f;
 }
 
 .SUCCESS {
@@ -283,24 +285,27 @@ div.task-progress-running {
 .UNSTABLE {
     border-left: 6px solid #fcae3f;
     background-color: #fad42e;
+    color: #1f1f1f;
     font-weight: bold;
 }
 
 .CANCELLED {
     border-left: 6px solid #8b8989;
     background-color: #d3d3d3;
+    color: #1f1f1f;
     font-weight: bold;
 }
 
 .NOT_BUILT {
     border-left: 6px solid #8b8989;
     background-color: #d3d3d3;
+    color: #1f1f1f;
     font-weight: bold;
 }
 
 .DISABLED {
     border-left: 6px solid transparent;
-    color: #a9a9a9;
+    color: var(--text-color-secondary, #a9a9a9);
 }
 
 .RUNNING {
@@ -330,6 +335,15 @@ div.clear {
     clear: both;
 }
 
+td.analysis-header {
+    font-size: smaller;
+    vertical-align: bottom;
+}
+
+td.analysis-count {
+    text-align: center;
+}
+
 div.pipelineerror {
     background-color: red;
     font-size: 22px;
@@ -346,14 +360,48 @@ div.pipeline-message {
     z-index: -50;
 }
 
-._jsPlumb_connector {
+div.pipeline-main {
+    position: relative;
+}
+
+/* Build-now button in the component heading: inherits the text colour, brightens on hover */
+a.task-icon-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+a.task-icon-link svg.icon-clock {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    color: var(--text-color, #333333);
+    opacity: 0.75;
+}
+
+a.task-icon-link:hover svg.icon-clock,
+a.task-icon-link:focus svg.icon-clock {
+    color: var(--link-color, #0072bc);
+    opacity: 1;
+}
+
+/* Overlay on which pipe.js draws the arrows between stages */
+svg.pipeline-connectors {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
     z-index: 0;
 }
 
-/* Bootstrap resets svg overflow to hidden, which clips jsPlumb arrow heads */
-svg._jsPlumb_connector,
-svg._jsPlumb_overlay {
-    overflow: visible;
+svg.pipeline-connectors path.relation {
+    fill: none;
+    stroke: #767676;
+    stroke-width: 2;
+}
+
+svg.pipeline-connectors marker path {
+    fill: #767676;
 }
 
 div.infoPanel {
@@ -374,8 +422,8 @@ div.infoPanelInner a {
 }
 div.infoPanelOuter {
     margin: 4px 2px 4px 4px;
-    border: 1px solid lightgray;
-    background-color: #FAF8F8;
+    border: 1px solid color-mix(in srgb, var(--text-color, #333333) 20%, transparent);
+    background-color: color-mix(in srgb, var(--text-color, #333333) 3%, transparent);
 }
 
 div.aggregatedChangesPanel {
@@ -395,8 +443,8 @@ div.aggregatedChangesPanelInner {
 
 div.aggregatedChangesPanelOuter {
     margin: 8px;
-    border: 1px solid lightgray;
-    background-color: #FAF8F8;
+    border: 1px solid color-mix(in srgb, var(--text-color, #333333) 20%, transparent);
+    background-color: color-mix(in srgb, var(--text-color, #333333) 3%, transparent);
 }
 
 div.aggregatedChangesPanelInner > ul {
@@ -433,27 +481,27 @@ div.aggregatedChangesPanelInner > ul {
 	padding:7px;
 	padding-top:2px;
 	padding-bottom:2px;
-	border:1px solid #EBEBEB;
+	border:1px solid color-mix(in srgb, var(--text-color, #333333) 10%, transparent);
 	text-decoration:none;
-	background-color:#F5F5F5;
-	color:#0072bc;
+	background-color:color-mix(in srgb, var(--text-color, #333333) 4%, transparent);
+	color:var(--link-color, #0072bc);
 	width:22px;
 	font-weight:normal;
 }
 
 .pagination a:hover {
-	background-color:#DDEEFF;
-	border:1px solid #BBDDFF;
-	color:#0072BC;
+	background-color:color-mix(in srgb, var(--link-color, #0072bc) 15%, transparent);
+	border:1px solid color-mix(in srgb, var(--link-color, #0072bc) 30%, transparent);
+	color:var(--link-color, #0072bc);
 }
 
 .pagination .active_link a {
 	padding-top:2px;
 	padding-bottom:2px;
-	border:1px solid #BBDDFF;
+	border:1px solid color-mix(in srgb, var(--link-color, #0072bc) 30%, transparent);
 	text-decoration:none;
-	background-color:#DDEEFF;
-	color:#0072BC;
+	background-color:color-mix(in srgb, var(--link-color, #0072bc) 15%, transparent);
+	color:var(--link-color, #0072bc);
 	cursor:default;
 }
 
@@ -461,10 +509,10 @@ div.aggregatedChangesPanelInner > ul {
 	padding:7px;
 	padding-top:2px;
 	padding-bottom:2px;
-	border:1px solid #EBEBEB;
+	border:1px solid color-mix(in srgb, var(--text-color, #333333) 10%, transparent);
 	margin-left:10px;
 	text-decoration:none;
-	background-color:#F5F5F5;
-	color:#D7D7D7;
+	background-color:color-mix(in srgb, var(--text-color, #333333) 4%, transparent);
+	color:color-mix(in srgb, var(--text-color, #333333) 25%, transparent);
 	cursor:default;
 }

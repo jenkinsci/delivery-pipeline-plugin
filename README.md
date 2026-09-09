@@ -1,15 +1,16 @@
 Delivery Pipeline Plugin
 ========================
 
-![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_logo.png)
+![Delivery Pipeline Plugin logo](docs/dpp_logo.png)
 
-[![Build Status](https://travis-ci.org/Diabol/delivery-pipeline-plugin.png)](https://travis-ci.org/Diabol/delivery-pipeline-plugin)
+[![Build Status](https://ci.jenkins.io/job/Plugins/job/delivery-pipeline-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/delivery-pipeline-plugin/job/master/)
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/delivery-pipeline-plugin.svg)](https://plugins.jenkins.io/delivery-pipeline-plugin/)
 
 The purpose of the Delivery Pipeline plugin is to provide visualisation of delivery/build pipelines in Jenkins. The plugin is perfect for Continuous Delivery pipeline visualisation on information radiators.
 
 In Continuous Delivery, fast feedback and visualisation of the delivery process is one of the most important aspects. When using Jenkins as a build server it is now possible to visualise one or more delivery pipelines in the same view (even in full screen!) using the Delivery Pipeline plugin. You can install the Delivery Pipeline plugin using the Jenkins plugin management.
 
-Project wiki page can be found here: [Delivery Pipeline Plugin - Wiki](https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin).
+Plugin documentation: [plugins.jenkins.io/delivery-pipeline-plugin](https://plugins.jenkins.io/delivery-pipeline-plugin/).
 
 We use the official Jenkins [issue tracker](https://issues.jenkins-ci.org/secure/IssueNavigator.jspa?mode=hide&reset=true&jqlQuery=project+%3D+JENKINS+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27delivery-pipeline-plugin%27) for bugs, improvements and new features. Please report any issues on component [delivery-pipeline-plugin](https://issues.jenkins-ci.org/browse/JENKINS/component/18134).
 
@@ -18,20 +19,28 @@ This plugin has been contributed to the community by [Diabol AB](https://www.dia
 
 ---
 
-![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_screenshot.png)
+![Delivery Pipeline view](docs/dpp_screenshot.png)
 
 Recent Changes
 ---
+- **1.6**: the view renders without third-party scripts (jQuery, jsPlumb and moment are gone), a Delivery Pipeline
+  View component can be a Pipeline (Jenkinsfile) job, nested stages and parallel branches show as tasks of their
+  stage, names are escaped everywhere in the generated markup, no inline styles (Content-Security-Policy), theme-aware
+  colours, jquery-plugin dependency dropped, Joda-Time and deprecated Stapler/Acegi APIs replaced, continuous
+  delivery set up. The "Delivery Pipeline View for Jenkins Pipelines" is deprecated.
+- **1.6.1**: no longer depends on Pipeline Stage View and its REST API; stages, their status and timing are read from the run's flow graph with pipeline-graph-analysis, and finished runs are cached.
 - **1.5.0**: Version bump; continued modernization and dependency maintenance.
 - **Plugin modernized** — updated build tooling, POM structure, and CI configuration to current Jenkins plugin standards.
-- **Functional tests restored** — integration test suite re-enabled after prior removal.
+- **Browser-level tests** — the views are rendered with JavaScript in HtmlUnit as part of the regular test suite.
 - **JDK 25 support** — build and CI updated to support Java 25.
 - **Dependency updates** — upgraded build-pipeline-plugin, analysis-core, build-name-setter, byte-buddy, objenesis, and commons-logging to current versions.
 - **UI fixes** — corrected missing arrow graphics and clock rendering in the pipeline view.
+- **Declarative-friendly stages** — stages nested inside a stage and parallel branches are shown as tasks of that stage without the `task` step; Declarative `parallel` and `matrix` blocks render one task per branch.
+- **Pipeline jobs in the standard view** — a component of a Delivery Pipeline View can point at a Pipeline (Jenkinsfile) job; the separate "Delivery Pipeline View for Jenkins Pipelines" is deprecated and no longer offered for new views.
 
 Requirements
 ---
-Delivery Pipeline plugin 1.5.0 and later requires Java 11 and Jenkins core 2.541.2 or later (Java 25 supported for plugin development).
+Delivery Pipeline plugin 1.5 and later requires Java 17 and Jenkins core 2.541.2 or later (Java 21 is used in CI; Java 25 works for plugin development).
 
 Delivery Pipeline plugin 1.4.0 and later requires Java 8 and Jenkins core 2.164 or later (Java 11 required for plugin development).
 
@@ -47,7 +56,7 @@ Delivery Pipeline plugin 0.10.3 requires Java 6 and Jenkins core 1.565 or later.
 
 Building the project
 ---
-Requires Java 11, Apache Maven 3.3.x or later.
+Requires Java 17 or later and Apache Maven 3.9.x or later.
 
     mvn clean install
 

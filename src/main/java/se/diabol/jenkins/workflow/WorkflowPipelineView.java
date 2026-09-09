@@ -20,7 +20,7 @@ package se.diabol.jenkins.workflow;
 import com.google.common.collect.Sets;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
 import hudson.model.Api;
 import hudson.model.Descriptor;
 import hudson.model.Descriptor.FormException;
@@ -32,13 +32,9 @@ import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import hudson.util.RunList;
 import jenkins.model.Jenkins;
-import org.acegisecurity.AuthenticationException;
-import org.acegisecurity.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -49,7 +45,6 @@ import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.core.PipelineView;
 import se.diabol.jenkins.core.TimestampFormat;
 import se.diabol.jenkins.pipeline.PipelineApi;
-import se.diabol.jenkins.pipeline.domain.Change;
 import se.diabol.jenkins.pipeline.domain.PipelineException;
 import se.diabol.jenkins.pipeline.sort.ComponentComparatorDescriptor;
 import se.diabol.jenkins.pipeline.sort.GenericComponentComparator;
@@ -57,22 +52,26 @@ import se.diabol.jenkins.pipeline.trigger.TriggerException;
 import se.diabol.jenkins.pipeline.util.JenkinsUtil;
 import se.diabol.jenkins.pipeline.util.ProjectUtil;
 import se.diabol.jenkins.workflow.model.Component;
-import se.diabol.jenkins.workflow.model.Pipeline;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletException;
 
+/**
+ * View for Pipeline jobs only.
+ *
+ * @deprecated since 1.5: a {@link se.diabol.jenkins.pipeline.DeliveryPipelineView} accepts Pipeline jobs as
+ *     components next to freestyle chains and shares one page and script. Existing views of this type keep
+ *     working; the type is no longer offered when creating a view.
+ */
+@Deprecated
 public class WorkflowPipelineView extends View implements PipelineView {
 
     private static final Logger LOG = Logger.getLogger(WorkflowPipelineView.class.getName());
@@ -267,8 +266,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
             backwardsCompatibilityHandling();
             for (ComponentSpec componentSpec : getComponentSpecs()) {
                 WorkflowJob job = getWorkflowJob(componentSpec.job);
-                List<Pipeline> pipelines = resolvePipelines(job);
-                Component component = new Component(componentSpec.name, job, pipelines);
+                Component component = Component.resolve(componentSpec.name, job, noOfPipelines, showChanges);
                 this.error = null;
                 components.add(component);
             }
@@ -336,20 +334,9 @@ public class WorkflowPipelineView extends View implements PipelineView {
     @Override
     public void triggerManual(String projectName, String upstreamName, String buildId) throws AuthenticationException {
         LOG.fine("Manual/Input step called for project: " + projectName + " and build id: " + buildId);
-
-        WorkflowJob workflowJob;
         try {
-            workflowJob = ProjectUtil.getWorkflowJob(projectName, getOwnerItemGroup());
-            RunList<WorkflowRun> builds = workflowJob.getBuilds();
-            for (WorkflowRun run : builds) {
-                if (Integer.toString(run.getNumber()).equals(buildId)) {
-                    InputAction inputAction = run.getAction(InputAction.class);
-                    if (inputAction != null && !inputAction.getExecutions().isEmpty()) {
-                        inputAction.getExecutions().get(0).doProceedEmpty();
-                    }
-                }
-            }
-        } catch (IOException | PipelineException | InterruptedException | TimeoutException e) {
+            WorkflowRuns.proceedInput(getWorkflowJob(projectName), buildId);
+        } catch (PipelineException e) {
             LOG.warning("Failed to resolve project to trigger manual/input: " + e);
         }
     }
@@ -362,15 +349,7 @@ public class WorkflowPipelineView extends View implements PipelineView {
     @Override
     public void abortBuild(String projectName, String buildId) throws TriggerException {
         try {
-            WorkflowJob workflowJob = ProjectUtil.getWorkflowJob(projectName, getOwnerItemGroup());
-            if (!workflowJob.hasAbortPermission()) {
-                throw new BadCredentialsException("Not authorized to abort build");
-            }
-            RunList<WorkflowRun> builds = workflowJob.getBuilds();
-            Optional<WorkflowRun> run = builds.stream()
-                    .filter(r -> Integer.toString(r.getNumber()).equals(buildId))
-                    .findFirst();
-            run.ifPresent(WorkflowRun::doStop);
+            WorkflowRuns.abort(getWorkflowJob(projectName), buildId);
         } catch (PipelineException e) {
             throw new TriggerException("Could not abort build");
         }
@@ -402,12 +381,9 @@ public class WorkflowPipelineView extends View implements PipelineView {
         return getItems().contains(item);
     }
 
-    @Override
-    public ItemGroup<? extends TopLevelItem> getOwnerItemGroup() {
-        if (getOwner() == null) {
-            return null;
-        }
-        return super.getOwnerItemGroup();
+    private ItemGroup<? extends TopLevelItem> ownerItemGroup() {
+        ViewGroup owner = getOwner();
+        return owner == null ? null : owner.getItemGroup();
     }
 
     @Override
@@ -416,39 +392,12 @@ public class WorkflowPipelineView extends View implements PipelineView {
         componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
     }
 
-    private List<Pipeline> resolvePipelines(WorkflowJob job) throws PipelineException {
-        List<Pipeline> pipelines = new ArrayList<>();
-        if (job.getBuilds() == null) {
-            return pipelines;
-        }
-
-        Iterator<WorkflowRun> it = job.getBuilds().iterator();
-        for (int i = 0; i < noOfPipelines && it.hasNext(); i++) {
-            WorkflowRun build = it.next();
-            Pipeline pipeline = resolvePipeline(job, build);
-            pipelines.add(pipeline);
-        }
-        return pipelines;
-    }
-
-    private Pipeline resolvePipeline(WorkflowJob job, WorkflowRun build) throws PipelineException {
-        Pipeline pipeline = Pipeline.resolve(job, build);
-        if (showChanges) {
-            pipeline.setChanges(getChangelog(build));
-        }
-        return pipeline;
-    }
-
     private WorkflowJob getWorkflowJob(final String projectName) throws PipelineException {
-        WorkflowJob job = ProjectUtil.getWorkflowJob(projectName, getOwnerItemGroup());
+        WorkflowJob job = ProjectUtil.getWorkflowJob(projectName, ownerItemGroup());
         if (job == null) {
             throw new PipelineException("Failed to resolve job with name: " + projectName);
         }
         return job;
-    }
-
-    private List<Change> getChangelog(WorkflowRun build) {
-        return Change.getChanges(build.getChangeSets());
     }
 
     @Extension
@@ -501,11 +450,17 @@ public class WorkflowPipelineView extends View implements PipelineView {
         @Nonnull
         @Override
         public String getDisplayName() {
-            return "Delivery Pipeline View for Jenkins Pipelines";
+            return "Delivery Pipeline View for Jenkins Pipelines (deprecated)";
+        }
+
+        /** Existing views keep working, but new ones should be Delivery Pipeline views with Pipeline components. */
+        @Override
+        public boolean isInstantiable() {
+            return false;
         }
     }
 
-    public static class ComponentSpec extends AbstractDescribableImpl<ComponentSpec> {
+    public static class ComponentSpec implements Describable<ComponentSpec> {
         private String name;
         private String job;
 

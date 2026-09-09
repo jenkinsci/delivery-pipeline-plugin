@@ -1,7 +1,6 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
 
-    <st:bind var="view" value="${it}"/>
     <j:set var="fullscreen" value='${request.getParameter("fullscreen") == "true" ? "true" : "false"}'/>
 
     <j:set var="page" value='${request.getParameter("page") == null ? 1 : request.getParameter("page")}'/>
@@ -36,9 +35,6 @@
         </j:default>
     </j:switch>
 
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/moment.min.js"/>
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/pipe-compat.js"/>
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/jquery.jsPlumb-1.3.16-all-min.js"/>
     <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/pipe.js"/>
     <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/main-behaviour.js"/>
 
@@ -56,7 +52,7 @@
             </div>
 
             <j:forEach begin="1" end="${it.noOfColumns}" indexVar="i">
-                <div id="pipelines-${i}-${it.id == null ? 0 : it.id}" class="left" style="width: ${100/it.noOfColumns}%;"></div>
+                <div id="pipelines-${i}-${it.id == null ? 0 : it.id}" class="left"></div>
             </j:forEach>
             <div class="clear"></div>
 

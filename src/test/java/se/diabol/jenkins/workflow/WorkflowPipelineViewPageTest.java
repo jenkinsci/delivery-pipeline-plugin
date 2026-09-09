@@ -81,6 +81,18 @@ class WorkflowPipelineViewPageTest {
     }
 
     @Test
+    void deprecatedViewIsNotOfferedForNewViews() throws Exception {
+        WorkflowPipelineView.DescriptorImpl descriptor =
+                jenkins.getInstance().getDescriptorByType(WorkflowPipelineView.DescriptorImpl.class);
+        assertThat(descriptor.isInstantiable(), is(false));
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            String newViewPage = client.goTo("newView").asNormalizedText();
+            assertThat(newViewPage, containsString("Delivery Pipeline View"));
+            assertThat(newViewPage, not(containsString("Jenkins Pipelines (deprecated)")));
+        }
+    }
+
+    @Test
     void viewRendersPipelinesWithJavaScript() throws Exception {
         try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
             client.getOptions().setThrowExceptionOnFailingStatusCode(false);

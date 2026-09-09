@@ -17,9 +17,9 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.workflow.api;
 
-import com.cloudbees.workflow.rest.external.RunExt;
-import com.cloudbees.workflow.rest.external.StageNodeExt;
-import org.joda.time.DateTime;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,16 +29,16 @@ public class Run {
     public final String id;
     public final String name;
     public final String status;
-    public final DateTime startTimeMillis;
-    public final DateTime endTimeMillis;
+    public final Instant startTimeMillis;
+    public final Instant endTimeMillis;
     public final Long durationMillis;
     public final List<Stage> stages;
 
     public Run(String id,
                String name,
                String status,
-               DateTime startTimeMillis,
-               DateTime endTimeMillis,
+               Instant startTimeMillis,
+               Instant endTimeMillis,
                Long durationMillis,
                List<Stage> stages) {
         this.id = id;
@@ -50,14 +50,28 @@ public class Run {
         this.stages = stages;
     }
 
-    public Run(RunExt run) {
-        this.id = run.getId();
-        this.name = run.getName();
-        this.status = run.getStatus().toString();
-        this.startTimeMillis = new DateTime(run.getStartTimeMillis());
-        this.endTimeMillis = new DateTime(run.getEndTimeMillis());
-        this.durationMillis = run.getDurationMillis();
-        this.stages = asStages(run.getStages());
+    /** Reads the run's stages, status and timing from its flow graph. */
+    public static Run of(WorkflowRun run) {
+        List<FlowNode> allNodes = FlowAnalysis.allNodes(run.getExecution());
+        List<FlowNode> stageStarts = FlowAnalysis.stageStartNodes(allNodes);
+        List<Stage> stages = new ArrayList<>(stageStarts.size());
+        for (FlowNode stageStart : stageStarts) {
+            stages.add(FlowAnalysis.stage(run, stageStart, allNodes, stageStarts));
+        }
+        long startTime = run.getStartTimeInMillis();
+        long duration = run.isBuilding() ? System.currentTimeMillis() - startTime : run.getDuration();
+        return new Run(String.valueOf(run.getNumber()), run.getDisplayName(), FlowAnalysis.runStatus(run),
+                Instant.ofEpochMilli(startTime), Instant.ofEpochMilli(startTime + duration), duration, stages);
+    }
+
+    /** The stage started by the flow node with the given id, or null. */
+    public Stage getStageById(final String id) {
+        for (Stage stage : stages) {
+            if (id != null && id.equals(stage.id)) {
+                return stage;
+            }
+        }
+        return null;
     }
 
     public boolean hasStage(final String name) {
@@ -78,20 +92,6 @@ public class Run {
             }
         }
         return null;
-    }
-
-    private List<Stage> asStages(List<StageNodeExt> extStages) {
-        List<Stage> stages = new ArrayList<>(extStages.size());
-        for (StageNodeExt stage : extStages) {
-            stages.add(new Stage(
-                    stage.getId(),
-                    stage.getName(),
-                    stage.getStatus().toString(),
-                    new DateTime(stage.getStartTimeMillis()),
-                    stage.getDurationMillis()
-            ));
-        }
-        return stages;
     }
 
     @Override

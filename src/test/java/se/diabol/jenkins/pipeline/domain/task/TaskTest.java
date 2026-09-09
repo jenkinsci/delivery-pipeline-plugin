@@ -30,13 +30,12 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.model.User;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.security.Permission;
 import hudson.tasks.BuildTrigger;
 import hudson.util.OneShotEvent;
 import jenkins.model.Jenkins;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.FailureBuilder;
@@ -211,14 +210,12 @@ class TaskTest {
         gmas.add(Permission.READ, "devel");
         jenkins.getInstance().setAuthorizationStrategy(gmas);
 
-        SecurityContext oldContext = ACL.impersonate(User.get("devel").impersonate());
-
-        Task prototype  = Task.getPrototypeTask(b, false);
-        Task task = prototype.getLatestTask(jenkins.getInstance(), firstBuild);
-        assertNotNull(task);
-        assertFalse(task.isRebuildable());
-
-        SecurityContextHolder.setContext(oldContext);
+        try (ACLContext ignored = ACL.as2(User.getById("devel", true).impersonate2())) {
+            Task prototype  = Task.getPrototypeTask(b, false);
+            Task task = prototype.getLatestTask(jenkins.getInstance(), firstBuild);
+            assertNotNull(task);
+            assertFalse(task.isRebuildable());
+        }
     }
 
     @Test

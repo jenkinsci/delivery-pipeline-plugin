@@ -25,6 +25,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.kohsuke.stapler.export.Exported;
 import se.diabol.jenkins.core.AbstractItem;
+import se.diabol.jenkins.workflow.api.FlowAnalysis;
 import se.diabol.jenkins.pipeline.domain.PipelineException;
 import se.diabol.jenkins.pipeline.util.PipelineUtils;
 
@@ -125,7 +126,12 @@ public class Stage extends AbstractItem {
     }
 
     static List<Stage> extractStages(WorkflowRun build, List<FlowNode> stageNodes) throws PipelineException {
-        List<Stage> result = resolveStageNodes(build, stageNodes);
+        return extractStages(build, stageNodes, FlowAnalysis.allNodes(build.getExecution()));
+    }
+
+    static List<Stage> extractStages(WorkflowRun build, List<FlowNode> stageNodes, List<FlowNode> allNodes)
+            throws PipelineException {
+        List<Stage> result = resolveStageNodes(build, stageNodes, allNodes);
         for (int i = 0; i < result.size(); i++) {
             Stage stage = result.get(i);
             if (i + 1 < result.size()) {
@@ -138,11 +144,11 @@ public class Stage extends AbstractItem {
         return result;
     }
 
-    private static List<Stage> resolveStageNodes(WorkflowRun build, List<FlowNode> stageNodes)
+    private static List<Stage> resolveStageNodes(WorkflowRun build, List<FlowNode> stageNodes, List<FlowNode> allNodes)
             throws PipelineException {
         List<Stage> result = new ArrayList<>();
         for (FlowNode stageNode : stageNodes) {
-            List<Task> tasks = Task.resolve(build, stageNode);
+            List<Task> tasks = Task.resolve(build, stageNode, allNodes, stageNodes);
             result.add(new Stage(stageNode.getDisplayName(), tasks));
         }
         return result;

@@ -30,7 +30,7 @@ public final class JenkinsUtil {
      * @throws IllegalStateException {@link Jenkins} has not been started, or was already shut down
      */
     public static Jenkins getInstance() {
-        Jenkins instance = Jenkins.getInstance();
+        Jenkins instance = Jenkins.get();
         if (instance == null) {
             throw new IllegalStateException("Jenkins has not been started, or was already shut down");
         }

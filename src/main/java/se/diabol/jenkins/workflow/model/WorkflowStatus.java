@@ -29,7 +29,7 @@ public class WorkflowStatus extends SimpleStatus {
 
     public static WorkflowStatus of(Stage stage) {
         return new WorkflowStatus(
-                statusType(stage), stage.startTimeMillis.getMillis() + stage.durationMillis, stage.durationMillis);
+                statusType(stage), stage.startTimeMillis.toEpochMilli() + stage.durationMillis, stage.durationMillis);
     }
 
     static StatusType statusType(Stage currentStage) {

@@ -19,7 +19,7 @@ package se.diabol.jenkins.pipeline.test;
 
 import com.google.common.collect.Lists;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.joda.time.DateTime;
+import java.time.Instant;
 import se.diabol.jenkins.pipeline.domain.Component;
 import se.diabol.jenkins.pipeline.domain.Pipeline;
 import se.diabol.jenkins.pipeline.domain.Stage;
@@ -91,7 +91,7 @@ public class PipelineUtil {
         return new se.diabol.jenkins.workflow.model.Component("Name", new WorkflowJob(null, "Job"), Collections.emptyList());
     }
 
-    public static Status status(StatusType statusType, DateTime lastRunedAt) {
-        return new SimpleStatus(statusType, lastRunedAt.getMillis(), 10, false, Lists.newArrayList());
+    public static Status status(StatusType statusType, Instant lastRunedAt) {
+        return new SimpleStatus(statusType, lastRunedAt.toEpochMilli(), 10, false, Lists.newArrayList());
     }
 }
