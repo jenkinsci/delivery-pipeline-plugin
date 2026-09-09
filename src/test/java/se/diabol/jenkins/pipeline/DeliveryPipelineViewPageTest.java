@@ -118,7 +118,8 @@ class DeliveryPipelineViewPageTest {
 
     @Test
     void namesWithQuotesAreRenderedAsDataNotMarkup() throws Exception {
-        FreeStyleProject odd = jenkins.createFreeStyleProject("job \"with\" 'quotes' (and parens)");
+        // No double quote in the job name: it is also the job's directory name, and Windows forbids it there.
+        FreeStyleProject odd = jenkins.createFreeStyleProject("job 'with' quotes (and parens)");
         odd.addProperty(new PipelineProperty("Task \"q\"", "Stage \"q\"", ""));
         jenkins.buildAndAssertSuccess(odd);
 
@@ -144,7 +145,7 @@ class DeliveryPipelineViewPageTest {
             assertThat(pipelines.asNormalizedText(), containsString("Task \"q\""));
             assertThat(pipelines.asNormalizedText(), containsString("Stage \"q\""));
             DomElement task = page.querySelector(".stage-task");
-            assertThat(task.getId(), is("task-job__with___quotes___and_parens_0"));
+            assertThat(task.getId(), is("task-job__with__quotes__and_parens_0"));
             DomElement stage = page.querySelector(".stage");
             assertThat(stage.getAttribute("class"), is("stage stage_Stage__q_"));
         }
