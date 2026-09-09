@@ -100,14 +100,6 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
-            <artifactId>pipeline-stage-view</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.pipeline-stage-view</groupId>
-            <artifactId>pipeline-rest-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>pipeline-graph-analysis</artifactId>
         </dependency>
@@ -207,6 +199,11 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-durable-task-step</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkinsci.plugins</groupId>
+            <artifactId>pipeline-model-definition</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

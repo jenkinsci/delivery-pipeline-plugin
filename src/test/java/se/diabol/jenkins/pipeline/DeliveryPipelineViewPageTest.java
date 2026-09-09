@@ -443,6 +443,66 @@ class DeliveryPipelineViewPageTest {
         }
     }
 
+    @Test
+    void declarativeSkippedStageIsShownAsNotBuilt() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "declarative");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "pipeline {",
+                "  agent any",
+                "  stages {",
+                "    stage('Build') {",
+                "      steps { echo 'b' }",
+                "    }",
+                "    stage('Deploy') {",
+                "      when { expression { false } }",
+                "      steps { echo 'd' }",
+                "    }",
+                "  }",
+                "}"), true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = pipelineView("Declarative", "declarative");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage").size(), is(2));
+            assertThat(taskNames(page), contains("Build", "Deploy"));
+            DomElement built = page.querySelector(".stage_Build .stage-task");
+            DomElement skipped = page.querySelector(".stage_Deploy .stage-task");
+            assertThat(built.getAttribute("class"), containsString("SUCCESS"));
+            assertThat("a stage skipped by a when condition is not built", skipped.getAttribute("class"), containsString("NOT_BUILT"));
+        }
+    }
+
+    @Test
+    void legacyStageStepsWithoutBlocksStillProduceStages() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "legacy");
+        flow.setDefinition(new CpsFlowDefinition("node { stage 'Build'; echo 'b'; stage 'Test'; echo 't' }", true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = pipelineView("Legacy", "legacy");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage").size(), is(2));
+            assertThat(taskNames(page), contains("Build", "Test"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(2));
+        }
+    }
+
+    @Test
+    void unstableStageIsShownAsUnstable() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "unstable");
+        flow.setDefinition(new CpsFlowDefinition(
+                "node { stage('Test') { catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') { error 'flaky' } } }", true));
+        jenkins.buildAndAssertStatus(Result.UNSTABLE, flow);
+        DeliveryPipelineView view = pipelineView("Unstable", "unstable");
+
+        try (JenkinsRule.WebClient client = jsClient()) {
+            HtmlPage page = render(client, view.getViewUrl());
+            assertThat(taskNames(page), contains("Test"));
+            assertThat(page.querySelectorAll(".stage-task.UNSTABLE").size(), is(1));
+        }
+    }
+
     private DeliveryPipelineView pipelineView(String name, String job) throws IOException {
         DeliveryPipelineView view = new DeliveryPipelineView(name);
         view.setComponentSpecs(List.of(new DeliveryPipelineView.ComponentSpec(name, job, null, false)));

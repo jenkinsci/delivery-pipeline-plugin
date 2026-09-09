@@ -28,6 +28,7 @@ Recent Changes
   stage, names are escaped everywhere in the generated markup, no inline styles (Content-Security-Policy), theme-aware
   colours, jquery-plugin dependency dropped, Joda-Time and deprecated Stapler/Acegi APIs replaced, continuous
   delivery set up. The "Delivery Pipeline View for Jenkins Pipelines" is deprecated.
+- **1.6.1**: no longer depends on Pipeline Stage View and its REST API; stages, their status and timing are read from the run's flow graph with pipeline-graph-analysis, and finished runs are cached.
 - **1.5.0**: Version bump; continued modernization and dependency maintenance.
 - **Plugin modernized** — updated build tooling, POM structure, and CI configuration to current Jenkins plugin standards.
 - **Browser-level tests** — the views are rendered with JavaScript in HtmlUnit as part of the regular test suite.

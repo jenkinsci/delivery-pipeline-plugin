@@ -19,18 +19,13 @@ package se.diabol.jenkins.workflow.model;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static se.diabol.jenkins.workflow.util.Util.getParentNodeWithTaskFinishedAction;
-import static se.diabol.jenkins.workflow.util.Util.getRunById;
 import static se.diabol.jenkins.workflow.util.Util.isAnyParentNodeContainingTaskFinishedAction;
 
-import com.cloudbees.workflow.flownode.FlowNodeUtil;
-import com.cloudbees.workflow.rest.external.StageNodeExt;
 import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
-import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.graphanalysis.DepthFirstScanner;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.pipelinegraphanalysis.GenericStatus;
 import org.jenkinsci.plugins.workflow.pipelinegraphanalysis.StatusAndTiming;
@@ -44,6 +39,7 @@ import se.diabol.jenkins.pipeline.domain.status.StatusFactory;
 import se.diabol.jenkins.pipeline.domain.status.StatusType;
 import se.diabol.jenkins.pipeline.domain.task.ManualStep;
 import se.diabol.jenkins.workflow.WorkflowApi;
+import se.diabol.jenkins.workflow.api.FlowAnalysis;
 import se.diabol.jenkins.workflow.api.Run;
 import se.diabol.jenkins.workflow.api.Stage;
 import se.diabol.jenkins.workflow.step.TaskAction;
@@ -129,8 +125,15 @@ public class Task extends AbstractItem {
     }
 
     public static List<Task> resolve(WorkflowRun build, FlowNode stageStartNode) throws PipelineException {
+        List<FlowNode> allNodes = FlowAnalysis.allNodes(stageStartNode.getExecution());
+        return resolve(build, stageStartNode, allNodes, FlowAnalysis.stageStartNodes(allNodes));
+    }
+
+    /** Tasks of a stage, given the run's nodes and top-level stage start nodes so they are read once per run. */
+    public static List<Task> resolve(WorkflowRun build, FlowNode stageStartNode, List<FlowNode> allNodes,
+                                     List<FlowNode> stageStarts) throws PipelineException {
         List<Task> result = new ArrayList<>();
-        List<FlowNode> stageNodes = FlowNodeUtil.getStageNodes(stageStartNode);
+        List<FlowNode> stageNodes = FlowAnalysis.nodesOf(stageStartNode, allNodes, stageStarts);
         List<FlowNode> taskNodes = Util.getTaskNodes(stageNodes);
 
         if (isNotEmpty(taskNodes)) {
@@ -138,7 +141,7 @@ public class Task extends AbstractItem {
                 result.add(resolveTask(build, stageStartNode, taskNode));
             }
         } else {
-            List<Task> nested = resolveNestedTasks(build, stageStartNode);
+            List<Task> nested = resolveNestedTasks(build, stageStartNode, allNodes, stageNodes);
             if (!nested.isEmpty()) {
                 return nested;
             }
@@ -168,14 +171,8 @@ public class Task extends AbstractItem {
      * branches inside a stage without this plugin's {@code task} step. Each stage that sits directly in the
      * stage becomes a task; if there are none, each parallel branch that sits directly in the stage does.
      */
-    private static List<Task> resolveNestedTasks(WorkflowRun build, FlowNode stageStartNode) throws PipelineException {
-        List<FlowNode> allNodes = allNodes(stageStartNode.getExecution());
-        List<FlowNode> nodes = new ArrayList<>();
-        for (FlowNode node : allNodes) {
-            if (node.getAllEnclosingIds().contains(stageStartNode.getId())) {
-                nodes.add(node);
-            }
-        }
+    private static List<Task> resolveNestedTasks(WorkflowRun build, FlowNode stageStartNode, List<FlowNode> allNodes,
+                                                 List<FlowNode> nodes) throws PipelineException {
         List<BlockStartNode> blocks = directChildren(nodes, stageStartNode, Task::isStageNode);
         if (blocks.isEmpty()) {
             blocks = directChildren(nodes, stageStartNode, Task::isBranchStart);
@@ -188,7 +185,7 @@ public class Task extends AbstractItem {
     }
 
     private static boolean isStageNode(FlowNode node) {
-        return StageNodeExt.isStageNode(node);
+        return FlowAnalysis.isStageNode(node);
     }
 
     private static boolean isBranchStart(FlowNode node) {
@@ -222,25 +219,7 @@ public class Task extends AbstractItem {
     }
 
     private static long nodeOrder(FlowNode node) {
-        try {
-            return Long.parseLong(node.getId());
-        } catch (NumberFormatException e) {
-            return Long.MAX_VALUE;
-        }
-    }
-
-    private static List<FlowNode> allNodes(FlowExecution execution) {
-        List<FlowNode> result = new ArrayList<>();
-        if (execution == null) {
-            return result;
-        }
-        DepthFirstScanner scanner = new DepthFirstScanner();
-        if (scanner.setup(execution.getCurrentHeads())) {
-            for (FlowNode node : scanner) {
-                result.add(node);
-            }
-        }
-        return result;
+        return FlowAnalysis.nodeOrder(node);
     }
 
     private static Task nestedTask(WorkflowRun build, FlowNode stageStartNode, List<FlowNode> allNodes,
@@ -273,23 +252,11 @@ public class Task extends AbstractItem {
     }
 
     private static BlockEndNode<?> endOf(List<FlowNode> allNodes, BlockStartNode block) {
-        for (FlowNode node : allNodes) {
-            if (node instanceof BlockEndNode && ((BlockEndNode<?>) node).getStartNode().getId().equals(block.getId())) {
-                return (BlockEndNode<?>) node;
-            }
-        }
-        return null;
+        return FlowAnalysis.endOf(allNodes, block);
     }
 
     private static FlowNode nodeAfter(List<FlowNode> allNodes, FlowNode node) {
-        for (FlowNode candidate : allNodes) {
-            for (FlowNode parent : candidate.getParents()) {
-                if (parent.getId().equals(node.getId())) {
-                    return candidate;
-                }
-            }
-        }
-        return null;
+        return FlowAnalysis.nodeAfter(allNodes, node);
     }
 
     static StatusType statusTypeOf(GenericStatus status) {
@@ -328,9 +295,11 @@ public class Task extends AbstractItem {
     }
 
     private static Stage getStage(WorkflowRun build, FlowNode stageStartNode) throws PipelineException {
-        List<Run> runs = workflowApi.getRunsFor(build.getParent());
-        Run run = getRunById(runs, build.getNumber());
-        Stage stage = run.getStageByName(stageStartNode.getDisplayName());
+        Run run = workflowApi.runFor(build);
+        Stage stage = run.getStageById(stageStartNode.getId());
+        if (stage == null) {
+            stage = run.getStageByName(stageStartNode.getDisplayName());
+        }
         if (stage == null) {
             throw new PipelineException("Could not resolve stage " + stageStartNode.getDisplayName()
                     + " for pipeline " + build.getDisplayName());
