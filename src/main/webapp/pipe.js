@@ -569,12 +569,24 @@ var DeliveryPipeline = (function () {
                 link = el('a', {id: 'startpipeline-' + index, class: 'task-icon-link task-trigger-build', href: '#',
                     'data-workflow-url': component.firstJobUrl, 'data-task-id': data.name});
             }
-            link.appendChild(el('img', {class: 'icon-clock icon-md', title: 'Build now',
-                src: resURL + '/plugin/delivery-pipeline-plugin/themes/default/clock.svg'}));
+            link.appendChild(buildNowIcon());
             heading.appendChild(link);
         }
         return heading;
     };
+
+    /** The Build-now clock, drawn inline in currentColor so it follows the page's text colour in every theme. */
+    function buildNowIcon() {
+        var svg = svgEl('svg', {class: 'icon-clock icon-md', viewBox: '0 0 24 24', width: '24', height: '24',
+            role: 'img', 'aria-label': 'Build now'});
+        var title = svgEl('title');
+        title.appendChild(document.createTextNode('Build now'));
+        svg.appendChild(title);
+        svg.appendChild(svgEl('circle', {cx: '12', cy: '12', r: '10', fill: 'none', stroke: 'currentColor', 'stroke-width': '2'}));
+        svg.appendChild(svgEl('path', {d: 'M12 6v6h4', fill: 'none', stroke: 'currentColor', 'stroke-width': '2',
+            'stroke-linecap': 'round', 'stroke-linejoin': 'round'}));
+        return svg;
+    }
 
     PipelineView.prototype.renderPagination = function (component) {
         if (this.options.fullscreen || !component.pagingData) {

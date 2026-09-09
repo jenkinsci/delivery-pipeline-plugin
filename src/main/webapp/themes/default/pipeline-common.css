@@ -364,6 +364,26 @@ div.pipeline-main {
     position: relative;
 }
 
+/* Build-now button in the component heading: inherits the text colour, brightens on hover */
+a.task-icon-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+a.task-icon-link svg.icon-clock {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    color: var(--text-color, #333333);
+    opacity: 0.75;
+}
+
+a.task-icon-link:hover svg.icon-clock,
+a.task-icon-link:focus svg.icon-clock {
+    color: var(--link-color, #0072bc);
+    opacity: 1;
+}
+
 /* Overlay on which pipe.js draws the arrows between stages */
 svg.pipeline-connectors {
     position: absolute;
