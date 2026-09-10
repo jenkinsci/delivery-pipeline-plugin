@@ -326,5 +326,28 @@ pipelineView('demo/Mixed', {
 }, [instances: 2])
 pipelineView('All pipelines', { regex('demo/(.*)-(build|a|1)$') }, [instances: 2, columns: 2, sorting: javaposse.jobdsl.dsl.views.DeliveryPipelineView.Sorting.LAST_ACTIVITY])
 
+// ---------------------------------------------------------------- Jenkinsfile zoo: one job per file in docker/jenkinsfiles
+folder('zoo') {
+    displayName('Jenkinsfile zoo')
+    description('One Pipeline job per file in docker/jenkinsfiles, each a shape a Jenkinsfile can take')
+}
+def zooFiles = new File('/usr/share/jenkins/ref/jenkinsfiles').listFiles().findAll { it.name.endsWith('.groovy') }.sort { it.name }
+zooFiles.each { file ->
+    def jobName = file.name - '.groovy'
+    def summary = file.text.readLines().find { it.startsWith('//') }
+    pipelineJob("zoo/${jobName}") {
+        description(summary ? summary.substring(2).trim() : jobName)
+        definition {
+            cps {
+                sandbox(true)
+                script(file.text)
+            }
+        }
+    }
+}
+pipelineView('zoo/Jenkinsfiles', {
+    zooFiles.each { file -> component(file.name - '.groovy', file.name - '.groovy') }
+}, [instances: 1, aggregated: false, columns: 2])
+
 // The first builds are started by docker/validate.py: builds queued from this seed are discarded, because the
 // seed runs before the queue is loaded during startup.

@@ -157,6 +157,23 @@ for name in FIRST_JOBS:
     status, _ = admin.post(f'{DEMO}job/{name}/' + ('buildWithParameters' if parameterized else 'build'))
     check(status in (200, 201), f'started the first build of {name} (status {status})')
 
+# The Jenkinsfile zoo: one job per file in docker/jenkinsfiles, checked against the .expect.json next to it.
+ZOO = 'job/zoo/'
+zoo_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'jenkinsfiles')
+zoo = {f[:-len('.expect.json')]: json.load(open(os.path.join(zoo_dir, f)))
+       for f in sorted(os.listdir(zoo_dir)) if f.endswith('.expect.json')}
+for name in zoo:
+    info = admin.json(f'{ZOO}job/{name}/api/json?tree=builds[number],inQueue')
+    if not info['builds'] and not info['inQueue']:
+        status, _ = admin.post(f'{ZOO}job/{name}/build')
+        check(status in (200, 201), f'started the first build of zoo/{name} (status {status})')
+
+
+def zoo_build(name):
+    builds = admin.json(f'{ZOO}job/{name}/api/json?tree=builds[number,building,result]')['builds']
+    return builds[0] if builds else None
+
+
 wait_for('the simple chain to finish', lambda: finished('simple-deploy'), timeout=900)
 wait_for('the fan-out chain to reach the package step', lambda: finished('fanout-package'), timeout=900)
 wait_for('the failing chain to fail', lambda: last_build('failing-test') and last_build('failing-test')['result'] == 'FAILURE', timeout=600)
@@ -167,6 +184,45 @@ wait_for('the bpp build to finish', lambda: finished('bpp-build'), timeout=600)
 wait_for('the scripted pipelines to finish', lambda: finished('pipeline-scripted') and finished('pipeline-skipped') and finished('pipeline-failing'), timeout=600)
 wait_for('the declarative pipeline to wait for input', lambda: any(
     t['requiresInput'] for t in tasks_of(view_json(DEMO + 'view/Pipelines/')['components'][0], 'Approve')), timeout=600)
+
+# ---------------------------------------------------------------- Jenkinsfile zoo
+print('== jenkinsfile zoo')
+wait_for('the zoo jobs with a result to finish', lambda: all(
+    (b := zoo_build(n)) is not None and not b['building'] for n, e in zoo.items() if e['result'] is not None), timeout=900)
+wait_for('the zoo job with an input to pause', lambda: any(
+    t['requiresInput'] for c in view_json(ZOO + 'view/Jenkinsfiles/')['components'] if c['name'] == 'input-with-parameters'
+    for p in c['pipelines'] for s in p['stages'] for t in s['tasks']), timeout=600)
+zoo_view = view_json(ZOO + 'view/Jenkinsfiles/')
+check(len(zoo_view['components']) == len(zoo) and not [c['error'] for c in zoo_view['components'] if c['error']],
+      f'zoo: {len(zoo_view["components"])} components, no errors')
+for name, expected in zoo.items():
+    component = next((c for c in zoo_view['components'] if c['name'] == name), None)
+    if component is None or not component['pipelines']:
+        check(False, f'zoo/{name}: no pipeline instance shown')
+        continue
+    build = zoo_build(name)
+    check(build['result'] == expected['result'], f'zoo/{name}: run result {build["result"]} (expected {expected["result"]})')
+    stages = stage_map(newest(component))
+    for stage_name, tasks in expected['stages'].items():
+        if stage_name not in stages:
+            check(False, f'zoo/{name}: stage {stage_name} shown {list(stages)}')
+            continue
+        shown = {t['name']: t['status']['type'] for t in stages[stage_name]['tasks']}
+        for task_name, allowed in tasks.items():
+            allowed = allowed if isinstance(allowed, list) else [allowed]
+            check(shown.get(task_name) in allowed, f'zoo/{name}: {stage_name} / {task_name} is {shown.get(task_name)} (expected {allowed})')
+    for stage_name, fragments in expected.get('tasks_contain', {}).items():
+        names = [t['name'] for t in stages.get(stage_name, {'tasks': []})['tasks']]
+        check(all(any(f in n for n in names) for f in fragments), f'zoo/{name}: {stage_name} tasks {names} cover {fragments}')
+    for stage_name, count in expected.get('task_count', {}).items():
+        names = [t['name'] for t in stages.get(stage_name, {'tasks': []})['tasks']]
+        check(len(names) == count, f'zoo/{name}: {stage_name} has {len(names)} tasks {names} (expected {count})')
+    if 'input' in expected:
+        task = stages[expected['input']]['tasks'][0]
+        check(task['requiresInput'] and (task['inputUrl'] or '').endswith('/input/'),
+              f'zoo/{name}: the input task links to the input page ({task["inputUrl"]})')
+        status, _ = admin.post(f'{ZOO}job/{name}/{build["number"]}/stop')
+        check(status in (200, 302), f'zoo/{name}: paused run stopped after the check (status {status})')
 
 # ---------------------------------------------------------------- views
 print('== views')

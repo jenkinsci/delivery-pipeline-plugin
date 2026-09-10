@@ -39,6 +39,9 @@ final class FlowGraph {
     /** The tag Declarative Pipeline puts on the stages it generates itself, such as "Declarative: Post Actions". */
     private static final String SYNTHETIC_STAGE_TAG = "SYNTHETIC_STAGE";
 
+    /** The tag Declarative Pipeline puts on a stage it did not run, with a value that starts with "SKIPPED". */
+    private static final String STAGE_STATUS_TAG = "STAGE_STATUS";
+
     private FlowGraph() {
     }
 
@@ -66,6 +69,28 @@ final class FlowGraph {
     private static boolean hasSyntheticTag(FlowNode node) {
         TagsAction tags = node.getAction(TagsAction.class);
         return tags != null && tags.getTagValue(SYNTHETIC_STAGE_TAG) != null;
+    }
+
+    /**
+     * Whether Declarative Pipeline skipped the stage: because of a when condition, an earlier failure, an unstable
+     * result or a restart from a later stage. The tag sits on the stage's node or its enclosing step node.
+     */
+    static boolean isSkipped(FlowNode node) {
+        if (hasSkippedTag(node)) {
+            return true;
+        }
+        for (FlowNode parent : node.getParents()) {
+            if (hasSkippedTag(parent)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasSkippedTag(FlowNode node) {
+        TagsAction tags = node.getAction(TagsAction.class);
+        String status = tags == null ? null : tags.getTagValue(STAGE_STATUS_TAG);
+        return status != null && status.startsWith("SKIPPED");
     }
 
     /** Whether the node starts a parallel branch. */

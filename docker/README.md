@@ -25,6 +25,18 @@ page and a phone viewport, so the rendering can be reviewed without a browser se
 Configuration lives in `casc.yaml` (Configuration as Code), the jobs in `jobs.groovy` (Job DSL), the plugin set in
 `plugins.txt`. Override the Jenkins version with `JENKINS_VERSION=2.579.1 docker/run.sh build`.
 
+## The Jenkinsfile zoo
+
+`docker/jenkinsfiles/` holds one Pipeline script per shape a Jenkinsfile can take: Declarative and scripted, nested
+and parallel stages, a matrix, `when` and `post` sections, failures and skipped stages, retries and timeouts, an input
+with parameters, a Pipeline that starts another. The seed creates one job per file in the *Jenkinsfile zoo* folder and
+a view over all of them; `validate.py` runs every job and compares the view with the `.expect.json` next to each
+script: the run result, the stages and tasks with their statuses, and where an input task links. The screenshots
+include the zoo view in both themes.
+
+To add a shape, drop a `name.groovy` with a one-line comment on top (it becomes the job description) and a
+`name.expect.json` beside it, then run `docker/run.sh all`.
+
 ## Upgrading from 1.4.2
 
     docker/upgrade.sh

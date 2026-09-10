@@ -4,6 +4,7 @@
 !docker/plugins.txt
 !docker/casc.yaml
 !docker/jobs.groovy
+!docker/jenkinsfiles/*.groovy
 !docker/upgrade/plugins.txt
 !docker/upgrade/casc.yaml
 !docker/upgrade/jobs.groovy

@@ -208,7 +208,11 @@ public final class FlowRuns {
         return timingOf(run, stageStart, last, after);
     }
 
-    /** Status and timing of a block that ends at the given node. */
+    /**
+     * Status and timing of a block that ends at the given node. A stage Declarative Pipeline skipped is not built,
+     * whatever the run's result: the analysis library reports a stage skipped after an earlier failure as failed,
+     * because the run failed, but nothing of it ran.
+     */
     static StageTiming timingOf(WorkflowRun run, FlowNode start, FlowNode last, FlowNode after) {
         FlowNode before = start.getParents().isEmpty() ? null : start.getParents().get(0);
         GenericStatus status = StatusAndTiming.computeChunkStatus2(run, before, start, last, after);
@@ -216,7 +220,8 @@ public final class FlowRuns {
         long startTime = timing == null || timing.getStartTimeMillis() == 0
                 ? run.getTimeInMillis() : timing.getStartTimeMillis();
         long duration = timing == null ? 0 : timing.getTotalDurationMillis();
-        return new StageTiming(start.getId(), start.getDisplayName(), typeOf(status), startTime, duration);
+        StatusType type = FlowGraph.isSkipped(start) ? StatusType.NOT_BUILT : typeOf(status);
+        return new StageTiming(start.getId(), start.getDisplayName(), type, startTime, duration);
     }
 
     static StatusType typeOf(GenericStatus status) {

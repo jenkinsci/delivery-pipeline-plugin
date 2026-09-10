@@ -1,0 +1,11 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    },
+    "Deploy": {
+      "Deploy": "NOT_BUILT"
+    }
+  }
+}

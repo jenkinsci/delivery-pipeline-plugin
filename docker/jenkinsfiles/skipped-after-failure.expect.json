@@ -1,0 +1,14 @@
+{
+  "result": "FAILURE",
+  "stages": {
+    "Build": {
+      "Build": "FAILED"
+    },
+    "Test": {
+      "Test": "NOT_BUILT"
+    },
+    "Deploy": {
+      "Deploy": "NOT_BUILT"
+    }
+  }
+}

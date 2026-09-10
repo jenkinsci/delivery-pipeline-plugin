@@ -45,6 +45,7 @@ with sync_playwright() as p:
         for view in VIEWS:
             shoot(page, f'{URL}/job/demo/view/{urllib.parse.quote(view)}/', f'{scheme}-{view.lower()}')
         shoot(page, f'{URL}/view/All%20pipelines/', f'{scheme}-all-pipelines')
+        shoot(page, f'{URL}/job/zoo/view/Jenkinsfiles/', f'{scheme}-jenkinsfiles')
         shoot(page, f'{URL}/job/demo/view/Fan-out/?fullscreen=true', f'{scheme}-fanout-fullscreen', full_page=False)
         context.close()
     # the log of one stage of a Pipeline run, where a task of the Pipelines view links to with Pipeline Graph View

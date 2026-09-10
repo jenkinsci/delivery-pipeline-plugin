@@ -40,8 +40,8 @@ scripts keep working; what changed is underneath and around them.
   into a Delivery Pipeline View with the same components when Jenkins loads it.
 - Pipeline jobs are read from the run's flow graph. Every top-level stage is a stage; the stages nested in it, or
   else its parallel branches, are its tasks. Declarative `parallel` and `matrix` blocks render one task per branch.
-  No `task` step is needed; the step of 1.x is deprecated but still works, shows its block as a task as before,
-  and prints a reminder to use a nested `stage`.
+  Matrix cells are named by their axes. No `task` step is needed; the step of 1.x is deprecated but still works,
+  shows its block as a task as before, and prints a reminder to use a nested `stage`.
 - The view model is a set of immutable records with one documented JSON contract, served by `<view>/api/json`
   (see `se.diabol.jenkins.pipeline.model`). The page script renders that JSON; it uses no third-party libraries
   and no page globals, works under a Content-Security-Policy and follows the Jenkins theme, dark themes included.
@@ -211,6 +211,10 @@ Maven 3.9 installed, `mvn clean verify` works as usual, and `LOCAL_MAVEN=1 docke
 
 Testing against a real controller
 ---------------------------------
+
+The suite also carries a *Jenkinsfile zoo* in `docker/jenkinsfiles/`: one Pipeline script per shape (nested and
+parallel stages, a matrix, skipped and failed stages, retries, an input with parameters, a Pipeline starting another),
+each with the stages, tasks and statuses the view must show. Add a script and its expectations to cover a new shape.
 
     docker/run.sh all
 

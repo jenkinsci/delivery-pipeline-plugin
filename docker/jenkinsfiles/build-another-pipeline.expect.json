@@ -1,0 +1,11 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Trigger": {
+      "Trigger": "SUCCESS"
+    },
+    "Report": {
+      "Report": "SUCCESS"
+    }
+  }
+}

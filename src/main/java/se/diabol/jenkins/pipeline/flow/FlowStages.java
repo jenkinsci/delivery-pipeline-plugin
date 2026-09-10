@@ -99,9 +99,15 @@ final class FlowStages {
             FlowRuns.StageTiming timing = FlowRuns.timingOf(run, block, last, FlowGraph.nodeAfter(allNodes, last));
             ThreadNameAction branch = block.getAction(ThreadNameAction.class);
             String name = branch != null && !FlowGraph.isStage(block) ? branch.getThreadName() : block.getDisplayName();
-            result.add(task(run, block, name, timing, previous, stageStart.getDisplayName(), restartable, console));
+            result.add(task(run, block, cellName(name), timing, previous, stageStart.getDisplayName(), restartable,
+                    console));
         }
         return result;
+    }
+
+    /** Declarative names every cell of a matrix "Matrix - OS = 'linux', ..."; the axes alone say what the cell is. */
+    private static String cellName(String name) {
+        return name.startsWith("Matrix - ") ? name.substring("Matrix - ".length()) : name;
     }
 
     /**

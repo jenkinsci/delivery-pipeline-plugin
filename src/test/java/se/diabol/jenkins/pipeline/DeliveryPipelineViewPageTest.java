@@ -715,4 +715,51 @@ class DeliveryPipelineViewPageTest {
             jenkins.getInstance().getQueue().cancel(flow);
         }
     }
+
+    @Test
+    void stagesSkippedAfterAFailureAreNotBuilt() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "halted");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "pipeline {",
+                "  agent any",
+                "  stages {",
+                "    stage('Build') { steps { error 'compilation failed' } }",
+                "    stage('Test') { steps { echo 't' } }",
+                "    stage('Deploy') { steps { echo 'd' } }",
+                "  }",
+                "}"), true));
+        jenkins.assertBuildStatus(Result.FAILURE, flow.scheduleBuild2(0));
+        DeliveryPipelineView view = view(jenkins, "Halted", "halted");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(page.<DomElement>querySelector(".stage_Build .stage-task").getAttribute("class"), containsString("FAILED"));
+            assertThat("a stage skipped because of the failure did not run",
+                    page.<DomElement>querySelector(".stage_Test .stage-task").getAttribute("class"), containsString("NOT_BUILT"));
+            assertThat(page.<DomElement>querySelector(".stage_Deploy .stage-task").getAttribute("class"), containsString("NOT_BUILT"));
+        }
+    }
+
+    @Test
+    void matrixCellsAreNamedByTheirAxes() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "matrixed");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "pipeline {",
+                "  agent none",
+                "  stages {",
+                "    stage('Test') {",
+                "      matrix {",
+                "        axes { axis { name 'OS'; values 'linux', 'mac' } }",
+                "        agent any",
+                "        stages { stage('Run') { steps { echo OS } } }",
+                "      }",
+                "    }",
+                "  }",
+                "}"), true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = view(jenkins, "Matrixed", "matrixed");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(taskNames(page), containsInAnyOrder("OS = 'linux'", "OS = 'mac'"));
+        }
+    }
 }

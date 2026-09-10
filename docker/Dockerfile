@@ -12,5 +12,7 @@ RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 COPY docker/casc.yaml /usr/share/jenkins/ref/casc.yaml
 COPY docker/jobs.groovy /usr/share/jenkins/ref/jobs.groovy
+# One Pipeline shape per file; the seed creates a job for each in the "Jenkinsfile zoo" folder.
+COPY docker/jenkinsfiles/*.groovy /usr/share/jenkins/ref/jenkinsfiles/
 # The plugin built by "mvn package"; the .override suffix makes a rebuilt image win over an older copy in a volume.
 COPY target/delivery-pipeline-plugin.hpi /usr/share/jenkins/ref/plugins/delivery-pipeline-plugin.jpi.override
