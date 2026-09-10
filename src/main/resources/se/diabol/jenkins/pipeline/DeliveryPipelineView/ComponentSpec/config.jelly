@@ -1,23 +1,18 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
-    <div>
-        <f:entry title="Name" field="name">
-            <f:textbox/>
-        </f:entry>
-        <f:entry title="Initial Job" field="firstJob">
-            <f:select/>
-        </f:entry>
-        <f:entry title="Final Job (optional)" field="lastJob">
-            <f:select/>
-        </f:entry>
-        <f:entry title="Show upstream" field="showUpstream">
-            <f:checkbox/>
-        </f:entry>
-        <f:entry>
-            <div align="right">
-                <f:repeatableDeleteButton/>
-            </div>
-        </f:entry>
-    </div>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry title="${%Name}" field="name">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%Initial job}" field="firstJob">
+        <f:select/>
+    </f:entry>
+    <f:entry title="${%Final job (optional)}" field="lastJob">
+        <f:select/>
+    </f:entry>
+    <f:entry title="${%Show upstream}" field="showUpstream">
+        <f:checkbox/>
+    </f:entry>
+    <f:entry>
+        <f:repeatableDeleteButton/>
+    </f:entry>
 </j:jelly>

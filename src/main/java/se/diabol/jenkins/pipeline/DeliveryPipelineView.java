@@ -17,107 +17,101 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
-import com.google.common.collect.Sets;
-import hudson.DescriptorExtensionList;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.Api;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
 import hudson.model.Descriptor;
+import hudson.model.Describable;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
-import hudson.model.ParametersAction;
+import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
-import hudson.model.listeners.ItemListener;
+import hudson.security.AccessControlled;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
-import org.acegisecurity.AuthenticationException;
-import org.acegisecurity.BadCredentialsException;
-import org.kohsuke.stapler.AncestorInPath;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.bind.JavaScriptMethod;
-import org.kohsuke.stapler.export.Exported;
-import se.diabol.jenkins.core.PipelineView;
-import se.diabol.jenkins.core.TimestampFormat;
-import se.diabol.jenkins.pipeline.domain.Component;
-import se.diabol.jenkins.pipeline.domain.Pipeline;
-import se.diabol.jenkins.pipeline.domain.PipelineException;
-import se.diabol.jenkins.pipeline.sort.ComponentComparatorDescriptor;
-import se.diabol.jenkins.pipeline.sort.GenericComponentComparator;
-import se.diabol.jenkins.pipeline.trigger.ManualTrigger;
-import se.diabol.jenkins.pipeline.trigger.ManualTriggerFactory;
-import se.diabol.jenkins.pipeline.trigger.TriggerException;
-import se.diabol.jenkins.pipeline.util.FullScreen;
-import se.diabol.jenkins.pipeline.util.JenkinsUtil;
-import se.diabol.jenkins.pipeline.util.ProjectUtil;
-
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import jakarta.annotation.Nonnull;
-import jakarta.servlet.ServletException;
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.HttpResponses;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.interceptor.RequirePOST;
+import se.diabol.jenkins.pipeline.cache.ModelCache;
+import se.diabol.jenkins.pipeline.model.Component;
+import se.diabol.jenkins.pipeline.model.ViewSettings;
+import se.diabol.jenkins.pipeline.source.ComponentRequest;
+import se.diabol.jenkins.pipeline.source.ComponentSource;
 
-public class DeliveryPipelineView extends View implements PipelineView {
+/**
+ * A view that shows one or more delivery pipelines: chains of jobs with downstream dependencies, or Pipeline
+ * (Jenkinsfile) jobs. The page polls {@code api/json} and renders the {@link Component} model it gets back.
+ *
+ * <p>Field names are the persisted format of 1.x, which Job DSL's {@code deliveryPipelineView} also writes.
+ */
+public class DeliveryPipelineView extends View {
 
     private static final Logger LOG = Logger.getLogger(DeliveryPipelineView.class.getName());
 
-    private static final int DEFAULT_INTERVAL = 2;
-
-    private static final int DEFAULT_NO_OF_PIPELINES = 3;
-    private static final int MAX_NO_OF_PIPELINES = 50;
-
-    private static final String OLD_NONE_SORTER = "se.diabol.jenkins.pipeline.sort.NoOpComparator";
-    private static final String NONE_SORTER = "none";
+    static final int DEFAULT_INTERVAL = 5;
+    static final int DEFAULT_NO_OF_PIPELINES = 3;
+    static final int MAX_NO_OF_PIPELINES = 50;
 
     private List<ComponentSpec> componentSpecs;
-    private int noOfPipelines = DEFAULT_NO_OF_PIPELINES;
-    private boolean showAggregatedPipeline = false;
-    private int noOfColumns = 1;
-    private String sorting = NONE_SORTER;
-    private String fullScreenCss = null;
-    private String embeddedCss = null;
-    private boolean showAvatars = false;
-    private int updateInterval = DEFAULT_INTERVAL;
-    private boolean showChanges = false;
-    private boolean allowManualTriggers = false;
-    private boolean showTotalBuildTime = false;
-    private boolean allowRebuild = false;
-    private boolean allowPipelineStart = false;
-    private boolean allowAbort = false;
-    private boolean showDescription = false;
-    private boolean showPromotions = false;
-    private boolean showTestResults = false;
-    private boolean showStaticAnalysisResults = false;
-    private boolean linkRelative = false;
-    private boolean pagingEnabled = false;
-    private boolean showAbsoluteDateTime = false;
-    private boolean showAggregatedChanges = false;
-    private String aggregatedChangesGroupingPattern = null;
-    private int maxNumberOfVisiblePipelines = -1;
     private List<RegExpSpec> regexpFirstJobs;
-    private boolean linkToConsoleLog = false;
-    private String description = null;
+    private int noOfPipelines = DEFAULT_NO_OF_PIPELINES;
+    private int noOfColumns = 1;
+    private String sorting = Sorting.NONE.getId();
+    private int updateInterval = DEFAULT_INTERVAL;
+    private int maxNumberOfVisiblePipelines = -1;
+    private boolean pagingEnabled;
+    private boolean showAggregatedPipeline;
+    private boolean showChanges;
+    private boolean showDescription;
+    private boolean showTotalBuildTime;
+    private boolean showTestResults;
+    private boolean showStaticAnalysisResults;
+    private boolean showPromotions;
+    private boolean showAbsoluteDateTime;
+    private boolean allowPipelineStart;
+    private boolean allowManualTriggers;
+    private boolean allowRebuild;
+    private boolean allowAbort;
 
-    private transient String error;
+    // Options of 1.x that 2.0 does not have. Jenkins reads transient fields from disk, so old configurations still
+    // load; they are never written back. The description used to be kept twice and is moved to the view's own.
+    private transient String description;
+    private transient boolean showAvatars;
+    private transient boolean linkRelative;
+    private transient boolean linkToConsoleLog;
+    private transient boolean showAggregatedChanges;
+    private transient String aggregatedChangesGroupingPattern;
+    private transient String fullScreenCss;
+    private transient String embeddedCss;
+    private transient String theme;
 
     @DataBoundConstructor
     public DeliveryPipelineView(String name) {
@@ -128,107 +122,42 @@ public class DeliveryPipelineView extends View implements PipelineView {
         super(name, owner);
     }
 
-    public List<RegExpSpec> getRegexpFirstJobs() {
-        return regexpFirstJobs;
-    }
-
-    public void setRegexpFirstJobs(List<RegExpSpec> regexpFirstJobs) {
-        this.regexpFirstJobs = regexpFirstJobs;
-    }
-
-    public boolean getShowAvatars() {
-        return showAvatars;
-    }
-
-    public void setShowAvatars(boolean showAvatars) {
-        this.showAvatars = showAvatars;
-    }
-
-    public String getSorting() {
-        /* Removed se.diabol.jenkins.pipeline.sort.NoOpComparator since it in some cases did sorting*/
-        if (OLD_NONE_SORTER.equals(sorting)) {
-            this.sorting = NONE_SORTER;
+    protected Object readResolve() {
+        if (super.description == null && description != null) {
+            super.description = description;
         }
-        return sorting;
+        description = null;
+        sorting = Sorting.fromId(sorting).getId();
+        if (updateInterval <= 0) {
+            updateInterval = DEFAULT_INTERVAL;
+        }
+        return this;
     }
 
-    public void setSorting(String sorting) {
-        /* Removed se.diabol.jenkins.pipeline.sort.NoOpComparator since it in some cases did sorting*/
-        if (OLD_NONE_SORTER.equals(sorting)) {
-            this.sorting = NONE_SORTER;
-        } else {
-            this.sorting = sorting;
-        }
-    }
+    /* ------------------------------------------------------------------ configuration */
 
     public List<ComponentSpec> getComponentSpecs() {
-        return componentSpecs;
+        return componentSpecs == null ? List.of() : componentSpecs;
     }
 
     public void setComponentSpecs(List<ComponentSpec> componentSpecs) {
-        this.componentSpecs = componentSpecs;
+        this.componentSpecs = componentSpecs == null ? null : new ArrayList<>(componentSpecs);
+    }
+
+    public List<RegExpSpec> getRegexpFirstJobs() {
+        return regexpFirstJobs == null ? List.of() : regexpFirstJobs;
+    }
+
+    public void setRegexpFirstJobs(List<RegExpSpec> regexpFirstJobs) {
+        this.regexpFirstJobs = regexpFirstJobs == null ? null : new ArrayList<>(regexpFirstJobs);
     }
 
     public int getNoOfPipelines() {
         return noOfPipelines;
     }
 
-    public boolean isShowAggregatedPipeline() {
-        return showAggregatedPipeline;
-    }
-
     public void setNoOfPipelines(int noOfPipelines) {
-        this.noOfPipelines = noOfPipelines;
-    }
-
-    public boolean isShowChanges() {
-        return showChanges;
-    }
-
-    public void setShowChanges(boolean showChanges) {
-        this.showChanges = showChanges;
-    }
-
-    @Exported
-    public boolean isShowTotalBuildTime() {
-        return showTotalBuildTime;
-    }
-
-    public void setShowTotalBuildTime(boolean showTotalBuildTime) {
-        this.showTotalBuildTime = showTotalBuildTime;
-    }
-
-    public void setShowAggregatedPipeline(boolean showAggregatedPipeline) {
-        this.showAggregatedPipeline = showAggregatedPipeline;
-    }
-
-    @Exported
-    @Override
-    public boolean isAllowPipelineStart() {
-        return allowPipelineStart;
-    }
-
-    public void setAllowPipelineStart(boolean allowPipelineStart) {
-        this.allowPipelineStart = allowPipelineStart;
-    }
-
-    @Exported
-    @Override
-    public boolean isAllowAbort() {
-        return allowAbort;
-    }
-
-    public void setAllowAbort(boolean allowAbort) {
-        this.allowAbort = allowAbort;
-    }
-
-    @Exported
-    public boolean isAllowManualTriggers() {
-        return allowManualTriggers;
-    }
-
-    public void setAllowManualTriggers(boolean allowManualTriggers) {
-        this.allowManualTriggers = allowManualTriggers;
+        this.noOfPipelines = Math.max(0, Math.min(MAX_NO_OF_PIPELINES, noOfPipelines));
     }
 
     public int getNoOfColumns() {
@@ -236,185 +165,23 @@ public class DeliveryPipelineView extends View implements PipelineView {
     }
 
     public void setNoOfColumns(int noOfColumns) {
-        this.noOfColumns = noOfColumns;
+        this.noOfColumns = Math.max(1, Math.min(3, noOfColumns));
     }
 
-    public String getFullScreenCss() {
-        return fullScreenCss;
+    public String getSorting() {
+        return Sorting.fromId(sorting).getId();
+    }
+
+    public void setSorting(String sorting) {
+        this.sorting = Sorting.fromId(sorting).getId();
     }
 
     public int getUpdateInterval() {
-        //This occurs when the plugin has been updated and as long as the view has not been updated
-        //Jenkins will set the default value to 0
-        if (updateInterval == 0) {
-            updateInterval = DEFAULT_INTERVAL;
-        }
-
-        return updateInterval;
+        return updateInterval <= 0 ? DEFAULT_INTERVAL : updateInterval;
     }
 
     public void setUpdateInterval(int updateInterval) {
-        this.updateInterval = updateInterval;
-    }
-
-    public void setFullScreenCss(String fullScreenCss) {
-        if (fullScreenCss != null && "".equals(fullScreenCss.trim())) {
-            this.fullScreenCss = null;
-        } else {
-            this.fullScreenCss = fullScreenCss;
-        }
-    }
-
-    public String getEmbeddedCss() {
-        return embeddedCss;
-    }
-
-    public void setEmbeddedCss(String embeddedCss) {
-        if (embeddedCss != null && "".equals(embeddedCss.trim())) {
-            this.embeddedCss = null;
-        } else {
-            this.embeddedCss = embeddedCss;
-        }
-    }
-
-    @Exported
-    public boolean getPagingEnabled() {
-        return pagingEnabled;
-    }
-
-    public boolean isFullScreenView() {
-        return FullScreen.isFullScreenRequest(Stapler.getCurrentRequest());
-    }
-
-    public void onProjectRenamed(Item item, String oldName, String newName) {
-        if (componentSpecs != null) {
-            Iterator<ComponentSpec> it = componentSpecs.iterator();
-            while (it.hasNext()) {
-                ComponentSpec componentSpec = it.next();
-                if (componentSpec.getFirstJob().equals(oldName)) {
-                    if (newName == null) {
-                        it.remove();
-                    } else {
-                        componentSpec.setFirstJob(newName);
-                    }
-                }
-                if (componentSpec.getLastJob() != null && componentSpec.getLastJob().equals(oldName)) {
-                    if (newName == null) {
-                        it.remove();
-                    } else {
-                        componentSpec.setLastJob(newName);
-                    }
-                }
-            }
-        }
-    }
-
-    @Exported
-    @Override
-    public String getViewUrl() {
-        return super.getViewUrl();
-    }
-
-    @Override
-    public Api getApi() {
-        return new PipelineApi(this);
-    }
-
-    @Exported
-    @Override
-    public String getLastUpdated() {
-        return TimestampFormat.formatTimestamp(System.currentTimeMillis());
-    }
-
-    @Exported
-    @Override
-    public String getError() {
-        return error;
-    }
-
-    @Exported
-    public boolean isAllowRebuild() {
-        return allowRebuild;
-    }
-
-    public void setAllowRebuild(boolean allowRebuild) {
-        this.allowRebuild = allowRebuild;
-    }
-
-    @Exported
-    public boolean isShowDescription() {
-        return showDescription;
-    }
-
-    @Exported
-    public boolean isShowPromotions() {
-        return showPromotions;
-    }
-
-    @Exported
-    public boolean isShowTestResults() {
-        return showTestResults;
-    }
-
-    @Exported
-    public boolean isShowStaticAnalysisResults() {
-        return showStaticAnalysisResults;
-    }
-
-    @Exported
-    public boolean isLinkRelative() {
-        return linkRelative;
-    }
-
-    public void setLinkRelative(boolean linkRelative) {
-        this.linkRelative = linkRelative;
-    }
-
-    public void setShowDescription(boolean showDescription) {
-        this.showDescription = showDescription;
-    }
-
-    public void setShowPromotions(boolean showPromotions) {
-        this.showPromotions = showPromotions;
-    }
-
-    public void setShowTestResults(boolean showTestResults) {
-        this.showTestResults = showTestResults;
-    }
-
-    public void setShowStaticAnalysisResults(boolean showStaticAnalysisResults) {
-        this.showStaticAnalysisResults = showStaticAnalysisResults;
-    }
-
-    public void setPagingEnabled(boolean pagingEnabled) {
-        this.pagingEnabled = pagingEnabled;
-    }
-
-    @Exported
-    public boolean isShowAbsoluteDateTime() {
-        return showAbsoluteDateTime;
-    }
-
-    public void setShowAbsoluteDateTime(boolean showAbsoluteDateTime) {
-        this.showAbsoluteDateTime = showAbsoluteDateTime;
-    }
-
-    @Exported
-    public boolean isShowAggregatedChanges() {
-        return showAggregatedChanges;
-    }
-
-    public void setShowAggregatedChanges(boolean showAggregatedChanges) {
-        this.showAggregatedChanges = showAggregatedChanges;
-    }
-
-    @Exported
-    public String getAggregatedChangesGroupingPattern() {
-        return aggregatedChangesGroupingPattern;
-    }
-
-    public void setAggregatedChangesGroupingPattern(String aggregatedChangesGroupingPattern) {
-        this.aggregatedChangesGroupingPattern = aggregatedChangesGroupingPattern;
+        this.updateInterval = updateInterval <= 0 ? DEFAULT_INTERVAL : updateInterval;
     }
 
     public int getMaxNumberOfVisiblePipelines() {
@@ -425,206 +192,359 @@ public class DeliveryPipelineView extends View implements PipelineView {
         this.maxNumberOfVisiblePipelines = maxNumberOfVisiblePipelines;
     }
 
+    public boolean isPagingEnabled() {
+        return pagingEnabled;
+    }
+
+    /** The 1.x name of {@link #isPagingEnabled()}. */
+    public boolean getPagingEnabled() {
+        return pagingEnabled;
+    }
+
+    public void setPagingEnabled(boolean pagingEnabled) {
+        this.pagingEnabled = pagingEnabled;
+    }
+
+    public boolean isShowAggregatedPipeline() {
+        return showAggregatedPipeline;
+    }
+
+    public void setShowAggregatedPipeline(boolean showAggregatedPipeline) {
+        this.showAggregatedPipeline = showAggregatedPipeline;
+    }
+
+    public boolean isShowChanges() {
+        return showChanges;
+    }
+
+    public void setShowChanges(boolean showChanges) {
+        this.showChanges = showChanges;
+    }
+
+    public boolean isShowDescription() {
+        return showDescription;
+    }
+
+    public void setShowDescription(boolean showDescription) {
+        this.showDescription = showDescription;
+    }
+
+    public boolean isShowTotalBuildTime() {
+        return showTotalBuildTime;
+    }
+
+    public void setShowTotalBuildTime(boolean showTotalBuildTime) {
+        this.showTotalBuildTime = showTotalBuildTime;
+    }
+
+    public boolean isShowTestResults() {
+        return showTestResults;
+    }
+
+    public void setShowTestResults(boolean showTestResults) {
+        this.showTestResults = showTestResults;
+    }
+
+    public boolean isShowStaticAnalysisResults() {
+        return showStaticAnalysisResults;
+    }
+
+    public void setShowStaticAnalysisResults(boolean showStaticAnalysisResults) {
+        this.showStaticAnalysisResults = showStaticAnalysisResults;
+    }
+
+    public boolean isShowPromotions() {
+        return showPromotions;
+    }
+
+    public void setShowPromotions(boolean showPromotions) {
+        this.showPromotions = showPromotions;
+    }
+
+    public boolean isShowAbsoluteDateTime() {
+        return showAbsoluteDateTime;
+    }
+
+    public void setShowAbsoluteDateTime(boolean showAbsoluteDateTime) {
+        this.showAbsoluteDateTime = showAbsoluteDateTime;
+    }
+
+    public boolean isAllowPipelineStart() {
+        return allowPipelineStart;
+    }
+
+    public void setAllowPipelineStart(boolean allowPipelineStart) {
+        this.allowPipelineStart = allowPipelineStart;
+    }
+
+    public boolean isAllowManualTriggers() {
+        return allowManualTriggers;
+    }
+
+    public void setAllowManualTriggers(boolean allowManualTriggers) {
+        this.allowManualTriggers = allowManualTriggers;
+    }
+
+    public boolean isAllowRebuild() {
+        return allowRebuild;
+    }
+
+    public void setAllowRebuild(boolean allowRebuild) {
+        this.allowRebuild = allowRebuild;
+    }
+
+    public boolean isAllowAbort() {
+        return allowAbort;
+    }
+
+    public void setAllowAbort(boolean allowAbort) {
+        this.allowAbort = allowAbort;
+    }
+
+    /* ------------------------------------------------------------------ the JSON the page polls */
+
     @Exported
-    public boolean isLinkToConsoleLog() {
-        return linkToConsoleLog;
-    }
-
-    public void setLinkToConsoleLog(boolean linkToConsoleLog) {
-        this.linkToConsoleLog = linkToConsoleLog;
-    }
-
-    @Override
-    @Exported
-    public String getDescription() {
-        if (super.description == null) {
-            setDescription(this.description);
-        }
-        return super.description;
-    }
-
-    public void setDescription(String description) {
-        super.description = description;
-        this.description = description;
-    }
-
-    @JavaScriptMethod
-    @Override
-    public void triggerManual(String projectName, String upstreamName, String buildId)
-            throws TriggerException, AuthenticationException {
-        try {
-            LOG.fine("Trigger manual build " + projectName + " " + upstreamName + " " + buildId);
-            AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.getInstance());
-            if (!project.hasPermission(Item.BUILD)) {
-                throw new BadCredentialsException("Not authorized to trigger build");
-            }
-            AbstractProject upstream = ProjectUtil.getProject(upstreamName, Jenkins.getInstance());
-            ManualTrigger trigger = ManualTriggerFactory.getManualTrigger(project, upstream);
-            if (trigger != null) {
-                trigger.triggerManual(project, upstream, buildId, getOwner().getItemGroup());
-            } else {
-                String message = "Trigger not found for manual build " + projectName + " for upstream "
-                        + upstreamName + " id: " + buildId;
-                LOG.log(Level.WARNING, message);
-                throw new TriggerException(message);
-            }
-        } catch (TriggerException e) {
-            LOG.log(Level.WARNING, triggerExceptionMessage(projectName, upstreamName, buildId), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void triggerRebuild(String projectName, String buildId) {
-        AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.getInstance());
-        if (!project.hasPermission(Item.BUILD)) {
-            throw new BadCredentialsException("Not authorized to trigger build");
-        }
-        AbstractBuild build = project.getBuildByNumber(Integer.parseInt(buildId));
-
-        @SuppressWarnings("unchecked")
-        List<Cause> prevCauses = build.getCauses();
-        List<Cause> newCauses = new ArrayList<>();
-        for (Cause cause : prevCauses) {
-            if (!(cause instanceof Cause.UserIdCause)) {
-                newCauses.add(cause);
-            }
-        }
-        newCauses.add(new Cause.UserIdCause());
-        CauseAction causeAction = new CauseAction(newCauses);
-        project.scheduleBuild2(project.getQuietPeriod(), (Cause) null, causeAction,
-                build.getAction(ParametersAction.class));
-    }
-
-    @Override
-    public void abortBuild(String projectName, String buildId) throws TriggerException {
-        AbstractProject project = ProjectUtil.getProject(projectName, Jenkins.getInstance());
-        if (!project.hasPermission(Item.CANCEL)) {
-            throw new BadCredentialsException("Not authorized to abort build");
-        }
-        AbstractBuild build = project.getBuildByNumber(Integer.parseInt(buildId));
-        try {
-            build.doStop();
-        } catch (IOException | ServletException e) {
-            throw new TriggerException("Could not abort build");
-        }
-    }
-
-    protected static String triggerExceptionMessage(final String projectName, final String upstreamName,
-                                                    final String buildId) {
-        String message = "Could not trigger manual build " + projectName + " for upstream " + upstreamName
-                + " id: " + buildId;
-        if (projectName.contains("/")) {
-            message += ". Did you mean to specify " + withoutFolderPrefix(projectName) + "?";
-        }
-        return message;
-    }
-
-    protected static String withoutFolderPrefix(final String projectName) {
-        return projectName.substring(projectName.indexOf("/") + 1);
+    public ViewSettings getSettings() {
+        return new ViewSettings(noOfPipelines, noOfColumns, getUpdateInterval(), pagingEnabled,
+                showAggregatedPipeline, showChanges, showDescription, showTotalBuildTime, showTestResults,
+                showStaticAnalysisResults, showPromotions, showAbsoluteDateTime, allowPipelineStart,
+                allowManualTriggers, allowRebuild, allowAbort);
     }
 
     @Exported
-    @Override
-    public List<Component> getPipelines() {
+    public long getServerTime() {
+        return System.currentTimeMillis();
+    }
+
+    /**
+     * The components with their pipelines. The request may carry {@code page} and {@code component} to page one
+     * component's instances, and {@code fullscreen=true} to switch paging off.
+     */
+    @Exported
+    public List<Component> getComponents() {
+        StaplerRequest2 request = Stapler.getCurrentRequest2();
+        int page = Math.max(1, intParameter(request, "page", 1));
+        int pagedComponent = intParameter(request, "component", 1);
+        boolean fullscreen = request != null && Boolean.parseBoolean(request.getParameter("fullscreen"));
+        boolean paging = pagingEnabled && !fullscreen;
+        return ModelCache.get().get(cacheKey(page, pagedComponent, paging),
+                () -> resolveComponents(page, pagedComponent, paging));
+    }
+
+    static int intParameter(StaplerRequest2 request, String name, int defaultValue) {
+        String value = request == null ? null : request.getParameter(name);
+        if (value == null) {
+            return defaultValue;
+        }
         try {
-            LOG.fine("Getting pipelines");
-            List<Component> components = new ArrayList<>();
-            if (componentSpecs != null) {
-                for (ComponentSpec componentSpec : componentSpecs) {
-                    AbstractProject firstJob = ProjectUtil.getProject(componentSpec.getFirstJob(), getOwnerItemGroup());
-                    AbstractProject lastJob = ProjectUtil.getProject(componentSpec.getLastJob(), getOwnerItemGroup());
-                    if (firstJob != null) {
-                        components.add(getComponent(componentSpec.getName(), firstJob,
-                                lastJob, showAggregatedPipeline, (componentSpecs.indexOf(componentSpec) + 1),
-                                componentSpec.isShowUpstream()));
-                    } else {
-                        throw new PipelineException("Could not find project: " + componentSpec.getFirstJob());
-                    }
-                }
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private String cacheKey(int page, int pagedComponent, boolean paging) {
+        return getViewUrl() + "|" + getSettings().hashCode() + "|" + getComponentSpecs().hashCode() + "|"
+                + getRegexpFirstJobs().hashCode() + "|" + sorting + "|" + maxNumberOfVisiblePipelines + "|"
+                + (paging ? pagedComponent + "/" + page : "-");
+    }
+
+    List<Component> resolveComponents(int page, int pagedComponent, boolean paging) {
+        List<Component> components = new ArrayList<>();
+        ViewSettings settings = getSettings();
+        int index = 1;
+        for (ComponentSpec spec : getComponentSpecs()) {
+            components.add(resolve(spec.getName(), spec.getFirstJob(), spec.getLastJob(), spec.isShowUpstream(),
+                    index, index == pagedComponent ? page : 1, paging, settings));
+            index++;
+        }
+        for (RegExpSpec spec : getRegexpFirstJobs()) {
+            for (Map.Entry<String, Job<?, ?>> match : matches(spec.getRegexp()).entrySet()) {
+                components.add(resolve(match.getKey(), match.getValue(), null, spec.isShowUpstream(), index,
+                        index == pagedComponent ? page : 1, paging, settings));
+                index++;
             }
-            if (regexpFirstJobs != null) {
-                for (RegExpSpec regexp : regexpFirstJobs) {
-                    Map<String, AbstractProject> matches = ProjectUtil.getProjects(regexp.getRegexp());
-                    int index = 1;
-                    for (Map.Entry<String, AbstractProject> entry : matches.entrySet()) {
-                        components.add(getComponent(entry.getKey(), entry.getValue(), null,
-                                showAggregatedPipeline, index, regexp.isShowUpstream()));
-                        index++;
-                    }
-                }
+        }
+        components.sort(Sorting.fromId(sorting).comparator());
+        if (maxNumberOfVisiblePipelines > 0 && components.size() > maxNumberOfVisiblePipelines) {
+            components = new ArrayList<>(components.subList(0, maxNumberOfVisiblePipelines));
+        }
+        return components;
+    }
+
+    private Component resolve(String name, String firstJobName, String lastJobName, boolean showUpstream, int index,
+                              int page, boolean paging, ViewSettings settings) {
+        Job<?, ?> first = findJob(firstJobName);
+        if (first == null) {
+            return Component.failed(name, index, "Could not find job " + firstJobName);
+        }
+        return resolve(name, first, lastJobName, showUpstream, index, page, paging, settings);
+    }
+
+    private Component resolve(String name, Job<?, ?> first, String lastJobName, boolean showUpstream, int index,
+                              int page, boolean paging, ViewSettings settings) {
+        Job<?, ?> last = null;
+        if (lastJobName != null && !lastJobName.isBlank()) {
+            last = findJob(lastJobName);
+            if (last == null) {
+                return Component.failed(name, index, "Could not find job " + lastJobName);
             }
-            if (getSorting() != null && !getSorting().equals(NONE_SORTER)) {
-                ComponentComparatorDescriptor comparatorDescriptor = GenericComponentComparator.all().find(sorting);
-                if (comparatorDescriptor != null) {
-                    components.sort(comparatorDescriptor.createInstance());
-                }
-            }
-            if (maxNumberOfVisiblePipelines > 0) {
-                LOG.fine("Limiting number of jobs to: " + maxNumberOfVisiblePipelines);
-                components = components.subList(0, Math.min(components.size(), maxNumberOfVisiblePipelines));
-            }
-            LOG.fine("Returning: " + components);
-            error = null;
-            return components;
+        }
+        try {
+            ComponentSource source = ComponentSource.forJob(first);
+            return source.resolve(new ComponentRequest(name, index, first, last, showUpstream, getOwnerItemGroup(),
+                    settings, page, paging));
         } catch (PipelineException e) {
-            error = e.getMessage();
-            return new ArrayList<>();
+            return Component.failed(name, index, e.getMessage());
+        } catch (RuntimeException e) {
+            LOG.log(Level.WARNING, "Could not resolve pipeline " + name + " of view " + getViewName(), e);
+            return Component.failed(name, index, "Could not resolve the pipeline: " + e);
         }
     }
 
-    private Component getComponent(String name, AbstractProject firstJob, AbstractProject lastJob,
-                                   boolean showAggregatedPipeline, int componentNumber, boolean showUpstream)
-            throws PipelineException {
-        Pipeline pipeline = Pipeline.extractPipeline(name, firstJob, lastJob, showUpstream);
-        Component component = new Component(name, firstJob.getName(), firstJob.getUrl(), firstJob.isParameterized(),
-                noOfPipelines, pagingEnabled, componentNumber);
-        List<Pipeline> pipelines = new ArrayList<>();
-        if (showAggregatedPipeline) {
-            pipelines.add(pipeline.createPipelineAggregated(getOwnerItemGroup(), showAggregatedChanges));
+    /** The job with the given name relative to the view's item group, or null. */
+    Job<?, ?> findJob(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
         }
-        pipelines.addAll(pipeline
-                .createPipelineLatest(noOfPipelines, getOwnerItemGroup(), showPaging(), showChanges, component));
-        component.setPipelines(pipelines);
-        return component;
+        ItemGroup<?> context = getOwnerItemGroup();
+        return Jenkins.get().getItem(name.trim(), context == null ? Jenkins.get() : context, Job.class);
     }
 
-    protected boolean showPaging() {
-        return !isFullScreenView() && getPagingEnabled();
+    /** Jobs whose full name matches the expression, keyed by its first capture group, in item order. */
+    static Map<String, Job<?, ?>> matches(String regexp) {
+        Map<String, Job<?, ?>> result = new LinkedHashMap<>();
+        if (regexp == null || regexp.isBlank()) {
+            return result;
+        }
+        Pattern pattern;
+        try {
+            pattern = Pattern.compile(regexp);
+        } catch (PatternSyntaxException e) {
+            LOG.log(Level.WARNING, "Ignoring invalid pipeline expression " + regexp, e);
+            return result;
+        }
+        for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
+            Matcher matcher = pattern.matcher(job.getFullName());
+            if (matcher.find() && matcher.groupCount() >= 1 && isPipelineStart(job)) {
+                result.putIfAbsent(matcher.group(1), job);
+            }
+        }
+        return result;
+    }
+
+    static boolean isPipelineStart(Job<?, ?> job) {
+        for (ComponentSource source : ComponentSource.all()) {
+            if (source.supports(job)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* ------------------------------------------------------------------ actions the page posts */
+
+    /** Triggers a manually triggered task, continuing from a build of its upstream job. */
+    @RequirePOST
+    public HttpResponse doManualStep(@QueryParameter String project, @QueryParameter String upstream,
+                                     @QueryParameter String buildId) {
+        if (!allowManualTriggers) {
+            return HttpResponses.errorWithoutStack(403, "Manual triggers are not enabled for this view");
+        }
+        return action(project, buildId, (source, job, number) ->
+                source.triggerManual(job, findJobByFullName(upstream), number, getOwnerItemGroup()));
+    }
+
+    /**
+     * Schedules a build of the job like the one with the given number, or when a stage is named, restarts that
+     * build from the stage.
+     */
+    @RequirePOST
+    public HttpResponse doRebuild(@QueryParameter String project, @QueryParameter String buildId,
+                                  @QueryParameter String stage) {
+        if (!allowRebuild) {
+            return HttpResponses.errorWithoutStack(403, "Rebuilding is not enabled for this view");
+        }
+        return action(project, buildId, (source, job, number) -> source.rebuild(job, number, stage));
+    }
+
+    /** Stops the build with the given number. */
+    @RequirePOST
+    public HttpResponse doAbort(@QueryParameter String project, @QueryParameter String buildId) {
+        if (!allowAbort) {
+            return HttpResponses.errorWithoutStack(403, "Aborting builds is not enabled for this view");
+        }
+        return action(project, buildId, ComponentSource::abort);
+    }
+
+    /** Lets a Pipeline run continue past the input step the given task, or else the run, is waiting at. */
+    @RequirePOST
+    public HttpResponse doProceedInput(@QueryParameter String project, @QueryParameter String buildId,
+                                       @QueryParameter String task) {
+        return action(project, buildId, (source, job, number) -> source.proceedInput(job, number, task));
+    }
+
+    private interface Action {
+        void perform(ComponentSource source, Job<?, ?> job, int buildNumber) throws PipelineException;
+    }
+
+    private HttpResponse action(String project, String buildId, Action action) {
+        Job<?, ?> job = findJobByFullName(project);
+        if (job == null) {
+            return HttpResponses.errorWithoutStack(404, "No such job: " + project);
+        }
+        int number;
+        try {
+            number = Integer.parseInt(buildId == null ? "" : buildId.trim());
+        } catch (NumberFormatException e) {
+            return HttpResponses.errorWithoutStack(400, "Not a build number: " + buildId);
+        }
+        try {
+            action.perform(ComponentSource.forJob(job), job, number);
+            return HttpResponses.ok();
+        } catch (PipelineException e) {
+            LOG.log(Level.FINE, "Action on " + project + " #" + buildId + " failed", e);
+            return HttpResponses.errorWithoutStack(400, e.getMessage());
+        }
+    }
+
+    private static Job<?, ?> findJobByFullName(String fullName) {
+        return fullName == null ? null : Jenkins.get().getItemByFullName(fullName, Job.class);
+    }
+
+    /* ------------------------------------------------------------------ View */
+
+    @Override
+    public Api getApi() {
+        return new PipelineApi(this);
     }
 
     @Override
     public Collection<TopLevelItem> getItems() {
-        Set<TopLevelItem> jobs = Sets.newHashSet();
-        addJobsFromComponentSpecs(jobs);
-        addRegexpFirstJobs(jobs);
-        return jobs;
-    }
-
-    private void addJobsFromComponentSpecs(Set<TopLevelItem> jobs) {
-        if (componentSpecs == null) {
-            return;
+        Set<TopLevelItem> items = new LinkedHashSet<>();
+        for (ComponentSpec spec : getComponentSpecs()) {
+            addJobs(items, findJob(spec.getFirstJob()), findJob(spec.getLastJob()));
         }
-        for (ComponentSpec spec : componentSpecs) {
-            AbstractProject first = ProjectUtil.getProject(spec.getFirstJob(), getOwnerItemGroup());
-            AbstractProject last = ProjectUtil.getProject(spec.getLastJob(), getOwnerItemGroup());
-            Collection<AbstractProject<?, ?>> downstreamProjects =
-                    ProjectUtil.getAllDownstreamProjects(first, last).values();
-            for (AbstractProject project : downstreamProjects) {
-                jobs.add((TopLevelItem) project);
+        for (RegExpSpec spec : getRegexpFirstJobs()) {
+            for (Job<?, ?> job : matches(spec.getRegexp()).values()) {
+                addJobs(items, job, null);
             }
         }
+        return items;
     }
 
-    private void addRegexpFirstJobs(Set<TopLevelItem> jobs) {
-        if (regexpFirstJobs == null) {
+    private static void addJobs(Set<TopLevelItem> into, Job<?, ?> first, Job<?, ?> last) {
+        if (first == null) {
             return;
         }
-        for (RegExpSpec spec : regexpFirstJobs) {
-            Map<String, AbstractProject> regexpJobs = ProjectUtil.getProjects(spec.getRegexp());
-            for (AbstractProject project : regexpJobs.values()) {
-                jobs.add((TopLevelItem) project);
+        try {
+            for (Job<?, ?> job : ComponentSource.forJob(first).jobsOf(first, last)) {
+                if (job instanceof TopLevelItem item) {
+                    into.add(item);
+                }
             }
+        } catch (PipelineException e) {
+            LOG.log(Level.FINE, "Cannot list the jobs of " + first.getFullName(), e);
         }
     }
 
@@ -634,134 +554,121 @@ public class DeliveryPipelineView extends View implements PipelineView {
     }
 
     @Override
-    protected void submit(StaplerRequest req) throws IOException, Descriptor.FormException {
-        try {
-            req.bindJSON(this, req.getSubmittedForm());
-            componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
-            regexpFirstJobs = req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs"));
-        } catch (javax.servlet.ServletException e) {
-            throw new IOException(e);
+    public void onJobRenamed(Item item, String oldName, String newName) {
+        if (componentSpecs == null || oldName == null) {
+            return;
+        }
+        Iterator<ComponentSpec> it = componentSpecs.iterator();
+        while (it.hasNext()) {
+            ComponentSpec spec = it.next();
+            if (oldName.equals(spec.getFirstJob())) {
+                if (newName == null) {
+                    it.remove();
+                    continue;
+                }
+                spec.setFirstJob(newName);
+            }
+            if (oldName.equals(spec.getLastJob())) {
+                if (newName == null) {
+                    it.remove();
+                    continue;
+                }
+                spec.setLastJob(newName);
+            }
         }
     }
 
     @Override
-    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException {
-        try {
-            if (!isDefault()) {
-                return getOwner().getPrimaryView().doCreateItem(req, rsp);
-            } else {
-                return JenkinsUtil.getInstance().doCreateItem(req, rsp);
-            }
-        } catch (javax.servlet.ServletException e) {
-            throw new IOException(e);
+    protected void submit(StaplerRequest2 req) throws IOException, ServletException, Descriptor.FormException {
+        req.bindJSON(this, req.getSubmittedForm());
+        componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
+        regexpFirstJobs = req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs"));
+    }
+
+    @Override
+    @RequirePOST
+    public Item doCreateItem(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
+        ItemGroup<? extends TopLevelItem> owner = getOwnerItemGroup();
+        (owner instanceof AccessControlled controlled ? controlled : Jenkins.get()).checkPermission(Item.CREATE);
+        if (owner instanceof jenkins.model.ModifiableTopLevelItemGroup group) {
+            return group.doCreateItem(req, rsp);
+        }
+        return Jenkins.get().doCreateItem(req, rsp);
+    }
+
+    /* ------------------------------------------------------------------ descriptors and specs */
+
+    /**
+     * Form validation and list filling happen on the view's configuration page: the caller must be allowed to
+     * configure the view, or to create one where there is none yet.
+     */
+    static void checkConfigure(View view, ViewGroup owner) {
+        if (view != null) {
+            view.checkPermission(View.CONFIGURE);
+        } else if (owner != null) {
+            owner.checkPermission(View.CREATE);
+        } else {
+            Jenkins.get().checkPermission(View.CREATE);
         }
     }
 
     @Extension
+    @Symbol("deliveryPipelineView")
     public static class DescriptorImpl extends ViewDescriptor {
-        public ListBoxModel doFillNoOfColumnsItems(@AncestorInPath ItemGroup<?> context) {
-            ListBoxModel options = new ListBoxModel();
-            options.add("1", "1");
-            options.add("2", "2");
-            options.add("3", "3");
-            return options;
-        }
 
-        public ListBoxModel doFillNoOfPipelinesItems(@AncestorInPath ItemGroup<?> context) {
-            ListBoxModel options = new ListBoxModel();
-            for (int i = 0; i <= MAX_NO_OF_PIPELINES; i++) {
-                String opt = String.valueOf(i);
-                options.add(opt, opt);
-            }
-            return options;
-        }
-
-        public ListBoxModel doFillSortingItems() {
-            DescriptorExtensionList<GenericComponentComparator, ComponentComparatorDescriptor> descriptors =
-                    GenericComponentComparator.all();
-            ListBoxModel options = new ListBoxModel();
-            options.add("None", NONE_SORTER);
-            for (ComponentComparatorDescriptor descriptor : descriptors) {
-                options.add(descriptor.getDisplayName(), descriptor.getId());
-            }
-            return options;
-        }
-
-        public FormValidation doCheckUpdateInterval(@QueryParameter String value) {
-            int valueAsInt;
-            try {
-                valueAsInt = Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                return FormValidation.error(e, "Value must be an integer");
-            }
-            if (valueAsInt <= 0) {
-                return FormValidation.error("Value must be greater than 0");
-            }
-            return FormValidation.ok();
-        }
-
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Delivery Pipeline View";
         }
-    }
 
-    public static class RegExpSpec extends AbstractDescribableImpl<RegExpSpec> {
+        // The validators below are cheap, change nothing and reveal nothing, so they need no POST protection.
 
-        private String regexp;
-        private boolean showUpstream;
-
-        @DataBoundConstructor
-        public RegExpSpec(String regexp, boolean showUpstream) {
-            this.regexp = regexp != null ? regexp.trim() : null;
-            this.showUpstream = showUpstream;
-        }
-
-        public String getRegexp() {
-            return regexp;
-        }
-
-        public boolean isShowUpstream() {
-            return showUpstream;
-        }
-
-        public void setShowUpstream(boolean showUpstream) {
-            this.showUpstream = showUpstream;
-        }
-
-        @Extension
-        public static class DescriptorImpl extends Descriptor<RegExpSpec> {
-
-            @Nonnull
-            @Override
-            public String getDisplayName() {
-                return "RegExp";
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public ListBoxModel doFillNoOfColumnsItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner) {
+            checkConfigure(view, owner);
+            ListBoxModel options = new ListBoxModel();
+            for (int i = 1; i <= 3; i++) {
+                options.add(String.valueOf(i), String.valueOf(i));
             }
+            return options;
+        }
 
-            public FormValidation doCheckRegexp(@QueryParameter String value) {
-                if (value != null) {
-                    if (value.trim().equals("")) {
-                        return FormValidation.error("Regular expression cannot be blank");
-                    }
-                    try {
-                        Pattern pattern = Pattern.compile(value);
-                        if (pattern.matcher("").groupCount() == 1) {
-                            return FormValidation.ok();
-                        } else if (pattern.matcher("").groupCount() == 0) {
-                            return FormValidation.error("No capture group defined");
-                        } else {
-                            return FormValidation.error("Too many capture groups defined");
-                        }
-                    } catch (PatternSyntaxException e) {
-                        return FormValidation.error(e, "Syntax error in regular expression pattern");
-                    }
-                }
-                return FormValidation.ok();
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public ListBoxModel doFillNoOfPipelinesItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner) {
+            checkConfigure(view, owner);
+            ListBoxModel options = new ListBoxModel();
+            for (int i = 0; i <= MAX_NO_OF_PIPELINES; i++) {
+                options.add(String.valueOf(i), String.valueOf(i));
+            }
+            return options;
+        }
+
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public ListBoxModel doFillSortingItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner) {
+            checkConfigure(view, owner);
+            ListBoxModel options = new ListBoxModel();
+            for (Sorting sorting : Sorting.values()) {
+                options.add(sorting.getDisplayName(), sorting.getId());
+            }
+            return options;
+        }
+
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public FormValidation doCheckUpdateInterval(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                    @QueryParameter String value) {
+            checkConfigure(view, owner);
+            try {
+                return Integer.parseInt(value) > 0 ? FormValidation.ok()
+                        : FormValidation.error("The update interval must be at least one second");
+            } catch (NumberFormatException e) {
+                return FormValidation.error("The update interval must be a whole number of seconds");
             }
         }
     }
 
-    public static class ComponentSpec extends AbstractDescribableImpl<ComponentSpec> {
+    /** One pipeline of the view: the job it starts with and, optionally, the one it ends with. */
+    public static class ComponentSpec implements Describable<ComponentSpec> {
         private String name;
         private String firstJob;
         private String lastJob;
@@ -771,7 +678,7 @@ public class DeliveryPipelineView extends View implements PipelineView {
         public ComponentSpec(String name, String firstJob, String lastJob, boolean showUpstream) {
             this.name = name;
             this.firstJob = firstJob;
-            this.lastJob = lastJob;
+            this.lastJob = lastJob == null || lastJob.isBlank() ? null : lastJob;
             this.showUpstream = showUpstream;
         }
 
@@ -799,58 +706,118 @@ public class DeliveryPipelineView extends View implements PipelineView {
             return showUpstream;
         }
 
-        public void setShowUpstream(boolean showUpstream) {
-            this.showUpstream = showUpstream;
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(name, firstJob, lastJob, showUpstream);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ComponentSpec spec && java.util.Objects.equals(name, spec.name)
+                    && java.util.Objects.equals(firstJob, spec.firstJob) && java.util.Objects.equals(lastJob, spec.lastJob)
+                    && showUpstream == spec.showUpstream;
         }
 
         @Extension
         public static class DescriptorImpl extends Descriptor<ComponentSpec> {
-
-            @Nonnull
+            @NonNull
             @Override
             public String getDisplayName() {
                 return "";
             }
 
-            public ListBoxModel doFillFirstJobItems(@AncestorInPath ItemGroup<?> context) {
-                return ProjectUtil.fillAllProjects(context, AbstractProject.class);
-            }
-
-            public ListBoxModel doFillLastJobItems(@AncestorInPath ItemGroup<?> context) {
+            /** Lists the jobs the caller may read, as {@code getAllItems} filters them. */
+            @SuppressWarnings("lgtm[jenkins/csrf]")
+            public ListBoxModel doFillFirstJobItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                    @AncestorInPath ItemGroup<?> context) {
+                checkConfigure(view, owner);
                 ListBoxModel options = new ListBoxModel();
-                options.add("");
-                options.addAll(ProjectUtil.fillAllProjects(context, AbstractProject.class));
+                for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
+                    if (isPipelineStart(job)) {
+                        options.add(job.getFullDisplayName(), job.getRelativeNameFrom(context));
+                    }
+                }
                 return options;
             }
 
-            public FormValidation doCheckName(@QueryParameter String value) {
-                if (value != null && !"".equals(value.trim())) {
-                    return FormValidation.ok();
-                } else {
-                    return FormValidation.error("Please supply a title");
+            @SuppressWarnings("lgtm[jenkins/csrf]")
+            public ListBoxModel doFillLastJobItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                   @AncestorInPath ItemGroup<?> context) {
+                checkConfigure(view, owner);
+                ListBoxModel options = new ListBoxModel();
+                options.add("", "");
+                for (AbstractProject<?, ?> job : Jenkins.get().getAllItems(AbstractProject.class)) {
+                    options.add(job.getFullDisplayName(), job.getRelativeNameFrom(context));
                 }
+                return options;
+            }
+
+            @SuppressWarnings("lgtm[jenkins/csrf]")
+            public FormValidation doCheckName(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                              @QueryParameter String value) {
+                checkConfigure(view, owner);
+                return value == null || value.isBlank() ? FormValidation.error("Please supply a title")
+                        : FormValidation.ok();
             }
         }
     }
 
-    @Extension
-    public static class ItemListenerImpl extends ItemListener {
+    /** Pipelines found by a regular expression over job names; the capture group names the pipeline. */
+    public static class RegExpSpec implements Describable<RegExpSpec> {
+        private String regexp;
+        private boolean showUpstream;
 
-        @Override
-        public void onRenamed(Item item, String oldName, String newName) {
-            notifyView(item, oldName, newName);
+        @DataBoundConstructor
+        public RegExpSpec(String regexp, boolean showUpstream) {
+            this.regexp = regexp == null ? null : regexp.trim();
+            this.showUpstream = showUpstream;
+        }
+
+        public String getRegexp() {
+            return regexp;
+        }
+
+        public boolean isShowUpstream() {
+            return showUpstream;
         }
 
         @Override
-        public void onDeleted(Item item) {
-            notifyView(item, item.getFullName(), null);
+        public int hashCode() {
+            return java.util.Objects.hash(regexp, showUpstream);
         }
 
-        private void notifyView(Item item, String oldName, String newName) {
-            Collection<View> views = JenkinsUtil.getInstance().getViews();
-            for (View view : views) {
-                if (view instanceof DeliveryPipelineView) {
-                    ((DeliveryPipelineView) view).onProjectRenamed(item, oldName, newName);
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof RegExpSpec spec && java.util.Objects.equals(regexp, spec.regexp)
+                    && showUpstream == spec.showUpstream;
+        }
+
+        @Extension
+        public static class DescriptorImpl extends Descriptor<RegExpSpec> {
+            @NonNull
+            @Override
+            public String getDisplayName() {
+                return "RegExp";
+            }
+
+            @SuppressWarnings("lgtm[jenkins/csrf]")
+            public FormValidation doCheckRegexp(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                @QueryParameter String value) {
+                checkConfigure(view, owner);
+                if (value == null || value.isBlank()) {
+                    return FormValidation.error("The regular expression cannot be blank");
+                }
+                try {
+                    int groups = Pattern.compile(value).matcher("").groupCount();
+                    if (groups == 0) {
+                        return FormValidation.error("No capture group defined");
+                    }
+                    if (groups > 1) {
+                        return FormValidation.error("Too many capture groups defined");
+                    }
+                    return FormValidation.ok();
+                } catch (PatternSyntaxException e) {
+                    return FormValidation.error(e, "Syntax error in the regular expression");
                 }
             }
         }

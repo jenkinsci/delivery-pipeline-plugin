@@ -17,90 +17,29 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
-import static javax.servlet.http.HttpServletResponse.SC_FORBIDDEN;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-import static javax.servlet.http.HttpServletResponse.SC_NOT_ACCEPTABLE;
-import static javax.servlet.http.HttpServletResponse.SC_OK;
-
 import hudson.model.Api;
-import org.acegisecurity.AuthenticationException;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-import se.diabol.jenkins.core.PipelineView;
-import se.diabol.jenkins.pipeline.trigger.TriggerException;
+import hudson.model.View;
+import jakarta.servlet.ServletException;
+import java.io.IOException;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 
+/** The view's {@code api/json}, which the page polls; responses must never be served from a cache. */
 public class PipelineApi extends Api {
 
-    private final PipelineView view;
+    private final DeliveryPipelineView view;
 
-    public PipelineApi(PipelineView view) {
+    public PipelineApi(DeliveryPipelineView view) {
         super(view);
         this.view = view;
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    public void doManualStep(StaplerRequest request,
-                             StaplerResponse response,
-                             @QueryParameter String project,
-                             @QueryParameter String upstream,
-                             @QueryParameter String buildId) {
-        if (project != null && upstream != null && buildId != null) {
-            try {
-                view.triggerManual(project, upstream, buildId);
-                response.setStatus(SC_OK);
-            } catch (TriggerException e) {
-                response.setStatus(SC_INTERNAL_SERVER_ERROR);
-            } catch (AuthenticationException e) {
-                response.setStatus(SC_FORBIDDEN);
-            }
-        } else {
-            response.setStatus(SC_NOT_ACCEPTABLE);
-        }
+    /** A read of the view's model, hence GET and no POST protection; the view's read permission is checked. */
+    @Override
+    @SuppressWarnings("lgtm[jenkins/csrf]")
+    public void doJson(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
+        view.checkPermission(View.READ);
+        rsp.setHeader("Cache-Control", "no-store, must-revalidate");
+        super.doJson(req, rsp);
     }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public void doRebuildStep(StaplerRequest request,
-                              StaplerResponse response,
-                              @QueryParameter String project,
-                              @QueryParameter String buildId) {
-        if (project != null && buildId != null) {
-            try {
-                view.triggerRebuild(project, buildId);
-                response.setStatus(SC_OK);
-            } catch (AuthenticationException e) {
-                response.setStatus(SC_FORBIDDEN);
-            }
-        } else {
-            response.setStatus(SC_NOT_ACCEPTABLE);
-        }
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public void doInputStep(StaplerRequest request,
-                             StaplerResponse response,
-                             @QueryParameter String project,
-                             @QueryParameter String upstream,
-                             @QueryParameter String buildId) {
-        doManualStep(request, response, project, upstream, buildId);
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public void doAbortBuild(StaplerRequest request,
-                             StaplerResponse response,
-                             @QueryParameter String project,
-                             @QueryParameter String buildId) {
-        if (project != null && buildId != null) {
-            try {
-                view.abortBuild(project, buildId);
-            } catch (AuthenticationException e) {
-                response.setStatus(SC_FORBIDDEN);
-            } catch (TriggerException e) {
-                response.setStatus(SC_NOT_ACCEPTABLE);
-            }
-        } else {
-            response.setStatus(SC_NOT_ACCEPTABLE);
-        }
-    }
-
 }

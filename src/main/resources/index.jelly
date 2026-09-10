@@ -1,7 +1,5 @@
 <?jelly escape-by-default='true'?>
-<!--
-  This view is used to render the installed plugins page.
--->
 <div>
-    This plugin visualize Delivery Pipelines (Jobs with upstream/downstream dependencies)
+    Visualises delivery pipelines built from chained jobs or Pipeline (Jenkinsfile) jobs, for information radiators
+    and everyday use.
 </div>
