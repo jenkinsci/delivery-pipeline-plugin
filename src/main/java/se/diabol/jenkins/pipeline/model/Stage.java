@@ -29,7 +29,8 @@ import org.kohsuke.stapler.export.ExportedBean;
  * @param name the heading of the box
  * @param row the row of the grid the stage sits in, starting at 0
  * @param column the column of the grid, starting at 0
- * @param version in the aggregated pipeline, the version that last reached the stage; null otherwise
+ * @param version in the aggregated pipeline, the version that last reached the stage, which for a Pipeline job is the
+ *                display name of the newest run that ran the stage; null otherwise
  * @param tasks the tasks, in order
  * @param downstream ids of the stages this stage leads to, for drawing arrows
  */

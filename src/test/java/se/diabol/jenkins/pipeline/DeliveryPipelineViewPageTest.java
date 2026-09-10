@@ -834,6 +834,7 @@ class DeliveryPipelineViewPageTest {
     @Test
     void pipelineRunShowsTheRunsItStartedAsAChain() throws Exception {
         jenkins.createFreeStyleProject("free");
+        chain("free", "free-deploy");
         WorkflowJob down = jenkins.getInstance().createProject(WorkflowJob.class, "down");
         down.setDefinition(new CpsFlowDefinition("node { stage('Deploy') { echo 'd' }; stage('Verify') { echo 'v' } }", true));
         WorkflowJob up = jenkins.getInstance().createProject(WorkflowJob.class, "up");
@@ -842,26 +843,52 @@ class DeliveryPipelineViewPageTest {
                 "stage('Trigger') { build job: 'down'; build job: 'free' }",
                 "stage('Report') { echo 'r' }"), true));
         jenkins.buildAndAssertSuccess(up);
+        jenkins.waitUntilNoActivity();
         DeliveryPipelineView view = view(jenkins, "Chain", "up");
         try (JenkinsRule.WebClient client = jsClient(jenkins)) {
             HtmlPage page = render(jenkins, client, view.getViewUrl());
-            assertThat("the started runs follow the stage that started them, each on a row of its own",
-                    texts(page, ".stage-name"), contains("Build", "Trigger", "Report", "down: Deploy", "down: Verify", "free"));
-            assertThat(taskNames(page), contains("Build", "Trigger", "Report", "Deploy", "Verify", "free"));
-            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(6));
-            assertThat("two arrows along the run, one to each started run, one along the started Pipeline",
-                    page.querySelectorAll("path.relation").size(), is(5));
+            assertThat("the started runs follow the stage that started them, each on a row of its own, and a started "
+                    + "job that is not a Pipeline brings the chain downstream of it",
+                    texts(page, ".stage-name"),
+                    contains("Build", "Trigger", "Report", "down: Deploy", "down: Verify", "free", "free: free-deploy"));
+            assertThat(taskNames(page), contains("Build", "Trigger", "Report", "Deploy", "Verify", "free", "free-deploy"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(7));
+            assertThat("two arrows along the run, one to each started run, one along the started Pipeline, one along "
+                    + "the started chain of jobs", page.querySelectorAll("path.relation").size(), is(6));
             assertThat("a task of a started run links to that run",
                     hrefOfTask(page, "Deploy"), endsWith("/job/down/1/"));
             String json = body(jenkins, client, view.getViewUrl() + "api/json");
             assertThat(json, containsString("\"id\":\"down#1/"));
             assertThat(json, containsString("\"jobFullName\":\"free\""));
+            assertThat(json, containsString("\"jobFullName\":\"free-deploy\""));
         }
         jenkins.buildAndAssertSuccess(down);
         try (JenkinsRule.WebClient client = jsClient(jenkins)) {
             HtmlPage page = render(jenkins, client, view.getViewUrl());
             assertThat("the chain shows the run that was started, not the latest one",
                     hrefOfTask(page, "Deploy"), endsWith("/job/down/1/"));
+        }
+    }
+
+    @Test
+    void aggregatedRowOfAPipelineJobShowsTheNewestRunThatRanEachStage() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "staged");
+        flow.setDefinition(new CpsFlowDefinition("node { stage('Build') { echo 'b' }; stage('Deploy') { echo 'd' } }", true));
+        jenkins.buildAndAssertSuccess(flow);
+        flow.setDefinition(new CpsFlowDefinition("node { stage('Build') { error 'broken' }; stage('Deploy') { echo 'd' } }", true));
+        jenkins.assertBuildStatus(Result.FAILURE, flow.scheduleBuild2(0));
+        DeliveryPipelineView view = view(jenkins, "Staged", "staged");
+        view.setShowAggregatedPipeline(true);
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat("the aggregated row is laid out like the run that completed its stages",
+                    texts(page, ".pipeline-aggregated .stage-name"), contains("Build", "Deploy"));
+            assertThat("each stage shows the newest run in which it ran",
+                    texts(page, ".pipeline-aggregated .stage-version"), contains("#2", "#1"));
+            assertThat(page.querySelectorAll(".pipeline-aggregated .stage-task.FAILED").size(), is(1));
+            assertThat(page.querySelectorAll(".pipeline-aggregated .stage-task.SUCCESS").size(), is(1));
+            assertThat("the newest run itself is shown below the aggregated row, with its one stage",
+                    texts(page, ".pipeline:not(.pipeline-aggregated) .stage-name"), contains("Build"));
         }
     }
 

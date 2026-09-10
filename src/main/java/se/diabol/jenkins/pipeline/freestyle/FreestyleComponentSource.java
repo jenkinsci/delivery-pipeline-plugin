@@ -189,7 +189,16 @@ public class FreestyleComponentSource extends ComponentSource {
         }
     }
 
-    private Pipeline instance(Chain chain, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
+    /**
+     * The pipeline instance that starts at the given build: the chain downstream of its project laid out as a
+     * component of that project shows it, with the builds the given one triggered. For a run of another kind of job
+     * that started the build.
+     */
+    public static Pipeline instanceOf(AbstractBuild<?, ?> build, ViewSettings settings) throws PipelineException {
+        return instance(chain(build.getProject(), null), build, settings);
+    }
+
+    private static Pipeline instance(Chain chain, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
         List<Stage> stages = stagesFor(chain, firstBuild, settings);
         List<Change> changes = Changes.of(firstBuild);
         List<Contributor> contributors = Changes.contributorsOf(changes);
@@ -211,7 +220,7 @@ public class FreestyleComponentSource extends ComponentSource {
                 List.of(), stagesFor(chain, null, settings));
     }
 
-    private List<Stage> stagesFor(Chain chain, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
+    private static List<Stage> stagesFor(Chain chain, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
         List<Stage> stages = new ArrayList<>();
         for (TemplateStage template : chain.stages()) {
             List<Task> tasks = new ArrayList<>();
@@ -224,7 +233,7 @@ public class FreestyleComponentSource extends ComponentSource {
         return stages;
     }
 
-    private Task task(Chain chain, ChainGraph.Node node, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
+    private static Task task(Chain chain, ChainGraph.Node node, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
         AbstractProject<?, ?> project = node.project();
         boolean queued = chain.index().isQueued(project, firstBuild);
         AbstractBuild<?, ?> build = queued ? null : chain.index().buildOf(project, firstBuild);

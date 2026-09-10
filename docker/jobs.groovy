@@ -345,6 +345,16 @@ zooFiles.each { file ->
         }
     }
 }
+// a chain of two freestyle jobs; the build-freestyle-chain shape starts the first and shows the chain behind it
+job('zoo/free-build') {
+    description('Freestyle job started by the build-freestyle-chain shape; its build trigger starts free-deploy')
+    steps { shell('echo building') }
+    publishers { downstream('zoo/free-deploy', 'SUCCESS') }
+}
+job('zoo/free-deploy') {
+    description('Freestyle job triggered by free-build')
+    steps { shell('echo deploying') }
+}
 pipelineView('zoo/Jenkinsfiles', {
     zooFiles.each { file -> component(file.name - '.groovy', file.name - '.groovy') }
 }, [instances: 1, aggregated: false, columns: 2])

@@ -1,0 +1,30 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    },
+    "Trigger": {
+      "Trigger": "SUCCESS"
+    },
+    "Report": {
+      "Report": "SUCCESS"
+    },
+    "free-build": {
+      "free-build": "SUCCESS"
+    },
+    "free-build: free-deploy": {
+      "free-deploy": ["SUCCESS", "RUNNING", "QUEUED", "IDLE"]
+    }
+  },
+  "downstream": {
+    "Trigger": ["Report", "free-build"],
+    "free-build": ["free-build: free-deploy"]
+  },
+  "positions": {
+    "Trigger": [0, 1],
+    "Report": [0, 2],
+    "free-build": [1, 2],
+    "free-build: free-deploy": [1, 3]
+  }
+}

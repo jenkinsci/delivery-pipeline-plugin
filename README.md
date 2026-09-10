@@ -71,11 +71,16 @@ scripts keep working; what changed is underneath and around them.
   links to the run's console and a finished one to the run.
 - A Pipeline that starts other jobs with the `build` step shows the runs it started as part of the same pipeline:
   their stages follow the stage that started them, named "job: stage", on the first row with room, with an arrow
-  from that stage, and the runs they start in turn follow them. A started job that is not a Pipeline is one task. A
-  run still waiting in the queue is a queued task; one cancelled before it started is left out. This needs the
+  from that stage, and the runs they start in turn follow them. A started job that is not a Pipeline brings the
+  chain of jobs downstream of it, laid out as a component of that job would show it. A run still waiting in the
+  queue is a queued task; one cancelled before it started is left out. This needs the
   Pipeline: Build Step plugin, part of the suggested set, at version 539 (December 2023) or newer, which records the
   started runs; with an older one the runs stay separate. As with chains of jobs, everyone who can see the view sees
   every job the chain reaches; acting on one still needs the permission on that job.
+- The aggregated row, in which every stage shows the latest version that reached it, is drawn for Pipeline
+  components too. It is laid out like the newest run that completed its stages, since a failed scripted run stops at
+  the failing stage, and each stage shows the newest run in which it ran, with that run's display name as the
+  version.
 - A *Delivery Pipeline manual step* post-build action of its own, so manual steps no longer need the Build
   Pipeline plugin.
 - The required dependencies are plugins a fresh Jenkins installs with its suggested set (Pipeline: Job,

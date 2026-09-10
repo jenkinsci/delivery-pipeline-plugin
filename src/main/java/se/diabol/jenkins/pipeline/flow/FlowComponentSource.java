@@ -45,7 +45,8 @@ import se.diabol.jenkins.pipeline.source.ComponentSource;
 
 /**
  * Components that are a single Pipeline job: each run is a pipeline instance, each top-level stage a stage, and the
- * runs it started with the {@code build} step follow its stages (see {@link FlowChain}).
+ * runs it started with the {@code build} step follow its stages; the aggregated row shows for every stage the
+ * newest run that ran it (see {@link FlowChain}).
  */
 @Extension(ordinal = 50)
 public class FlowComponentSource extends ComponentSource {
@@ -68,6 +69,12 @@ public class FlowComponentSource extends ComponentSource {
         Paging paging = request.paging() && settings.pagingEnabled()
                 ? new Paging(Math.max(1, request.page()), settings.noOfPipelines(), total) : null;
         List<Pipeline> pipelines = new ArrayList<>();
+        if (settings.showAggregatedPipeline()) {
+            Pipeline aggregated = FlowChain.aggregated(job, settings);
+            if (aggregated != null) {
+                pipelines.add(aggregated.forSettings(settings));
+            }
+        }
         Queue.Item queued = job.getQueueItem();
         if (queued != null && (paging == null || paging.page() == 1)) {
             pipelines.add(FlowRuns.queued(job, queued).forSettings(settings));
@@ -77,7 +84,7 @@ public class FlowComponentSource extends ComponentSource {
             it.next();
         }
         for (int i = 0; i < settings.noOfPipelines() && it.hasNext(); i++) {
-            pipelines.add(FlowChain.of(it.next()).forSettings(settings));
+            pipelines.add(FlowChain.of(it.next(), settings).forSettings(settings));
         }
         return new Component(request.name(), request.index(), JobRef.of(job), paging, pipelines, null);
     }

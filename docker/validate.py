@@ -324,6 +324,13 @@ check(matrix_tasks == ['test on'], f'matrix: the multi-configuration project is 
 
 pipelines = {c['name']: c for c in view_json(DEMO + 'view/Pipelines/')['components']}
 decl = stage_map(newest(pipelines['Declarative']))
+# the Pipelines view has no aggregated row by configuration; the Mixed view shows one for its Pipeline component
+mixed = {c['name']: c for c in view_json(DEMO + 'view/Mixed/')['components']}
+agg = next((p for p in mixed['Pipeline job']['pipelines'] if p['aggregated']), None)
+check(agg is not None and [s['name'] for s in agg['stages']] == [s['name'] for s in newest(mixed['Pipeline job'])['stages']]
+      and agg['stages'][0]['version'],
+      f'mixed: the Pipeline component has an aggregated row laid out like its run, its first stage with a version {agg and [(s["name"], s["version"]) for s in agg["stages"]]}')
+check(not any(p['aggregated'] for p in pipelines['Declarative']['pipelines']), 'pipelines: a view configured without the aggregated row has none')
 check(list(decl) == ['Build', 'Test', 'Approve'], f'declarative: stages reached so far while paused {list(decl)}')
 check(sorted(t['name'] for t in decl['Test']['tasks']) == ['Integration', 'Unit'], 'declarative: parallel nested stages are tasks')
 plugin_tree = admin.json(f'{DEMO}job/pipeline-declarative/1/stages/tree')

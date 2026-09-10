@@ -17,8 +17,10 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.flow;
 
+import hudson.model.AbstractBuild;
 import hudson.model.Job;
 import hudson.model.Queue;
+import hudson.model.Result;
 import hudson.model.Run;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
@@ -26,15 +28,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import se.diabol.jenkins.pipeline.PipelineException;
 import se.diabol.jenkins.pipeline.PipelineProperty;
 import se.diabol.jenkins.pipeline.details.TaskDetailsContributor;
+import se.diabol.jenkins.pipeline.freestyle.FreestyleComponentSource;
 import se.diabol.jenkins.pipeline.freestyle.Statuses;
 import se.diabol.jenkins.pipeline.freestyle.Templates;
 import se.diabol.jenkins.pipeline.model.Pipeline;
@@ -42,19 +49,23 @@ import se.diabol.jenkins.pipeline.model.Stage;
 import se.diabol.jenkins.pipeline.model.Status;
 import se.diabol.jenkins.pipeline.model.StatusType;
 import se.diabol.jenkins.pipeline.model.Task;
+import se.diabol.jenkins.pipeline.model.ViewSettings;
 
 /**
  * A run together with the runs it started, as one pipeline instance. The stages of a started run follow the stage
- * that started it, on the first row with room for them, with an arrow from that stage and from the task that holds
+ * that started it, on the first rows with room for them, with an arrow from that stage and from the task that holds
  * the step; the runs they started follow in turn. Their stage and task ids carry the started run's id as a prefix,
  * their stage names its job's name. A started run still waiting in the queue is one queued task; one that was
- * cancelled before it started, or has been deleted since, is left out. A started job that is not a Pipeline is one
- * task, named as a chained job would be.
+ * cancelled before it started, or has been deleted since, is left out. A started job that is not a Pipeline brings
+ * the chain of jobs downstream of it, laid out as a component of that job would show it.
  *
  * <p>Which runs a run started comes from {@link DownstreamRuns}. The jobs are looked up as the system, so that the
  * pipeline, which is cached and served to every viewer, does not depend on who computed it: as with chains of jobs,
  * everyone who can see the view sees every job the chain reaches, and acting on one still needs the permission on
  * that job.
+ *
+ * <p>The class also builds the aggregated row of a Pipeline job, in which every stage shows the newest run that ran
+ * it.
  */
 final class FlowChain {
 
@@ -64,26 +75,31 @@ final class FlowChain {
     /** How many started runs one pipeline instance shows at most, whatever the depth. */
     private static final int MAX_RUNS = 50;
 
+    /** How many runs back the aggregated row looks for the newest run in which a stage ran. */
+    private static final int AGGREGATED_RUNS = 20;
+
     /** The stages of one run as placed on the grid, with the prefix their ids carry. */
     private record Placed(Run<?, ?> run, List<Stage> stages, String prefix) {
     }
 
+    private final ViewSettings settings;
     private final List<Stage> grid = new ArrayList<>();
     private final List<BitSet> rows = new ArrayList<>();
     private final Set<String> visited = new HashSet<>();
     private long latestEnd;
     private int runs;
 
-    private FlowChain() {
+    private FlowChain(ViewSettings settings) {
+        this.settings = settings;
     }
 
     /** The pipeline instance of the run, with the runs it started. */
-    static Pipeline of(WorkflowRun run) {
+    static Pipeline of(WorkflowRun run, ViewSettings settings) {
         Pipeline own = FlowRuns.of(run).pipeline();
         if (own.stages().isEmpty()) {
             return own;
         }
-        FlowChain chain = new FlowChain();
+        FlowChain chain = new FlowChain(settings);
         chain.visited.add(run.getExternalizableId());
         chain.latestEnd = endOf(run);
         Placed root = chain.place(run, own.stages(), 0, "", null);
@@ -94,6 +110,80 @@ final class FlowChain {
         chain.grid.sort(Comparator.comparingInt(Stage::row).thenComparingInt(Stage::column));
         long totalBuildTime = Math.max(own.totalBuildTime(), chain.latestEnd - run.getTimeInMillis());
         return own.withStages(chain.grid, totalBuildTime);
+    }
+
+    /**
+     * The aggregated row of a Pipeline job: laid out like the newest run that completed its stages, since a failed
+     * scripted run stops at the failing stage, each stage shows the newest run in which it ran, with that run's
+     * display name as the version, or the layout run's stage as it is, without a version, when no recent run ran
+     * it. Null for a job without runs.
+     */
+    static Pipeline aggregated(WorkflowJob job, ViewSettings settings) {
+        List<WorkflowRun> recent = new ArrayList<>();
+        WorkflowRun complete = null;
+        for (WorkflowRun run : job.getBuilds()) {
+            if (recent.size() == AGGREGATED_RUNS) {
+                break;
+            }
+            recent.add(run);
+            Result result = run.getResult();
+            if (complete == null && !run.isBuilding() && result != null && result.isBetterOrEqualTo(Result.UNSTABLE)) {
+                complete = run;
+            }
+        }
+        if (recent.isEmpty()) {
+            return null;
+        }
+        Map<String, Pipeline> instances = new HashMap<>();
+        Pipeline layout = instanceOf(complete != null ? complete : recent.get(0), settings, instances);
+        List<Stage> stages = new ArrayList<>();
+        for (Stage stage : layout.stages()) {
+            Stage source = stage;
+            Pipeline from = layout;
+            String version = null;
+            for (WorkflowRun run : recent) {
+                Pipeline instance = instanceOf(run, settings, instances);
+                Stage candidate = stageNamed(instance, stage.name());
+                if (candidate != null && reached(candidate)) {
+                    source = candidate;
+                    from = instance;
+                    version = instance.version();
+                    break;
+                }
+            }
+            List<Task> tasks = new ArrayList<>();
+            for (Task task : source.tasks()) {
+                tasks.add(withIds(task, from.id() + "/"));
+            }
+            stages.add(new Stage(stage.id(), stage.name(), stage.row(), stage.column(), version, tasks,
+                    stage.downstream()));
+        }
+        return new Pipeline("aggregated", null, 0, true, null, null, false, List.of(), List.of(), List.of(), 0, 0,
+                List.of(), List.of(), stages);
+    }
+
+    private static Pipeline instanceOf(WorkflowRun run, ViewSettings settings, Map<String, Pipeline> instances) {
+        return instances.computeIfAbsent(run.getExternalizableId(), id -> of(run, settings));
+    }
+
+    private static Stage stageNamed(Pipeline pipeline, String name) {
+        for (Stage stage : pipeline.stages()) {
+            if (stage.name().equals(name)) {
+                return stage;
+            }
+        }
+        return null;
+    }
+
+    /** Whether the stage ran, runs or waits in its run: any task that is not idle, disabled or not built. */
+    private static boolean reached(Stage stage) {
+        for (Task task : stage.tasks()) {
+            StatusType type = task.status().type();
+            if (type != StatusType.NOT_BUILT && type != StatusType.IDLE && type != StatusType.DISABLED) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Adds the runs the placed run started, and theirs, to the grid. */
@@ -116,14 +206,13 @@ final class FlowChain {
                 if (!visited.add(startedRun.getExternalizableId())) {
                     continue;
                 }
-                List<Stage> stages = startedRun instanceof WorkflowRun flow
-                        ? FlowRuns.of(flow).pipeline().stages() : List.of(buildStage(startedRun));
+                List<Stage> stages = stagesOf(startedRun);
                 if (stages.isEmpty()) {
                     continue;
                 }
                 next = place(startedRun, stages, from.column() + 1, startedRun.getExternalizableId() + "/",
                         job.getDisplayName());
-                latestEnd = Math.max(latestEnd, endOf(startedRun));
+                latestEnd = Math.max(latestEnd, Math.max(endOf(startedRun), endOf(stages)));
             } else {
                 Queue.Item item = started.buildNumber() == null && job instanceof Queue.Task task
                         ? Jenkins.get().getQueue().getItem(task) : null;
@@ -134,7 +223,7 @@ final class FlowChain {
                         job.getFullName() + "#queued-" + runs + "/", job.getDisplayName());
             }
             runs++;
-            link(placed, from, started.flowNodeId(), next.stages().get(0));
+            link(placed, from, started.flowNodeId(), firstOf(next.stages()));
             if (startedRun != null) {
                 follow(next, depth + 1);
             }
@@ -142,15 +231,37 @@ final class FlowChain {
     }
 
     /**
-     * Puts the stages of a run on the grid from the given column on, on the first row with room for them, with
-     * their ids prefixed and their names carrying the job's name unless that is the name already.
+     * The stages a started run contributes: a Pipeline run's own; for a job that is not a Pipeline, the chain of
+     * jobs downstream of it as a component of that job lays it out, or failing that the run as one task.
+     */
+    private List<Stage> stagesOf(Run<?, ?> run) {
+        if (run instanceof WorkflowRun flow) {
+            return FlowRuns.of(flow).pipeline().stages();
+        }
+        if (run instanceof AbstractBuild<?, ?> build) {
+            try {
+                return FreestyleComponentSource.instanceOf(build, settings).stages();
+            } catch (PipelineException e) {
+                return List.of(buildStage(run));
+            }
+        }
+        return List.of(buildStage(run));
+    }
+
+    /**
+     * Puts the stages of a run on the grid from the given column on, keeping their rows and columns relative to
+     * each other, on the first rows with room for them; prefixes their ids and gives their names the job's name
+     * unless that is the name already.
      */
     private Placed place(Run<?, ?> run, List<Stage> stages, int firstColumn, String prefix, String jobName) {
-        int width = 0;
+        List<BitSet> shape = new ArrayList<>();
         for (Stage stage : stages) {
-            width = Math.max(width, stage.column() + 1);
+            while (shape.size() <= stage.row()) {
+                shape.add(new BitSet());
+            }
+            shape.get(stage.row()).set(firstColumn + stage.column());
         }
-        int row = rowWithRoom(firstColumn, width);
+        int firstRow = rowWithRoom(shape);
         List<Stage> placed = new ArrayList<>();
         for (Stage stage : stages) {
             List<Task> tasks = new ArrayList<>();
@@ -158,24 +269,41 @@ final class FlowChain {
                 tasks.add(withIds(task, prefix));
             }
             String name = jobName == null || jobName.equals(stage.name()) ? stage.name() : jobName + ": " + stage.name();
-            placed.add(new Stage(prefix + stage.id(), name, row, firstColumn + stage.column(), stage.version(), tasks,
-                    prefixed(stage.downstream(), prefix)));
+            placed.add(new Stage(prefix + stage.id(), name, firstRow + stage.row(), firstColumn + stage.column(),
+                    stage.version(), tasks, prefixed(stage.downstream(), prefix)));
         }
         grid.addAll(placed);
         return new Placed(run, placed, prefix);
     }
 
-    private int rowWithRoom(int firstColumn, int width) {
-        for (int row = 0; ; row++) {
-            if (row == rows.size()) {
+    /** The first row from which the shape, one set of columns per row, fits into free cells of the grid; takes them. */
+    private int rowWithRoom(List<BitSet> shape) {
+        for (int first = 0; ; first++) {
+            while (rows.size() < first + shape.size()) {
                 rows.add(new BitSet());
             }
-            BitSet used = rows.get(row);
-            if (used.get(firstColumn, firstColumn + width).isEmpty()) {
-                used.set(firstColumn, firstColumn + width);
-                return row;
+            boolean free = true;
+            for (int i = 0; i < shape.size() && free; i++) {
+                free = !rows.get(first + i).intersects(shape.get(i));
+            }
+            if (free) {
+                for (int i = 0; i < shape.size(); i++) {
+                    rows.get(first + i).or(shape.get(i));
+                }
+                return first;
             }
         }
+    }
+
+    /** The stage a chain enters by: the first one by row and column. */
+    private static Stage firstOf(List<Stage> stages) {
+        Stage first = stages.get(0);
+        for (Stage stage : stages) {
+            if (stage.row() < first.row() || stage.row() == first.row() && stage.column() < first.column()) {
+                first = stage;
+            }
+        }
+        return first;
     }
 
     /** Draws the arrows from the stage, and from its task that holds the step, to the first stage of a started run. */
@@ -333,6 +461,22 @@ final class FlowChain {
 
     private static long endOf(Run<?, ?> run) {
         return run.isBuilding() ? System.currentTimeMillis() : run.getTimeInMillis() + run.getDuration();
+    }
+
+    /** When the last of the builds shown by the stages ended, or now while one still runs; 0 when none ran. */
+    private static long endOf(List<Stage> stages) {
+        long end = 0;
+        for (Stage stage : stages) {
+            for (Task task : stage.tasks()) {
+                Status status = task.status();
+                switch (status.type()) {
+                    case RUNNING, PAUSED_PENDING_INPUT -> end = Math.max(end, System.currentTimeMillis());
+                    case SUCCESS, UNSTABLE, FAILED, CANCELLED -> end = Math.max(end, status.timestamp() + status.duration());
+                    default -> { }
+                }
+            }
+        }
+        return end;
     }
 
     private static boolean isBlank(String value) {
