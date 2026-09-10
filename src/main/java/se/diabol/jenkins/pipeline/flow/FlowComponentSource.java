@@ -43,7 +43,10 @@ import se.diabol.jenkins.pipeline.model.ViewSettings;
 import se.diabol.jenkins.pipeline.source.ComponentRequest;
 import se.diabol.jenkins.pipeline.source.ComponentSource;
 
-/** Components that are a single Pipeline job: each run is a pipeline instance, each top-level stage a stage. */
+/**
+ * Components that are a single Pipeline job: each run is a pipeline instance, each top-level stage a stage, and the
+ * runs it started with the {@code build} step follow its stages (see {@link FlowChain}).
+ */
 @Extension(ordinal = 50)
 public class FlowComponentSource extends ComponentSource {
 
@@ -74,7 +77,7 @@ public class FlowComponentSource extends ComponentSource {
             it.next();
         }
         for (int i = 0; i < settings.noOfPipelines() && it.hasNext(); i++) {
-            pipelines.add(FlowRuns.of(it.next()).pipeline().forSettings(settings));
+            pipelines.add(FlowChain.of(it.next()).forSettings(settings));
         }
         return new Component(request.name(), request.index(), JobRef.of(job), paging, pipelines, null);
     }
@@ -130,7 +133,8 @@ public class FlowComponentSource extends ComponentSource {
 
     /**
      * Proceeds the input step the task with the given id is waiting at, or the run's first pending one, as its
-     * "Proceed" button would; the step checks who may.
+     * "Proceed" button would; the step checks who may. The id of a task of a started run carries the run's id as a
+     * prefix, up to the last slash.
      */
     @Override
     public void proceedInput(Job<?, ?> job, int buildNumber, String task) throws PipelineException {
@@ -138,7 +142,8 @@ public class FlowComponentSource extends ComponentSource {
         if (run == null) {
             throw new PipelineException("Build " + buildNumber + " of " + job.getFullName() + " does not exist");
         }
-        InputStepExecution execution = FlowStages.pendingInputOf(run, task == null ? "" : task.trim());
+        String node = task == null ? "" : task.substring(task.lastIndexOf('/') + 1).trim();
+        InputStepExecution execution = FlowStages.pendingInputOf(run, node);
         if (execution == null) {
             throw new PipelineException(run.getFullDisplayName() + " is not waiting for input");
         }

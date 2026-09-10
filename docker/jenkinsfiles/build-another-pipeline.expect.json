@@ -6,6 +6,25 @@
     },
     "Report": {
       "Report": "SUCCESS"
+    },
+    "declarative-basic: Build": {
+      "Build": "SUCCESS"
+    },
+    "declarative-basic: Test": {
+      "Test": "SUCCESS"
+    },
+    "declarative-basic: Deploy": {
+      "Deploy": "SUCCESS"
     }
+  },
+  "downstream": {
+    "Trigger": ["Report", "declarative-basic: Build"],
+    "declarative-basic: Build": ["declarative-basic: Test"]
+  },
+  "positions": {
+    "Trigger": [0, 0],
+    "Report": [0, 1],
+    "declarative-basic: Build": [1, 1],
+    "declarative-basic: Deploy": [1, 3]
   }
 }

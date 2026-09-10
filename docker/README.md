@@ -29,10 +29,11 @@ Configuration lives in `casc.yaml` (Configuration as Code), the jobs in `jobs.gr
 
 `docker/jenkinsfiles/` holds one Pipeline script per shape a Jenkinsfile can take: Declarative and scripted, nested
 and parallel stages, a parallel nested in a branch, a matrix, `when` and `post` sections, failures and skipped stages,
-retries and timeouts, an input with parameters, a Pipeline that starts another, plain steps without a stage. The seed
-creates one job per file in the *Jenkinsfile zoo* folder and a view over all of them; `validate.py` runs every job and
-compares the view with the `.expect.json` next to each script: the run result, the stages and tasks with their
-statuses and test counts, and where an input task links. The screenshots include the zoo view in both themes.
+retries and timeouts, an input with parameters, a Pipeline that starts another and one that starts two at once, plain
+steps without a stage. The seed creates one job per file in the *Jenkinsfile zoo* folder and a view over all of them;
+`validate.py` runs every job and compares the view with the `.expect.json` next to each script: the run result, the
+stages and tasks with their statuses and test counts, the arrows and grid positions of a chain, and where an input
+task links. The screenshots include the zoo view in both themes.
 
 To add a shape, drop a `name.groovy` with a one-line comment on top (it becomes the job description) and a
 `name.expect.json` beside it, then run `docker/run.sh all`.

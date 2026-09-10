@@ -130,6 +130,12 @@
             <artifactId>pipeline-model-definition</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <!-- The runs a build step started, shown as a chain -->
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>pipeline-build-step</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!-- Test only -->
         <dependency>

@@ -43,6 +43,7 @@ the update center's dependency data, the closure a fresh installation gets has 9
 | build-pipeline-plugin | no | manual triggers of the Build Pipeline plugin | optional; 2.0 has its own manual step |
 | promoted-builds, warnings-ng | no | promotions, analysis counts | optional |
 | pipeline-model-definition | yes (suggested) | restart a Declarative run from a stage | optional |
+| pipeline-build-step | yes (suggested) | the runs a `build` step started, shown as a chain (its record exists since 539, December 2023) | optional |
 | dashboard-view | no | a portlet | dropped |
 
 Pipeline Graph Analysis stays required on purpose. It is a library plugin with no user interface, maintained by the

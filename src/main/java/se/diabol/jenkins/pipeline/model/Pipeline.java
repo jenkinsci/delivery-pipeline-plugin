@@ -66,6 +66,12 @@ public record Pipeline(@Exported String id, @Exported String version, @Exported 
         return Permissions.on(jobFullName);
     }
 
+    /** The same pipeline with other stages and total build time, for a source that adds the runs this one started. */
+    public Pipeline withStages(List<Stage> stages, long totalBuildTime) {
+        return new Pipeline(id, version, timestamp, aggregated, jobFullName, buildNumber, rebuildable, triggers,
+                contributors, changes, commits, totalBuildTime, tests, analysis, stages);
+    }
+
     /**
      * The same pipeline with only the details the view shows: the change log, test results and static analysis
      * results. Sources that compute a pipeline once and share it between views strip it per view with this.

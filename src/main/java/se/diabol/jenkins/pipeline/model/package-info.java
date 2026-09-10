@@ -65,5 +65,10 @@ If not, see <http://www.gnu.org/licenses/>.
  * test results sit on the task that recorded them, or on the pipeline when they were recorded outside the tasks shown.
  * A task waiting at an input step is proceeded by posting to {@code proceedInput} with its id as {@code task}, or,
  * when {@code inputUrl} is set because the step has parameters, by following that link.
+ * <p>A Pipeline run that started other runs, with the {@code build} step, carries their stages too: the stage that
+ * started a run lists the run's first stage in {@code downstream}, as does the task that holds the step; the started
+ * run's stage and task ids carry its {@code job#number/} as a prefix, and its stage names its job's name, as
+ * "job: stage". The tasks name their own job and build in {@code jobFullName} and {@code buildNumber}, which the
+ * actions are posted for.
  */
 package se.diabol.jenkins.pipeline.model;

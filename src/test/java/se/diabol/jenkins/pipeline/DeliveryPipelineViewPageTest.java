@@ -43,6 +43,7 @@ import hudson.tasks.BuildTrigger;
 import java.net.URL;
 import java.util.List;
 import org.htmlunit.html.DomElement;
+import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
 import hudson.model.Cause;
@@ -828,6 +829,49 @@ class DeliveryPipelineViewPageTest {
             assertThat("a finished run links to its page",
                     page.<DomElement>querySelector(".stage-task .taskname a").getAttribute("href"), endsWith("/job/plain/1/"));
         }
+    }
+
+    @Test
+    void pipelineRunShowsTheRunsItStartedAsAChain() throws Exception {
+        jenkins.createFreeStyleProject("free");
+        WorkflowJob down = jenkins.getInstance().createProject(WorkflowJob.class, "down");
+        down.setDefinition(new CpsFlowDefinition("node { stage('Deploy') { echo 'd' }; stage('Verify') { echo 'v' } }", true));
+        WorkflowJob up = jenkins.getInstance().createProject(WorkflowJob.class, "up");
+        up.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "stage('Build') { node { echo 'b' } }",
+                "stage('Trigger') { build job: 'down'; build job: 'free' }",
+                "stage('Report') { echo 'r' }"), true));
+        jenkins.buildAndAssertSuccess(up);
+        DeliveryPipelineView view = view(jenkins, "Chain", "up");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat("the started runs follow the stage that started them, each on a row of its own",
+                    texts(page, ".stage-name"), contains("Build", "Trigger", "Report", "down: Deploy", "down: Verify", "free"));
+            assertThat(taskNames(page), contains("Build", "Trigger", "Report", "Deploy", "Verify", "free"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(6));
+            assertThat("two arrows along the run, one to each started run, one along the started Pipeline",
+                    page.querySelectorAll("path.relation").size(), is(5));
+            assertThat("a task of a started run links to that run",
+                    hrefOfTask(page, "Deploy"), endsWith("/job/down/1/"));
+            String json = body(jenkins, client, view.getViewUrl() + "api/json");
+            assertThat(json, containsString("\"id\":\"down#1/"));
+            assertThat(json, containsString("\"jobFullName\":\"free\""));
+        }
+        jenkins.buildAndAssertSuccess(down);
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat("the chain shows the run that was started, not the latest one",
+                    hrefOfTask(page, "Deploy"), endsWith("/job/down/1/"));
+        }
+    }
+
+    private static String hrefOfTask(HtmlPage page, String name) {
+        for (DomNode link : page.querySelectorAll(".stage-task .taskname a")) {
+            if (link.getTextContent().trim().equals(name)) {
+                return ((DomElement) link).getAttribute("href");
+            }
+        }
+        throw new AssertionError("no task named " + name);
     }
 
     @Test

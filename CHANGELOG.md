@@ -91,6 +91,11 @@ Old views keep loading; these settings are read and ignored, without old-data en
 - When the Pipeline Graph View plugin is installed (it is one of the plugins a fresh Jenkins suggests), every stage,
   nested stage and parallel branch links to its own log in that plugin's console page. Without it, a running stage
   links to the run's console and a finished one to the run.
+- A Pipeline that starts other jobs with the `build` step shows the runs it started as part of the same pipeline:
+  their stages follow the stage that started them, named "job: stage", with an arrow from that stage, and the runs
+  they start in turn follow them; a started job that is not a Pipeline is one task. This needs the Pipeline: Build
+  Step plugin at version 539 or newer, which records the started runs. Everyone who can see the view sees every job
+  the chain reaches, as with chains of jobs; acting on one still needs the permission on that job.
 - A Declarative stage skipped because an earlier stage failed shows as not built, like one skipped by a `when`
   condition; matrix cells are named by their axes, a stage inside a scripted parallel branch is shown as
   "branch: stage", and a `parallel` nested inside a branch shows its inner branches as tasks, named the same way. A

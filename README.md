@@ -69,6 +69,13 @@ scripts keep working; what changed is underneath and around them.
 - When the Pipeline Graph View plugin is installed (it is one of the plugins a fresh Jenkins suggests), every stage,
   nested stage and parallel branch links to its own log in that plugin's console page. Without it, a running stage
   links to the run's console and a finished one to the run.
+- A Pipeline that starts other jobs with the `build` step shows the runs it started as part of the same pipeline:
+  their stages follow the stage that started them, named "job: stage", on the first row with room, with an arrow
+  from that stage, and the runs they start in turn follow them. A started job that is not a Pipeline is one task. A
+  run still waiting in the queue is a queued task; one cancelled before it started is left out. This needs the
+  Pipeline: Build Step plugin, part of the suggested set, at version 539 (December 2023) or newer, which records the
+  started runs; with an older one the runs stay separate. As with chains of jobs, everyone who can see the view sees
+  every job the chain reaches; acting on one still needs the permission on that job.
 - A *Delivery Pipeline manual step* post-build action of its own, so manual steps no longer need the Build
   Pipeline plugin.
 - The required dependencies are plugins a fresh Jenkins installs with its suggested set (Pipeline: Job,
@@ -76,7 +83,8 @@ scripts keep working; what changed is underneath and around them.
   that reads stage status and timing from a run's flow graph; the plugin manager installs it alongside. Everything
   else is optional and activates when the plugin is present: Build Pipeline (manual triggers), Promoted Builds
   (promotions, promotion-triggered jobs), Warnings Next Generation (static analysis results), Parameterized Trigger
-  (blocking sub-projects), Pipeline: Declarative (restart from stage), Pipeline Graph View (a log per stage).
+  (blocking sub-projects), Pipeline: Declarative (restart from stage), Pipeline Graph View (a log per stage),
+  Pipeline: Build Step (the runs a `build` step started, as a chain).
 
 One limit of the Pipeline support: a multibranch project needs a component per branch, by name or with a regular
 expression such as `app/(.*)`, rather than being discovered as a whole.

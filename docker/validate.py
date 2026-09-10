@@ -223,16 +223,33 @@ for name, expected in zoo.items():
             counts = [(r['total'], r['failed'], r['skipped']) for r in shown.get(task_name) or []]
             check((total, failed, skipped) in counts,
                   f'zoo/{name}: {stage_name} / {task_name} test counts {counts} (expected {[total, failed, skipped]})')
-    tree = admin.json(f'{ZOO}job/{name}/{build["number"]}/stages/tree')
-    known = set()
-    def collect_ids(items):
-        for st in items:
-            known.add(str(st['id']))
-            collect_ids(st.get('children') or [])
-    collect_ids(tree['stages'] if isinstance(tree, dict) and 'stages' in tree else tree.get('data', {}).get('stages', []))
-    links = {t['name']: t['url'].rsplit('=', 1)[-1] for st in stages.values() for t in st['tasks'] if 'selected-node=' in t['url']}
-    check(all(node in known for node in links.values()),
-          f'zoo/{name}: every task that links to a node links to one Pipeline Graph View lists {links}')
+    for stage_name, targets in expected.get('downstream', {}).items():
+        by_id = {st['id']: st['name'] for st in stages.values()}
+        linked = [by_id.get(i, i) for i in stages.get(stage_name, {'downstream': []})['downstream']]
+        check(all(t in linked for t in targets), f'zoo/{name}: {stage_name} leads to {linked} (expected {targets})')
+    for stage_name, (row, column) in expected.get('positions', {}).items():
+        st = stages.get(stage_name)
+        check(st is not None and st['row'] == row and st['column'] == column,
+              f'zoo/{name}: {stage_name} at row {st and st["row"]}, column {st and st["column"]} (expected {row}, {column})')
+    # every task that links to a node of Pipeline Graph View names one that plugin lists for the task's own run,
+    # which is a started run's for the stages of a chain
+    links = [(t['name'], t['jobFullName'], t['buildNumber'], t['url'].rsplit('=', 1)[-1])
+             for st in stages.values() for t in st['tasks'] if 'selected-node=' in t['url']]
+    trees = {}
+    def known_nodes(job_full_name, number):
+        if (job_full_name, number) not in trees:
+            path = 'job/' + '/job/'.join(job_full_name.split('/'))
+            tree = admin.json(f'{path}/{number}/stages/tree')
+            ids = set()
+            def collect_ids(items):
+                for st in items:
+                    ids.add(str(st['id']))
+                    collect_ids(st.get('children') or [])
+            collect_ids(tree['stages'] if isinstance(tree, dict) and 'stages' in tree else tree.get('data', {}).get('stages', []))
+            trees[(job_full_name, number)] = ids
+        return trees[(job_full_name, number)]
+    check(all(node in known_nodes(job, number) for _, job, number, node in links),
+          f'zoo/{name}: every task that links to a node links to one Pipeline Graph View lists for its run {[(n, node) for n, _, _, node in links]}')
     if 'input' in expected:
         task = stages[expected['input']]['tasks'][0]
         check(task['requiresInput'] and (task['inputUrl'] or '').endswith('/input/'),
