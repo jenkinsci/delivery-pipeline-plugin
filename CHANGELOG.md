@@ -92,8 +92,9 @@ Old views keep loading; these settings are read and ignored, without old-data en
   nested stage and parallel branch links to its own log in that plugin's console page. Without it, a running stage
   links to the run's console and a finished one to the run.
 - A Declarative stage skipped because an earlier stage failed shows as not built, like one skipped by a `when`
-  condition; matrix cells are named by their axes. The Docker suite carries a corpus of Jenkinsfile shapes
-  (`docker/jenkinsfiles/`) with the stages, tasks and statuses the view must show for each.
+  condition; matrix cells are named by their axes, and a stage inside a scripted parallel branch is shown as
+  "branch: stage". The Docker suite carries a corpus of Jenkinsfile shapes (`docker/jenkinsfiles/`) with the
+  stages, tasks and statuses the view must show for each.
 
 #### Upgrading
 

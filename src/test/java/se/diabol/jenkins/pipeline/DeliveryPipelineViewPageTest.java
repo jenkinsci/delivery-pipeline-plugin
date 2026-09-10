@@ -762,4 +762,23 @@ class DeliveryPipelineViewPageTest {
             assertThat(taskNames(page), containsInAnyOrder("OS = 'linux'", "OS = 'mac'"));
         }
     }
+
+    @Test
+    void stagesInsideScriptedBranchesCarryTheBranchName() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "branched");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "node {",
+                "  stage('Test') {",
+                "    parallel(",
+                "      linux: { stage('Compile') { echo 'c' }; stage('Unit') { echo 'u' } },",
+                "      windows: { stage('Compile') { echo 'c' }; stage('Unit') { echo 'u' } })",
+                "  }",
+                "}"), true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = view(jenkins, "Branched", "branched");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(taskNames(page), containsInAnyOrder("linux: Compile", "linux: Unit", "windows: Compile", "windows: Unit"));
+        }
+    }
 }

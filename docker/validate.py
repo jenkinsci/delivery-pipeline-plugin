@@ -217,6 +217,16 @@ for name, expected in zoo.items():
     for stage_name, count in expected.get('task_count', {}).items():
         names = [t['name'] for t in stages.get(stage_name, {'tasks': []})['tasks']]
         check(len(names) == count, f'zoo/{name}: {stage_name} has {len(names)} tasks {names} (expected {count})')
+    tree = admin.json(f'{ZOO}job/{name}/{build["number"]}/stages/tree')
+    known = set()
+    def collect_ids(items):
+        for st in items:
+            known.add(str(st['id']))
+            collect_ids(st.get('children') or [])
+    collect_ids(tree['stages'] if isinstance(tree, dict) and 'stages' in tree else tree.get('data', {}).get('stages', []))
+    links = {t['name']: t['url'].rsplit('=', 1)[-1] for st in stages.values() for t in st['tasks'] if 'selected-node=' in t['url']}
+    check(all(node in known for node in links.values()),
+          f'zoo/{name}: every task that links to a node links to one Pipeline Graph View lists {links}')
     if 'input' in expected:
         task = stages[expected['input']]['tasks'][0]
         check(task['requiresInput'] and (task['inputUrl'] or '').endswith('/input/'),

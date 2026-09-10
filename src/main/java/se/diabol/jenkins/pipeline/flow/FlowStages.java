@@ -99,10 +99,32 @@ final class FlowStages {
             FlowRuns.StageTiming timing = FlowRuns.timingOf(run, block, last, FlowGraph.nodeAfter(allNodes, last));
             ThreadNameAction branch = block.getAction(ThreadNameAction.class);
             String name = branch != null && !FlowGraph.isStage(block) ? branch.getThreadName() : block.getDisplayName();
-            result.add(task(run, block, cellName(name), timing, previous, stageStart.getDisplayName(), restartable,
-                    console));
+            result.add(task(run, block, cellName(taskName(block, name)), timing, previous, stageStart.getDisplayName(),
+                    restartable, console));
         }
         return result;
+    }
+
+    /**
+     * A stage inside a parallel branch of another name, as scripted Pipelines write them, is shown as
+     * "branch: stage", so that two branches with the same stages stay apart. Declarative names a branch after the
+     * stage it wraps, and those keep the plain name.
+     */
+    private static String taskName(FlowNode block, String name) {
+        if (!FlowGraph.isStage(block)) {
+            return name;
+        }
+        for (BlockStartNode enclosing : block.getEnclosingBlocks()) {
+            ThreadNameAction branch = enclosing.getAction(ThreadNameAction.class);
+            if (branch != null) {
+                String branchName = branch.getThreadName();
+                return branchName.equals(name) ? name : branchName + ": " + name;
+            }
+            if (FlowGraph.isStage(enclosing)) {
+                break;
+            }
+        }
+        return name;
     }
 
     /** Declarative names every cell of a matrix "Matrix - OS = 'linux', ..."; the axes alone say what the cell is. */
@@ -123,7 +145,9 @@ final class FlowStages {
         Status status = statusOf(timing, previous, name, parentStageName);
         String restart = restartable.contains(parentStageName) ? parentStageName : null;
         boolean requiresInput = status.type() == StatusType.PAUSED_PENDING_INPUT;
-        String url = taskUrl(run.getUrl(), console, consoleNodeOf(node), status.type() == StatusType.RUNNING);
+        // the console page addresses blocks; a legacy stage step without a block is not among its nodes
+        String url = taskUrl(run.getUrl(), node instanceof BlockStartNode ? console : null, consoleNodeOf(node),
+                status.type() == StatusType.RUNNING);
         return new Task(node.getId(), name, url, run.getParent().getFullName(), run.getNumber(), status,
                 null, restart != null, restart, requiresInput, requiresInput ? inputUrlOf(run, node) : null, null,
                 TaskDetailsContributor.testsOf(run, node.getId()), List.of(), List.of(), List.of());
