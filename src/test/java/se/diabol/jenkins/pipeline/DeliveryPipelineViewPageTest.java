@@ -781,4 +781,81 @@ class DeliveryPipelineViewPageTest {
             assertThat(taskNames(page), containsInAnyOrder("linux: Compile", "linux: Unit", "windows: Compile", "windows: Unit"));
         }
     }
+
+    @Test
+    void branchesOfAParallelNestedInABranchBecomeTasks() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "nested");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "node {",
+                "  stage('Test') {",
+                "    parallel(",
+                "      a: { parallel(a1: { echo '1' }, a2: { echo '2' }) },",
+                "      b: { echo 'b' })",
+                "  }",
+                "}"), true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = view(jenkins, "Nested", "nested");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage").size(), is(1));
+            assertThat("the leaves of the nested parallel are the tasks, named after both branches",
+                    taskNames(page), containsInAnyOrder("a: a1", "a: a2", "b"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(3));
+        }
+    }
+
+    @Test
+    void pipelineRunWithoutStagesIsShownAsOneTaskNamedAfterTheJob() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "plain");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "node {",
+                "  writeFile file: 'unit.xml', text: '<testsuite name=\"unit\" tests=\"2\" failures=\"1\">"
+                        + "<testcase classname=\"A\" name=\"passes\"/>"
+                        + "<testcase classname=\"A\" name=\"fails\"><failure message=\"boom\"/></testcase></testsuite>'",
+                "  junit 'unit.xml'",
+                "}"), true));
+        jenkins.assertBuildStatus(Result.UNSTABLE, flow.scheduleBuild2(0));
+        DeliveryPipelineView view = view(jenkins, "Plain", "plain");
+        view.setShowTestResults(true);
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(texts(page, ".stage-name"), contains("plain"));
+            assertThat("the run is one task named after the job", taskNames(page), contains("plain"));
+            assertThat(page.<DomElement>querySelector(".stage-task").getAttribute("class"), containsString("UNSTABLE"));
+            assertThat("the run's test results sit on the task, not on the run",
+                    texts(page, ".stage_plain .test-results td"), contains("2", "1", "0"));
+            assertThat(page.querySelectorAll(".pipeline-tests").size(), is(0));
+            assertThat("a finished run links to its page",
+                    page.<DomElement>querySelector(".stage-task .taskname a").getAttribute("href"), endsWith("/job/plain/1/"));
+        }
+    }
+
+    @Test
+    void runWithoutAStageYetIsTheRunItselfUnlessThePreviousRunHadStages() throws Exception {
+        WorkflowJob fresh = jenkins.getInstance().createProject(WorkflowJob.class, "fresh");
+        fresh.setDefinition(new CpsFlowDefinition("sleep 120; node { stage('Build') { echo 'b' } }", true));
+        WorkflowJob late = jenkins.getInstance().createProject(WorkflowJob.class, "late");
+        late.setDefinition(new CpsFlowDefinition("node { stage('Build') { echo 'b' } }", true));
+        jenkins.buildAndAssertSuccess(late);
+        late.setDefinition(new CpsFlowDefinition("sleep 120; node { stage('Build') { echo 'b' } }", true));
+        WorkflowRun freshRun = fresh.scheduleBuild2(0).waitForStart();
+        WorkflowRun lateRun = late.scheduleBuild2(0).waitForStart();
+        try {
+            DeliveryPipelineView freshView = view(jenkins, "Fresh", "fresh");
+            DeliveryPipelineView lateView = view(jenkins, "Late", "late");
+            try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+                HtmlPage page = render(jenkins, client, freshView.getViewUrl());
+                assertThat("a first run with no stage yet is the run itself", taskNames(page), contains("fresh"));
+                assertThat(page.querySelectorAll(".task-progress-running").size(), is(1));
+                assertThat("a running run links to its console",
+                        page.<DomElement>querySelector(".stage-task .taskname a").getAttribute("href"), endsWith("/job/fresh/1/console"));
+                page = render(jenkins, client, lateView.getViewUrl());
+                assertThat("a run whose previous run had stages is still starting", taskNames(page), contains("Starting"));
+            }
+        } finally {
+            freshRun.doStop();
+            lateRun.doStop();
+            jenkins.waitUntilNoActivity();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-// Scripted: a parallel inside a parallel branch; the inner one folds into its branch's task
+// Scripted: a parallel inside a parallel branch; the inner branches are the tasks, named after both branches
 node {
   stage('Test') {
     parallel(

@@ -41,8 +41,10 @@ scripts keep working; what changed is underneath and around them.
 - Pipeline jobs are read from the run's flow graph. Every top-level stage is a stage; the stages nested in it, or
   else its parallel branches, are its tasks. Declarative `parallel` and `matrix` blocks render one task per branch.
   Matrix cells are named by their axes, and a stage inside a scripted parallel branch is shown as "branch: stage",
-  so that two branches with the same stages stay apart. No `task` step is needed; the step of 1.x is deprecated but
-  still works, shows its block as a task as before, and prints a reminder to use a nested `stage`.
+  so that two branches with the same stages stay apart; a `parallel` nested inside a branch shows its inner branches
+  as tasks, named the same way. A run without any stage, as a scripted Pipeline of plain steps is, is shown as one
+  task named after its job, the way a chained job without a stage name is. No `task` step is needed; the step of 1.x
+  is deprecated but still works, shows its block as a task as before, and prints a reminder to use a nested `stage`.
 - The view model is a set of immutable records with one documented JSON contract, served by `<view>/api/json`
   (see `se.diabol.jenkins.pipeline.model`). The page script renders that JSON; it uses no third-party libraries
   and no page globals, works under a Content-Security-Policy and follows the Jenkins theme, dark themes included.
@@ -76,9 +78,8 @@ scripts keep working; what changed is underneath and around them.
   (promotions, promotion-triggered jobs), Warnings Next Generation (static analysis results), Parameterized Trigger
   (blocking sub-projects), Pipeline: Declarative (restart from stage), Pipeline Graph View (a log per stage).
 
-Two limits of the Pipeline support: a `parallel` nested inside a parallel branch folds into that branch's task,
-and a multibranch project needs a component per branch, by name or with a regular expression such as
-`app/(.*)`, rather than being discovered as a whole.
+One limit of the Pipeline support: a multibranch project needs a component per branch, by name or with a regular
+expression such as `app/(.*)`, rather than being discovered as a whole.
 
 **What was removed** (settings of 1.x that 2.0 ignores when loading an old view)
 

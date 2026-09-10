@@ -142,15 +142,10 @@ final class FlowGraph {
 
     /** The nodes inside a stage: its block, or for a legacy stage step everything up to the next stage. */
     static List<FlowNode> nodesOf(FlowNode stageStart, List<FlowNode> allNodes, List<FlowNode> stageStarts) {
-        List<FlowNode> result = new ArrayList<>();
-        if (stageStart instanceof BlockStartNode) {
-            for (FlowNode node : allNodes) {
-                if (node.getAllEnclosingIds().contains(stageStart.getId())) {
-                    result.add(node);
-                }
-            }
-            return result;
+        if (stageStart instanceof BlockStartNode block) {
+            return enclosedBy(allNodes, block);
         }
+        List<FlowNode> result = new ArrayList<>();
         long from = order(stageStart);
         long to = Long.MAX_VALUE;
         for (FlowNode other : stageStarts) {
@@ -162,6 +157,17 @@ final class FlowGraph {
         for (FlowNode node : allNodes) {
             long position = order(node);
             if (position > from && position < to) {
+                result.add(node);
+            }
+        }
+        return result;
+    }
+
+    /** The nodes of the list that sit inside the block. */
+    static List<FlowNode> enclosedBy(List<FlowNode> nodes, BlockStartNode block) {
+        List<FlowNode> result = new ArrayList<>();
+        for (FlowNode node : nodes) {
+            if (node.getAllEnclosingIds().contains(block.getId())) {
                 result.add(node);
             }
         }

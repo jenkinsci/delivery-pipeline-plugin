@@ -27,10 +27,12 @@ import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
 import org.jenkinsci.plugins.workflow.support.steps.input.InputStepExecution;
 import se.diabol.jenkins.pipeline.details.TaskDetailsContributor;
+import se.diabol.jenkins.pipeline.freestyle.Statuses;
 import se.diabol.jenkins.pipeline.model.Stage;
 import se.diabol.jenkins.pipeline.model.Status;
 import se.diabol.jenkins.pipeline.model.StatusType;
@@ -68,13 +70,42 @@ final class FlowStages {
             List<String> downstream = i + 1 < stageStarts.size() ? List.of(stageStarts.get(i + 1).getId()) : List.of();
             stages.add(new Stage(stageStart.getId(), timing.name(), 0, i, null, tasks, downstream));
         }
-        if (stages.isEmpty() && run.isBuilding()) {
-            Task starting = new Task("starting", "Starting", run.getUrl(), run.getParent().getFullName(),
-                    run.getNumber(), Status.running(run.getTimeInMillis(), run.getEstimatedDuration()), null, false,
-                    null, false, null, null, List.of(), List.of(), List.of(), List.of());
-            stages.add(new Stage("starting", run.getParent().getDisplayName(), 0, 0, null, List.of(starting), List.of()));
+        if (stages.isEmpty()) {
+            stages.add(wholeRun(run, previous));
         }
         return stages;
+    }
+
+    /**
+     * A run without stages, as a scripted Pipeline of plain steps is, shown as one task named after its job, the way
+     * a chained job without a stage name is; it carries the run's status, its test results and its link. A run that
+     * is still starting when the previous run had stages is shown as starting instead: its stages are yet to come.
+     */
+    private static Stage wholeRun(WorkflowRun run, FlowRuns.Analysis previous) {
+        WorkflowJob job = run.getParent();
+        Task task;
+        if (run.isBuilding() && previous != null && !previous.pipeline().stages().isEmpty()) {
+            task = new Task("starting", "Starting", run.getUrl(), job.getFullName(), run.getNumber(),
+                    Status.running(run.getTimeInMillis(), run.getEstimatedDuration()), null, false, null, false, null,
+                    null, List.of(), List.of(), List.of(), List.of());
+        } else {
+            Status status = runStatus(run);
+            boolean requiresInput = status.type() == StatusType.PAUSED_PENDING_INPUT;
+            task = new Task("run", job.getDisplayName(),
+                    taskUrl(run.getUrl(), null, null, status.type() == StatusType.RUNNING), job.getFullName(),
+                    run.getNumber(), status, null, false, null, requiresInput,
+                    requiresInput ? inputUrlOf(run, "run") : null, null, TaskDetailsContributor.testsOf(run),
+                    List.of(), List.of(), List.of());
+        }
+        return new Stage(task.id(), job.getDisplayName(), 0, 0, null, List.of(task), List.of());
+    }
+
+    /** The status of a run as a whole: waiting at an input step, running, or finished with its result. */
+    private static Status runStatus(WorkflowRun run) {
+        if (run.isBuilding() && pendingInputOf(run, "run") != null) {
+            return Status.pausedPendingInput(run.getTimeInMillis(), -1);
+        }
+        return Statuses.of(run);
     }
 
     /**
@@ -90,7 +121,7 @@ final class FlowStages {
             blocks = FlowGraph.directChildren(nodes, stageStart, FlowGraph::isTaskStep);
         }
         if (blocks.isEmpty()) {
-            blocks = FlowGraph.directChildren(nodes, stageStart, FlowGraph::isBranch);
+            blocks = leafBranches(nodes, stageStart);
         }
         List<Task> result = new ArrayList<>();
         for (BlockStartNode block : blocks) {
@@ -106,25 +137,43 @@ final class FlowStages {
     }
 
     /**
-     * A stage inside a parallel branch of another name, as scripted Pipelines write them, is shown as
-     * "branch: stage", so that two branches with the same stages stay apart. Declarative names a branch after the
+     * The parallel branches that sit directly in the block. A branch that holds a parallel of its own, which only
+     * scripted Pipelines can write, is shown as its inner branches, down to the leaves.
+     */
+    private static List<BlockStartNode> leafBranches(List<FlowNode> nodes, FlowNode block) {
+        List<BlockStartNode> result = new ArrayList<>();
+        for (BlockStartNode branch : FlowGraph.directChildren(nodes, block, FlowGraph::isBranch)) {
+            List<BlockStartNode> inner = leafBranches(FlowGraph.enclosedBy(nodes, branch), branch);
+            if (inner.isEmpty()) {
+                result.add(branch);
+            } else {
+                result.addAll(inner);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * A stage inside a parallel branch of another name, as scripted Pipelines write them, or a branch of a parallel
+     * nested inside a branch, is shown as "branch: name": every branch enclosing it below the stage adds its name,
+     * outermost first, so that two branches with the same stages stay apart. Declarative names a branch after the
      * stage it wraps, and those keep the plain name.
      */
     private static String taskName(FlowNode block, String name) {
-        if (!FlowGraph.isStage(block)) {
+        if (!FlowGraph.isStage(block) && !FlowGraph.isBranch(block)) {
             return name;
         }
+        String result = name;
         for (BlockStartNode enclosing : block.getEnclosingBlocks()) {
-            ThreadNameAction branch = enclosing.getAction(ThreadNameAction.class);
-            if (branch != null) {
-                String branchName = branch.getThreadName();
-                return branchName.equals(name) ? name : branchName + ": " + name;
-            }
             if (FlowGraph.isStage(enclosing)) {
                 break;
             }
+            ThreadNameAction branch = enclosing.getAction(ThreadNameAction.class);
+            if (branch != null && !branch.getThreadName().equals(name)) {
+                result = branch.getThreadName() + ": " + result;
+            }
         }
-        return name;
+        return result;
     }
 
     /** Declarative names every cell of a matrix "Matrix - OS = 'linux', ..."; the axes alone say what the cell is. */
@@ -149,7 +198,7 @@ final class FlowStages {
         String url = taskUrl(run.getUrl(), node instanceof BlockStartNode ? console : null, consoleNodeOf(node),
                 status.type() == StatusType.RUNNING);
         return new Task(node.getId(), name, url, run.getParent().getFullName(), run.getNumber(), status,
-                null, restart != null, restart, requiresInput, requiresInput ? inputUrlOf(run, node) : null, null,
+                null, restart != null, restart, requiresInput, requiresInput ? inputUrlOf(run, node.getId()) : null, null,
                 TaskDetailsContributor.testsOf(run, node.getId()), List.of(), List.of(), List.of());
     }
 
@@ -196,8 +245,8 @@ final class FlowStages {
     }
 
     /** The input page of the run when the input step waiting inside the block has parameters, else null. */
-    private static String inputUrlOf(WorkflowRun run, FlowNode block) {
-        InputStepExecution execution = pendingInputOf(run, block.getId());
+    private static String inputUrlOf(WorkflowRun run, String blockId) {
+        InputStepExecution execution = pendingInputOf(run, blockId);
         if (execution == null || execution.getInput().getParameters().isEmpty()) {
             return null;
         }

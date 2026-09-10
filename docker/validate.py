@@ -217,6 +217,12 @@ for name, expected in zoo.items():
     for stage_name, count in expected.get('task_count', {}).items():
         names = [t['name'] for t in stages.get(stage_name, {'tasks': []})['tasks']]
         check(len(names) == count, f'zoo/{name}: {stage_name} has {len(names)} tasks {names} (expected {count})')
+    for stage_name, tasks in expected.get('tests', {}).items():
+        shown = {t['name']: t['tests'] for t in stages.get(stage_name, {'tasks': []})['tasks']}
+        for task_name, (total, failed, skipped) in tasks.items():
+            counts = [(r['total'], r['failed'], r['skipped']) for r in shown.get(task_name) or []]
+            check((total, failed, skipped) in counts,
+                  f'zoo/{name}: {stage_name} / {task_name} test counts {counts} (expected {[total, failed, skipped]})')
     tree = admin.json(f'{ZOO}job/{name}/{build["number"]}/stages/tree')
     known = set()
     def collect_ids(items):
