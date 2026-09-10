@@ -237,6 +237,16 @@ pipelines = {c['name']: c for c in view_json(DEMO + 'view/Pipelines/')['componen
 decl = stage_map(newest(pipelines['Declarative']))
 check(list(decl) == ['Build', 'Test', 'Approve'], f'declarative: stages reached so far while paused {list(decl)}')
 check(sorted(t['name'] for t in decl['Test']['tasks']) == ['Integration', 'Unit'], 'declarative: parallel nested stages are tasks')
+plugin_tree = admin.json(f'{DEMO}job/pipeline-declarative/1/stages/tree')
+plugin_urls = {}
+def collect(stages):
+    for st in stages:
+        plugin_urls[st['name']] = st['url'].lstrip('/')
+        collect(st.get('children') or [])
+collect(plugin_tree['stages'] if isinstance(plugin_tree, dict) and 'stages' in plugin_tree else plugin_tree.get('data', {}).get('stages', []))
+task_urls = {t['name']: t['url'] for st in decl.values() for t in st['tasks']}
+check(task_urls and all(plugin_urls.get(name) == url for name, url in task_urls.items()),
+      f'declarative: with Pipeline Graph View installed, tasks link to the page the plugin itself links stages to {task_urls}')
 approve = decl['Approve']['tasks'][0]
 check(approve['status']['type'] == 'PAUSED_PENDING_INPUT' and approve['requiresInput'], 'declarative: input step shows as paused')
 scripted = stage_map(newest(pipelines['Scripted']))

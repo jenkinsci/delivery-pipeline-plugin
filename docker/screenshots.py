@@ -47,6 +47,22 @@ with sync_playwright() as p:
         shoot(page, f'{URL}/view/All%20pipelines/', f'{scheme}-all-pipelines')
         shoot(page, f'{URL}/job/demo/view/Fan-out/?fullscreen=true', f'{scheme}-fanout-fullscreen', full_page=False)
         context.close()
+    # the log of one stage of a Pipeline run, where a task of the Pipelines view links to with Pipeline Graph View
+    context = browser.new_context(viewport={'width': 1440, 'height': 900}, color_scheme='light')
+    page = context.new_page()
+    login(page)
+    model = page.request.get(f'{URL}/job/demo/view/Pipelines/api/json').json()
+    declarative = next(c for c in model['components'] if c['name'] == 'Declarative')
+    # the first run, which ran every stage; later ones are restarts that skipped most of them
+    first_run = declarative['pipelines'][-1]
+    for name, shot in (('Build', 'light-stage-console'), ('Unit', 'light-stage-console-nested')):
+        task = next(t for st in first_run['stages'] for t in st['tasks'] if t['name'] == name)
+        page.goto(f"{URL}/{task['url']}")
+        page.wait_for_load_state('networkidle')
+        page.wait_for_timeout(5000)
+        page.screenshot(path=os.path.join(OUT, shot + '.png'), full_page=False)
+        print('captured', shot)
+    context.close()
     # a wide light capture of the fan-out chain, the source of the README screenshot
     wide = browser.new_context(viewport={'width': 1900, 'height': 1000}, color_scheme='light')
     page = wide.new_page()

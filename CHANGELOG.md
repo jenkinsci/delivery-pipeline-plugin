@@ -38,8 +38,8 @@ The full contract is documented in the `se.diabol.jenkins.pipeline.model` packag
 - Jenkins 2.555.3 or newer and Java 21; 2.555 is the first LTS line that requires Java 21.
 - Required plugins are ones a fresh Jenkins installs with its suggested set (Pipeline: Job, Pipeline: API,
   Pipeline: Input Step, JUnit, Token Macro, Structs) plus Pipeline Graph Analysis, which the plugin manager installs
-  alongside. Build Pipeline, Promoted Builds, Warnings Next Generation, Parameterized Trigger and Pipeline:
-  Declarative are optional and activate when present.
+  alongside. Build Pipeline, Promoted Builds, Warnings Next Generation, Parameterized Trigger, Pipeline:
+  Declarative and Pipeline Graph View are optional and activate when present.
 
 #### Removed
 
@@ -88,6 +88,9 @@ Old views keep loading; these settings are read and ignored, without old-data en
   anywhere outside the tasks shown, are listed under the run's heading. A run waiting in the queue is shown before it
   starts, laid out like the previous run. A task waiting at an input step with parameters links to the input page,
   since only that page can collect them; one without parameters is proceeded from the view.
+- When the Pipeline Graph View plugin is installed (it is one of the plugins a fresh Jenkins suggests), every stage,
+  nested stage and parallel branch links to its own log in that plugin's console page. Without it, a running stage
+  links to the run's console and a finished one to the run.
 
 #### Upgrading
 

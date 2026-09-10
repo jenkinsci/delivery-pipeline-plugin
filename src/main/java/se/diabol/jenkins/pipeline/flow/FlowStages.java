@@ -17,6 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline.flow;
 
+import hudson.model.Action;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,10 @@ import se.diabol.jenkins.pipeline.model.Task;
  */
 final class FlowStages {
 
+    /** The action Pipeline Graph View adds to a run for its console page, which can open on a chosen stage. */
+    private static final String GRAPH_VIEW_CONSOLE_ACTION =
+            "io.jenkins.plugins.pipelinegraphview.consoleview.PipelineConsoleViewAction";
+
     private FlowStages() {
     }
 
@@ -51,13 +56,14 @@ final class FlowStages {
                                 List<FlowRuns.StageTiming> timings, FlowRuns.Analysis previous,
                                 Set<String> restartable) {
         List<Stage> stages = new ArrayList<>();
+        String console = stageConsoleUrlName(run);
         for (int i = 0; i < stageStarts.size(); i++) {
             FlowNode stageStart = stageStarts.get(i);
             FlowRuns.StageTiming timing = timings.get(i);
             List<FlowNode> nodes = FlowGraph.nodesOf(stageStart, allNodes, stageStarts);
-            List<Task> tasks = nestedTasks(run, stageStart, nodes, allNodes, previous, restartable);
+            List<Task> tasks = nestedTasks(run, stageStart, nodes, allNodes, previous, restartable, console);
             if (tasks.isEmpty()) {
-                tasks.add(task(run, stageStart, timing.name(), timing, previous, timing.name(), restartable));
+                tasks.add(task(run, stageStart, timing.name(), timing, previous, timing.name(), restartable, console));
             }
             List<String> downstream = i + 1 < stageStarts.size() ? List.of(stageStarts.get(i + 1).getId()) : List.of();
             stages.add(new Stage(stageStart.getId(), timing.name(), 0, i, null, tasks, downstream));
@@ -78,7 +84,7 @@ final class FlowStages {
      */
     private static List<Task> nestedTasks(WorkflowRun run, FlowNode stageStart, List<FlowNode> nodes,
                                           List<FlowNode> allNodes, FlowRuns.Analysis previous,
-                                          Set<String> restartable) {
+                                          Set<String> restartable, String console) {
         List<BlockStartNode> blocks = FlowGraph.directChildren(nodes, stageStart, FlowGraph::isStage);
         if (blocks.isEmpty()) {
             blocks = FlowGraph.directChildren(nodes, stageStart, FlowGraph::isTaskStep);
@@ -93,26 +99,70 @@ final class FlowStages {
             FlowRuns.StageTiming timing = FlowRuns.timingOf(run, block, last, FlowGraph.nodeAfter(allNodes, last));
             ThreadNameAction branch = block.getAction(ThreadNameAction.class);
             String name = branch != null && !FlowGraph.isStage(block) ? branch.getThreadName() : block.getDisplayName();
-            result.add(task(run, block, name, timing, previous, stageStart.getDisplayName(), restartable));
+            result.add(task(run, block, name, timing, previous, stageStart.getDisplayName(), restartable, console));
         }
         return result;
     }
 
     /**
-     * The task of a block. A running one links to the console; its test results are the ones recorded inside the
-     * block; a rebuild of it restarts the run from its top-level stage, when the run can be restarted from there;
-     * when it waits at an input step with parameters, the task links to the input page instead of offering the
-     * proceed button.
+     * The task of a block. It links to its own log when Pipeline Graph View provides one, else a running one links
+     * to the console and a finished one to the run; its test results are the ones recorded inside the block; a
+     * rebuild of it restarts the run from its top-level stage, when the run can be restarted from there; when it
+     * waits at an input step with parameters, the task links to the input page instead of offering the proceed
+     * button.
      */
     private static Task task(WorkflowRun run, FlowNode node, String name, FlowRuns.StageTiming timing,
-                             FlowRuns.Analysis previous, String parentStageName, Set<String> restartable) {
+                             FlowRuns.Analysis previous, String parentStageName, Set<String> restartable,
+                             String console) {
         Status status = statusOf(timing, previous, name, parentStageName);
         String restart = restartable.contains(parentStageName) ? parentStageName : null;
         boolean requiresInput = status.type() == StatusType.PAUSED_PENDING_INPUT;
-        String url = status.type() == StatusType.RUNNING ? run.getUrl() + "console" : run.getUrl();
+        String url = taskUrl(run.getUrl(), console, consoleNodeOf(node), status.type() == StatusType.RUNNING);
         return new Task(node.getId(), name, url, run.getParent().getFullName(), run.getNumber(), status,
                 null, restart != null, restart, requiresInput, requiresInput ? inputUrlOf(run, node) : null, null,
                 TaskDetailsContributor.testsOf(run, node.getId()), List.of(), List.of(), List.of());
+    }
+
+    /**
+     * Where a task links to: the run's Pipeline Graph View console opened on the task's node when that plugin
+     * provides one, else the run's console while the task runs and the run page otherwise.
+     */
+    static String taskUrl(String runUrl, String consoleUrlName, String nodeId, boolean running) {
+        if (consoleUrlName != null) {
+            return runUrl + consoleUrlName + "/?selected-node=" + nodeId;
+        }
+        return running ? runUrl + "console" : runUrl;
+    }
+
+    /**
+     * The node Pipeline Graph View selects for the task: a stage that sits directly inside a parallel branch, as
+     * Declarative Pipeline nests them, is addressed by the branch, everything else by its own node.
+     */
+    static String consoleNodeOf(FlowNode node) {
+        if (FlowGraph.isStage(node)) {
+            for (BlockStartNode enclosing : node.getEnclosingBlocks()) {
+                if (FlowGraph.isBranch(enclosing)) {
+                    return enclosing.getId();
+                }
+                if (FlowGraph.isStage(enclosing)) {
+                    break;
+                }
+            }
+        }
+        return node.getId();
+    }
+
+    /**
+     * The URL name of Pipeline Graph View's console page on the run ("stages" today, "pipeline-console" in older
+     * releases), read from the action the plugin adds to runs, or null when the plugin is not installed.
+     */
+    static String stageConsoleUrlName(WorkflowRun run) {
+        for (Action action : run.getAllActions()) {
+            if (GRAPH_VIEW_CONSOLE_ACTION.equals(action.getClass().getName())) {
+                return action.getUrlName();
+            }
+        }
+        return null;
     }
 
     /** The input page of the run when the input step waiting inside the block has parameters, else null. */

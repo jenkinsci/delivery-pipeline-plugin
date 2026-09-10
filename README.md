@@ -63,6 +63,9 @@ scripts keep working; what changed is underneath and around them.
   anywhere outside the tasks shown, are listed under the run's heading. A run waiting in the queue is shown before it
   starts, laid out like the previous run. A task waiting at an input step with parameters links to the input page,
   since only that page can collect them; one without parameters is proceeded from the view.
+- When the Pipeline Graph View plugin is installed (it is one of the plugins a fresh Jenkins suggests), every stage,
+  nested stage and parallel branch links to its own log in that plugin's console page. Without it, a running stage
+  links to the run's console and a finished one to the run.
 - A *Delivery Pipeline manual step* post-build action of its own, so manual steps no longer need the Build
   Pipeline plugin.
 - The required dependencies are plugins a fresh Jenkins installs with its suggested set (Pipeline: Job,
@@ -70,7 +73,7 @@ scripts keep working; what changed is underneath and around them.
   that reads stage status and timing from a run's flow graph; the plugin manager installs it alongside. Everything
   else is optional and activates when the plugin is present: Build Pipeline (manual triggers), Promoted Builds
   (promotions, promotion-triggered jobs), Warnings Next Generation (static analysis results), Parameterized Trigger
-  (blocking sub-projects), Pipeline: Declarative (restart from stage).
+  (blocking sub-projects), Pipeline: Declarative (restart from stage), Pipeline Graph View (a log per stage).
 
 Two limits of the Pipeline support: a `parallel` nested inside a parallel branch folds into that branch's task,
 and a multibranch project needs a component per branch, by name or with a regular expression such as

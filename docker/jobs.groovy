@@ -21,7 +21,6 @@ job('demo/simple-build') {
     description('First job of the simple chain')
     deliveryPipelineConfiguration('Build', 'compile')
     wrappers { deliveryPipelineVersion('1.0.${BUILD_NUMBER}', true) }
-    triggers { cron('H/6 * * * *') }
     steps { shell('echo compiling; sleep 3') }
     publishers { downstream('demo/simple-test', 'SUCCESS') }
 }
