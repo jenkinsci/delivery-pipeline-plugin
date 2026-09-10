@@ -1,0 +1,43 @@
+# Configuration as Code for the test controller. Two users: admin (everything) and viewer (read only), so that
+# the permission gating of the view's buttons can be checked. Both passwords are fixtures, overridable by env.
+jenkins:
+  systemMessage: "Delivery Pipeline plugin test controller"
+  numExecutors: 4
+  mode: NORMAL
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: ${ADMIN_PASSWORD:-admin}
+        - id: viewer
+          password: ${VIEWER_PASSWORD:-viewer}
+  authorizationStrategy:
+    globalMatrix:
+      entries:
+        - user:
+            name: admin
+            permissions:
+              - "Overall/Administer"
+        - user:
+            name: viewer
+            permissions:
+              - "Overall/Read"
+              - "Job/Read"
+              - "View/Read"
+  markupFormatter:
+    rawHtml:
+      disableSyntaxHighlighting: true
+appearance:
+  themeManager:
+    disableUserThemes: false
+    theme: darkSystem
+unclassified:
+  location:
+    url: http://localhost:8080/
+    adminAddress: nobody@example.com
+security:
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: false
+jobs:
+  - file: /usr/share/jenkins/ref/jobs.groovy

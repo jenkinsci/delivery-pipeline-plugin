@@ -1,7 +1,9 @@
-.gradle
-.idea
-build
-src
-work
-target/*/*
+# Only what docker/Dockerfile copies goes to the daemon; the checkout and target/ stay out.
+*
 !target/delivery-pipeline-plugin.hpi
+!docker/plugins.txt
+!docker/casc.yaml
+!docker/jobs.groovy
+!docker/upgrade/plugins.txt
+!docker/upgrade/casc.yaml
+!docker/upgrade/jobs.groovy

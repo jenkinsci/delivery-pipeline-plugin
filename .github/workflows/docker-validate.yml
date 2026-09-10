@@ -1,0 +1,40 @@
+# Runs the Docker test controller and validates the plugin against it. Manual, or on request in a pull request.
+name: docker-validate
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'docker/**'
+      - 'src/main/**'
+      - 'pom.xml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: docker/.m2
+          key: docker-m2-${{ hashFiles('pom.xml') }}
+          restore-keys: docker-m2-
+      - name: Build the plugin and the controller image (Maven runs in a container)
+        run: docker/run.sh build
+      - name: Start the controller
+        run: docker/run.sh up
+      - name: Validate
+        run: docker/run.sh validate
+      - name: Screenshots
+        if: always()
+        run: docker/run.sh screenshots
+      - name: Controller log
+        if: always()
+        run: docker compose -f docker/docker-compose.yml logs jenkins > docker/out/jenkins.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-validate
+          path: docker/out
+      - name: Stop
+        if: always()
+        run: docker/run.sh down
