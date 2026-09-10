@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 
+import hudson.model.FreeStyleProject;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -29,17 +30,25 @@ import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.model.Component;
+import se.diabol.jenkins.pipeline.model.JobRef;
 
 @WithJenkins
 class ModelCacheTest {
 
+    private static List<Component> showing(String jobFullName) {
+        return List.of(new Component(jobFullName, 1,
+                new JobRef(jobFullName, jobFullName, "job/" + jobFullName + "/", false), null, List.of(), null));
+    }
+
     @Test
-    void aModelIsComputedOncePerKeyUntilSomethingChanges(JenkinsRule jenkins) throws Exception {
+    void aModelIsComputedOncePerKeyUntilOneOfItsJobsBuilds(JenkinsRule jenkins) throws Exception {
+        // created first: creating a job empties the cache, which is not what this test is about
+        FreeStyleProject job = jenkins.createFreeStyleProject("job");
         ModelCache cache = ModelCache.get();
         AtomicInteger computed = new AtomicInteger();
         List<Component> first = cache.get("k", () -> {
             computed.incrementAndGet();
-            return List.of(Component.failed("a", 1, "x"));
+            return showing("job");
         });
         List<Component> second = cache.get("k", () -> {
             computed.incrementAndGet();
@@ -47,19 +56,39 @@ class ModelCacheTest {
         });
         assertThat(second, sameInstance(first));
         assertThat(computed.get(), is(1));
-        cache.get("other", () -> {
+        List<Component> other = cache.get("other", () -> {
             computed.incrementAndGet();
-            return List.of();
+            return showing("other-job");
         });
         assertThat(computed.get(), is(2));
 
-        jenkins.buildAndAssertSuccess(jenkins.createFreeStyleProject("job"));
+        jenkins.buildAndAssertSuccess(job);
         List<Component> afterBuild = cache.get("k", () -> {
             computed.incrementAndGet();
             return List.of();
         });
-        assertThat("a build clears the cache", afterBuild, not(sameInstance(first)));
+        assertThat("a build of a job the model shows drops the model", afterBuild, not(sameInstance(first)));
         assertThat(computed.get(), is(3));
+        assertThat("a model that does not show the job is kept", cache.get("other", () -> {
+            computed.incrementAndGet();
+            return List.of();
+        }), sameInstance(other));
+        assertThat(computed.get(), is(3));
+    }
+
+    @Test
+    void buildsInsideAJobAndJobChangesInvalidateAsExpected(JenkinsRule jenkins) throws Exception {
+        ModelCache cache = ModelCache.get();
+        cache.clear();
+        List<Component> matrix = cache.get("matrix", () -> showing("matrix"));
+        List<Component> unrelated = cache.get("unrelated", () -> showing("elsewhere"));
+        cache.invalidate("matrix/axis=linux");
+        assertThat("a build of a matrix configuration drops the model of its project",
+                cache.get("matrix", () -> List.of()), not(sameInstance(matrix)));
+        assertThat(cache.get("unrelated", () -> List.of()), sameInstance(unrelated));
+        jenkins.createFreeStyleProject("brand-new");
+        assertThat("a job being created empties the cache, since chains may change",
+                cache.get("unrelated", () -> List.of()), not(sameInstance(unrelated)));
     }
 
     @Test

@@ -68,8 +68,9 @@ Old views keep loading; these settings are read and ignored, without old-data en
   `matrix` included) are its tasks. No `task` step is needed.
 - A *Delivery Pipeline manual step* post-build action (`deliveryPipelineManualStep` in Job DSL), so manual steps no
   longer need the Build Pipeline plugin. Build Pipeline's manual triggers are still recognised when it is installed.
-- Computed models are cached and dropped whenever a build starts, ends or is deleted, the queue changes or a job is
-  reconfigured, so many wall boards polling one view cost little more than one. The system properties
+- Computed models are cached; a build or queue event drops only the models that show the job in question, and a
+  job being created, reconfigured, renamed or deleted empties the cache, so many wall boards polling one view cost
+  little more than one even on a busy controller. The system properties
   `se.diabol.jenkins.pipeline.cache.ModelCache.idleSeconds` (default 30) and `activeSeconds` (default 2) tune how
   long an idle and an active view may be served from the cache; they are read on every request, so they can be
   changed at runtime. The README's "Performance and caching" section explains when to change them.

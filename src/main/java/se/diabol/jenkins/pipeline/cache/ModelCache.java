@@ -26,17 +26,25 @@ import hudson.model.TaskListener;
 import hudson.model.listeners.ItemListener;
 import hudson.model.listeners.RunListener;
 import hudson.model.queue.QueueListener;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import se.diabol.jenkins.pipeline.model.Component;
+import se.diabol.jenkins.pipeline.model.Pipeline;
+import se.diabol.jenkins.pipeline.model.Stage;
+import se.diabol.jenkins.pipeline.model.Task;
 
 /**
  * Remembers computed view models for a short while, so that many browsers polling the same view do not each walk
- * the build history. Entries are dropped whenever a build starts, ends or is deleted, the queue changes or a job is
- * reconfigured; a model that contains a running or queued build expires quickly on its own as well, because stages
- * of a Pipeline run come and go without any of those events.
+ * the build history. An entry remembers the jobs its model shows: when a build of one of them starts, ends or is
+ * deleted, or one of them enters or leaves the queue, only the entries showing that job are dropped, so that a busy
+ * controller does not recompute every board on every event. A job being created, reconfigured, renamed or deleted
+ * empties the cache, because that can change which jobs belong to which pipeline. A model that contains a running
+ * or queued build expires quickly on its own as well, because stages of a Pipeline run come and go without any of
+ * those events.
  * <p>Two system properties tune how long an entry may be served, in seconds, and are read on every request so that
  * they can be changed at runtime as well as set at startup:
  * <ul>
@@ -54,7 +62,17 @@ public class ModelCache {
     static final String ACTIVE_SECONDS_PROPERTY = ModelCache.class.getName() + ".activeSeconds";
     private static final int MAX_ENTRIES = 1000;
 
-    private record Entry(List<Component> components, long expiresAt) {
+    /** A cached model with the full names of the jobs it shows. */
+    private record Entry(List<Component> components, long expiresAt, Set<String> jobs) {
+        /** Whether the model shows the job, or something inside it such as a matrix configuration or a promotion. */
+        boolean shows(String jobFullName) {
+            for (String job : jobs) {
+                if (jobFullName.equals(job) || jobFullName.startsWith(job + "/")) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     private final Map<String, Entry> entries = new ConcurrentHashMap<>();
@@ -71,7 +89,8 @@ public class ModelCache {
                 return old;
             }
             List<Component> components = loader.get();
-            return new Entry(components, now + (isActive(components) ? activeTtlMillis() : idleTtlMillis()));
+            return new Entry(components, now + (isActive(components) ? activeTtlMillis() : idleTtlMillis()),
+                    jobsOf(components));
         });
         if (entries.size() > MAX_ENTRIES) {
             entries.entrySet().removeIf(e -> e.getValue().expiresAt() <= now);
@@ -81,6 +100,50 @@ public class ModelCache {
 
     public void clear() {
         entries.clear();
+    }
+
+    /** Drops the models that show the job, or something inside it such as a matrix configuration or a promotion. */
+    public void invalidate(String jobFullName) {
+        if (jobFullName == null) {
+            clear();
+            return;
+        }
+        entries.values().removeIf(entry -> entry.shows(jobFullName));
+    }
+
+    static Set<String> jobsOf(List<Component> components) {
+        Set<String> result = new HashSet<>();
+        for (Component component : components) {
+            if (component.firstJob() != null) {
+                result.add(component.firstJob().fullName());
+            }
+            for (Pipeline pipeline : component.pipelines()) {
+                if (pipeline.jobFullName() != null) {
+                    result.add(pipeline.jobFullName());
+                }
+                for (Stage stage : pipeline.stages()) {
+                    for (Task task : stage.tasks()) {
+                        if (task.jobFullName() != null) {
+                            result.add(task.jobFullName());
+                        }
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private static void invalidate(Run<?, ?> run) {
+        get().invalidate(run.getParent().getFullName());
+    }
+
+    /** A queue item's task is the job itself, or for a Pipeline's executor placeholder a task owned by the job. */
+    private static void invalidate(Queue.Item item) {
+        if (item.task.getOwnerTask() instanceof Item job) {
+            get().invalidate(job.getFullName());
+        } else {
+            get().clear();
+        }
     }
 
     static long idleTtlMillis() {
@@ -104,22 +167,22 @@ public class ModelCache {
     public static class RunChanges extends RunListener<Run<?, ?>> {
         @Override
         public void onStarted(Run<?, ?> run, TaskListener listener) {
-            get().clear();
+            invalidate(run);
         }
 
         @Override
         public void onCompleted(Run<?, ?> run, TaskListener listener) {
-            get().clear();
+            invalidate(run);
         }
 
         @Override
         public void onFinalized(Run<?, ?> run) {
-            get().clear();
+            invalidate(run);
         }
 
         @Override
         public void onDeleted(Run<?, ?> run) {
-            get().clear();
+            invalidate(run);
         }
     }
 
@@ -127,12 +190,12 @@ public class ModelCache {
     public static class QueueChanges extends QueueListener {
         @Override
         public void onEnterWaiting(Queue.WaitingItem item) {
-            get().clear();
+            invalidate(item);
         }
 
         @Override
         public void onLeft(Queue.LeftItem item) {
-            get().clear();
+            invalidate(item);
         }
     }
 

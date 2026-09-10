@@ -165,9 +165,11 @@ Performance and caching
 Computing a view means walking the build history of every job in its pipelines, or the flow graph of every run
 of a Pipeline job. The plugin does that once per view and page, keeps the result in memory, and serves it to
 every browser that polls the view; only the per-user facts (whether the buttons may be shown) are added when the
-JSON is written. The cache is emptied whenever a build starts, ends or is deleted, the queue changes, or a job is
-created, reconfigured, renamed or deleted, so nothing stale is shown after an event. Between events an entry is
-served for a limited time:
+JSON is written. Each cached model remembers the jobs it shows: when a build of one of them starts, ends or is
+deleted, or one of them enters or leaves the queue, only the models showing that job are dropped, so a busy
+controller does not recompute every board on every event. A job being created, reconfigured, renamed or deleted
+empties the cache, because that can change which jobs belong to which pipeline. Between events an entry is served
+for a limited time:
 
 | System property | Default | Applies to |
 |---|---|---|
