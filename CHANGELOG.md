@@ -74,6 +74,8 @@ Old views keep loading; these settings are read and ignored, without old-data en
   `se.diabol.jenkins.pipeline.cache.ModelCache.idleSeconds` (default 30) and `activeSeconds` (default 2) tune how
   long an idle and an active view may be served from the cache; they are read on every request, so they can be
   changed at runtime. The README's "Performance and caching" section explains when to change them.
+- The JSON is exported once per model and viewer and served with an ETag; a poll that sends it back and
+  finds nothing changed is answered with 304 Not Modified and no body.
 - A page script without libraries or page globals that works under a Content-Security-Policy and follows the
   Jenkins theme. Stages are laid out by the longest path from the first stage, so arrows always point to the right.
 - Actions are checked on the server against the view's settings and the user's permissions; buttons appear only for

@@ -23,7 +23,9 @@ trigger, proceeding an `input` step, a rebuild, an abort and a start. It exits n
 page and a phone viewport, so the rendering can be reviewed without a browser session on the controller.
 
 Configuration lives in `casc.yaml` (Configuration as Code), the jobs in `jobs.groovy` (Job DSL), the plugin set in
-`plugins.txt`. Override the Jenkins version with `JENKINS_VERSION=2.579.1 docker/run.sh build`.
+`plugins.txt`. Override the Jenkins version with `JENKINS_VERSION=2.579.1 docker/run.sh build`. The same suite,
+the load test and the upgrade exercise run in GitHub Actions (`.github/workflows/docker-suite.yml`) on every push and
+pull request that touches the plugin or the suite.
 
 ## The Jenkinsfile zoo
 
@@ -54,13 +56,16 @@ and Pipeline and has `PERF_VIEWERS` (50) viewers poll the board's JSON every `PE
 page does and each over its own kept-alive connection accepting compressed responses, until the deployment has run
 through or `PERF_DURATION` (300)
 seconds have passed; finally the same viewers poll without any pause for `PERF_STORM` (20) seconds to find the
-ceiling. The report lists requests, throughput, latency percentiles, response size, errors and the controller's CPU
-per phase, and the run fails on any error, on a p95 above `PERF_P95_MAX_MS` (3000) during the deployment, or on a
-median more than ten times the quiet baseline. The controller has four executors, so most of the deployment waits in
-the queue, which is what a board full of queued tasks looks like. In a run on a laptop, fifty viewers during the
-deployment saw the same latency as one viewer on the quiet board, about 100 ms at the median and under 200 ms at the
-worst, because the cache serves them one computed model; the storm found the ceiling at about 64 polls a second,
-bound by the controller serializing the board rather than by the network, since the JSON travels compressed.
+ceiling. The viewers send the ETag back like the page does, so the report counts the polls answered 304 as well;
+the storm asks for full responses to find the export ceiling rather than the 304 one (`PERF_CONDITIONAL=0` makes
+every phase do so). The report lists requests, throughput, latency percentiles, response size, errors and the
+controller's CPU per phase, and the run fails on any error, on a p95 above `PERF_P95_MAX_MS` (3000) during the
+deployment, or on a median more than ten times the quiet baseline. The controller has four executors, so most of the deployment waits in
+the queue, which is what a board full of queued tasks looks like. In a run on a laptop, a poll of the quiet board took
+6 ms, answered 304; the fifty viewers during the deployment saw an 8 ms median and a 109 ms p99 while the controller
+spent its CPU on the builds; and the storm, asking for full responses, found the ceiling at about 2000 polls a second,
+a 20 ms median with eight cores busy. The viewers log in once and poll with their session, as the page does: sending
+the password with every request would cost Jenkins about 80 ms of hashing per request, which dwarfs the board.
 
 ## Upgrading from 1.4.2
 

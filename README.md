@@ -213,6 +213,12 @@ Pipeline jobs that run for a long time; raise `idleSeconds` when large chains of
 builds are rare. The *update interval* of each view is the other knob: polls that arrive within the cached time
 cost almost nothing, so a short interval is fine as long as the limits above fit the controller.
 
+The JSON itself is exported once per model and viewer and kept with the cached model, and every response carries an
+ETag made of the model's version and the viewer. The page sends it back on the next poll, and a poll that finds the
+model unchanged is answered with 304 Not Modified and no body, so a quiet board costs a header exchange per poll and
+a busy one costs one export per model and viewer however many screens watch it. Only `serverTime` is written afresh
+into every response. Requests with Stapler's `tree`, `depth`, `pretty` or `xpath` parameters are exported on the spot.
+
 To see what a view costs, time `<view>/api/json` twice: the first answer after an event is the computation, the
 second one is the cache. On a controller with views of several hundred tasks the first takes a few seconds and
 the second a fraction of one.

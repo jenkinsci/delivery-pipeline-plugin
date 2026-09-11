@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import se.diabol.jenkins.pipeline.model.Component;
 import se.diabol.jenkins.pipeline.model.Pipeline;
@@ -62,8 +63,17 @@ public class ModelCache {
     static final String ACTIVE_SECONDS_PROPERTY = ModelCache.class.getName() + ".activeSeconds";
     private static final int MAX_ENTRIES = 1000;
 
-    /** A cached model with the full names of the jobs it shows. */
-    private record Entry(List<Component> components, long expiresAt, Set<String> jobs) {
+    /** How many viewers' exported forms one model keeps; permissions make the JSON differ per viewer. */
+    private static final int MAX_EXPORTS = 64;
+
+    private static final AtomicLong VERSIONS = new AtomicLong();
+
+    /**
+     * A cached model with the full names of the jobs it shows, a version that no other model ever gets, and the
+     * exported forms of the model per viewer.
+     */
+    private record Entry(List<Component> components, long expiresAt, Set<String> jobs, long version,
+                         Map<String, byte[]> exports) {
         /** Whether the model shows the job, or something inside it such as a matrix configuration or a promotion. */
         boolean shows(String jobFullName) {
             for (String job : jobs) {
@@ -75,6 +85,42 @@ public class ModelCache {
         }
     }
 
+    /**
+     * A cached model as it is served: its components, a version that changes with every recomputation, which
+     * conditional requests compare, and the exported form per viewer, computed once and kept with the model.
+     */
+    public static final class Cached {
+        private final List<Component> components;
+        private final long version;
+        private final Map<String, byte[]> exports;
+
+        private Cached(Entry entry) {
+            this.components = entry.components();
+            this.version = entry.version();
+            this.exports = entry.exports();
+        }
+
+        public List<Component> components() {
+            return components;
+        }
+
+        public long version() {
+            return version;
+        }
+
+        /** The exported form of the model for the viewer, from the exporter the first time only. */
+        public byte[] export(String viewer, Supplier<byte[]> exporter) {
+            byte[] bytes = exports.get(viewer);
+            if (bytes == null) {
+                bytes = exporter.get();
+                if (exports.size() < MAX_EXPORTS) {
+                    exports.put(viewer, bytes);
+                }
+            }
+            return bytes;
+        }
+    }
+
     private final Map<String, Entry> entries = new ConcurrentHashMap<>();
 
     public static ModelCache get() {
@@ -83,6 +129,11 @@ public class ModelCache {
 
     /** The cached model for the key, or the loader's result which is then cached. */
     public List<Component> get(String key, Supplier<List<Component>> loader) {
+        return cached(key, loader).components();
+    }
+
+    /** The cached model for the key with its version and exported forms, or the loader's result which is then cached. */
+    public Cached cached(String key, Supplier<List<Component>> loader) {
         long now = System.currentTimeMillis();
         Entry entry = entries.compute(key, (k, old) -> {
             if (old != null && old.expiresAt() > now) {
@@ -90,12 +141,12 @@ public class ModelCache {
             }
             List<Component> components = loader.get();
             return new Entry(components, now + (isActive(components) ? activeTtlMillis() : idleTtlMillis()),
-                    jobsOf(components));
+                    jobsOf(components), VERSIONS.incrementAndGet(), new ConcurrentHashMap<>());
         });
         if (entries.size() > MAX_ENTRIES) {
             entries.entrySet().removeIf(e -> e.getValue().expiresAt() <= now);
         }
-        return entry.components();
+        return new Cached(entry);
     }
 
     public void clear() {

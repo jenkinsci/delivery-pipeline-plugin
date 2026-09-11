@@ -4,13 +4,16 @@
 Runs against the test controller (docker/run.sh up) as docker/run.sh perf. The seed carries a Performance folder
 with chains of eight jobs and four Declarative Pipelines behind one board, the Deployment view. Three phases:
 
-  baseline    one viewer polls the quiet board every second for 20 seconds
+  baseline    one viewer polls the quiet board every second for 20 seconds, sending the ETag back like the page
   deployment  a build of every chain and Pipeline is started, and PERF_VIEWERS viewers poll the board every
               PERF_INTERVAL seconds, the way the page does, until the deployment has run through (or PERF_DURATION)
-  storm       the same viewers poll without any pause for PERF_STORM seconds, on the board at rest again
+  storm       the same viewers poll without any pause for PERF_STORM seconds, on the board at rest again, and ask
+              for full responses every time, to find the export ceiling rather than the 304 one
 
-Every viewer keeps one connection open and accepts compressed responses, like a browser tab (PERF_GZIP=0 asks for
-plain ones), so the size column is bytes on the wire. The report lists requests, throughput, latency percentiles,
+Every viewer logs in once through the login form and polls with its session cookie, keeps one connection open and
+accepts compressed responses, like a browser tab (PERF_GZIP=0 asks for plain ones), so the size column is bytes on
+the wire. Sending the password with every request instead would have Jenkins hash it every time, which costs more
+than the board does. The report lists requests, throughput, latency percentiles,
 response size, errors and the controller's CPU per phase, the CPU summed over cores as docker stats reports it; the
 run fails on any error, or on a p95 above PERF_P95_MAX_MS during the deployment. Reads Server/User/Password from
 JENKINS_URL, JENKINS_USER and JENKINS_PASSWORD (or ADMIN_PASSWORD).
@@ -40,6 +43,7 @@ DURATION = int(os.environ.get('PERF_DURATION', '300'))
 STORM = int(os.environ.get('PERF_STORM', '20'))
 P95_MAX_MS = int(os.environ.get('PERF_P95_MAX_MS', '3000'))
 GZIP = os.environ.get('PERF_GZIP', '1') != '0'
+CONDITIONAL = os.environ.get('PERF_CONDITIONAL', '1') != '0'
 FOLDER = 'job/perf/'
 VIEW = FOLDER + 'view/Deployment/'
 POLL = VIEW + 'api/json?page=1&component=0&fullscreen=false'
@@ -88,34 +92,78 @@ class Client:
         return self.request(path, 'POST', data)
 
 
+def session_cookie():
+    """The session a browser gets from the login form, as a Cookie header value: the form carries a crumb and a
+    session of its own, which the login needs, and the login answers with the session the polls then use."""
+    kind = http.client.HTTPSConnection if ORIGIN.scheme == 'https' else http.client.HTTPConnection
+    connection = kind(ORIGIN.hostname, ORIGIN.port, timeout=60)
+    connection.request('GET', PREFIX + '/login')
+    response = connection.getresponse()
+    page = response.read().decode('utf-8', 'replace')
+    cookies = {}
+    for name, value in response.getheaders():
+        if name.lower() == 'set-cookie':
+            cookie = value.split(';', 1)[0]
+            cookies[cookie.split('=', 1)[0]] = cookie
+    form = {'j_username': USER, 'j_password': PASSWORD, 'from': '/'}
+    crumb = re.search(r'name="Jenkins-Crumb"[^>]*value="([^"]+)"', page)
+    if crumb:
+        form['Jenkins-Crumb'] = crumb.group(1)
+    connection.request('POST', PREFIX + '/j_spring_security_check', body=urllib.parse.urlencode(form).encode(),
+                       headers={'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': '; '.join(cookies.values())})
+    response = connection.getresponse()
+    response.read()
+    for name, value in response.getheaders():
+        if name.lower() == 'set-cookie':
+            cookie = value.split(';', 1)[0]
+            cookies[cookie.split('=', 1)[0]] = cookie
+    location = response.getheader('Location') or ''
+    connection.close()
+    if response.status not in (302, 303) or 'loginError' in location or not any(k.startswith('JSESSIONID') for k in cookies):
+        raise RuntimeError(f'login failed: HTTP {response.status} {location}')
+    return '; '.join(cookies.values())
+
+
 class Viewer(threading.Thread):
     """One browser tab: polls the board's JSON over a kept-alive connection every interval seconds, or without pause."""
 
-    def __init__(self, interval, stop_at, samples, errors):
+    def __init__(self, interval, stop_at, samples, errors, conditional):
         super().__init__(daemon=True)
         self.interval = interval
         self.stop_at = stop_at
         self.samples = samples
         self.errors = errors
+        self.conditional = conditional
+        self.etag = None
 
     def run(self):
         connection = None
         time.sleep(random.uniform(0, min(self.interval, 5)))  # tabs are not opened in the same second
+        try:
+            cookie = session_cookie()
+        except Exception as e:  # noqa: BLE001
+            self.errors.append(f'login: {str(e)[:80]}')
+            return
         while time.time() < self.stop_at:
             if connection is None:
                 kind = http.client.HTTPSConnection if ORIGIN.scheme == 'https' else http.client.HTTPConnection
                 connection = kind(ORIGIN.hostname, ORIGIN.port, timeout=60)
             started = time.perf_counter()
             try:
-                headers = {'Authorization': AUTH, 'Accept': 'application/json'}
+                headers = {'Cookie': cookie, 'Accept': 'application/json'}
                 if GZIP:
                     headers['Accept-Encoding'] = 'gzip'
+                if self.conditional and self.etag:
+                    headers['If-None-Match'] = self.etag
                 connection.request('GET', PREFIX + '/' + POLL, headers=headers)
                 response = connection.getresponse()
                 body = response.read()
                 elapsed = time.perf_counter() - started
                 if response.status == 200:
-                    self.samples.append((elapsed, len(body)))
+                    self.etag = response.getheader('ETag')
+                    self.samples.append((elapsed, len(body), False))
+                elif response.status == 304:
+                    self.samples.append((elapsed, 0, True))
                 else:
                     self.errors.append(f'HTTP {response.status}')
             except Exception as e:  # noqa: BLE001 - every failure is a finding
@@ -164,14 +212,14 @@ class CpuSampler(threading.Thread):
 
 
 class Phase:
-    def __init__(self, name, viewers, interval):
-        self.name, self.viewers, self.interval = name, viewers, interval
+    def __init__(self, name, viewers, interval, conditional=True):
+        self.name, self.viewers, self.interval, self.conditional = name, viewers, interval, conditional and CONDITIONAL
         self.samples, self.errors = [], []
         self.started = self.ended = 0
 
     def run(self, seconds, until=None, min_seconds=30):
         stop_at = time.time() + seconds
-        threads = [Viewer(self.interval, stop_at, self.samples, self.errors) for _ in range(self.viewers)]
+        threads = [Viewer(self.interval, stop_at, self.samples, self.errors, self.conditional) for _ in range(self.viewers)]
         self.started = time.time()
         for thread in threads:
             thread.start()
@@ -197,10 +245,11 @@ class Phase:
 
     def row(self, cpu):
         n = len(self.samples)
+        full = [s for s in self.samples if not s[2]]
         seconds = max(self.ended - self.started, 1e-9)
-        kb = (sum(s[1] for s in self.samples) / n / 1024) if n else 0
+        kb = (sum(s[1] for s in full) / len(full) / 1024) if full else 0
         cpu_text = f'{cpu[0]:.0f} / {cpu[1]:.0f}' if cpu else 'n/a'
-        return (f'{self.name:<12}{self.viewers:>8}{n:>9}{n / seconds:>8.1f}{self.percentile(0.5):>8.0f}'
+        return (f'{self.name:<12}{self.viewers:>8}{n:>9}{n - len(full):>6}{n / seconds:>8.1f}{self.percentile(0.5):>8.0f}'
                 f'{self.percentile(0.95):>8.0f}{self.percentile(0.99):>8.0f}{self.percentile(1):>8.0f}'
                 f'{kb:>7.0f}{len(self.errors):>7}  {cpu_text}')
 
@@ -219,7 +268,8 @@ def main():
     print(f'== board {VIEW}: {len(board["components"])} components, {tasks} tasks, '
           f'{len(json.dumps(board)) / 1024:.0f} KB of JSON; {len(chains)} chains of 8 jobs, {len(pipelines)} Pipelines')
     print(f'== {VIEWERS} viewers every {INTERVAL:g} s, deployment capped at {DURATION} s, storm {STORM} s, '
-          f'{"compressed" if GZIP else "plain"} responses')
+          f'{"compressed" if GZIP else "plain"} responses, ETags {"sent back" if CONDITIONAL else "ignored"}, '
+          f'a session cookie per viewer')
     cpu = CpuSampler()
     cpu.start()
 
@@ -243,12 +293,12 @@ def main():
 
     deployment = Phase('deployment', VIEWERS, INTERVAL).run(DURATION, until=deployment_done)
     finished = deployment_done()
-    storm = Phase('storm', VIEWERS, 0).run(STORM)
+    storm = Phase('storm', VIEWERS, 0, conditional=False).run(STORM)
     cpu.stopped = True
 
     print()
-    print(f'{"phase":<12}{"viewers":>8}{"requests":>9}{"req/s":>8}{"p50 ms":>8}{"p95 ms":>8}{"p99 ms":>8}{"max ms":>8}'
-          f'{"KB":>7}{"errors":>7}  CPU % avg / max')
+    print(f'{"phase":<12}{"viewers":>8}{"requests":>9}{"304s":>6}{"req/s":>8}{"p50 ms":>8}{"p95 ms":>8}{"p99 ms":>8}'
+          f'{"max ms":>8}{"KB":>7}{"errors":>7}  CPU % avg / max')
     for phase in (baseline, deployment, storm):
         print(phase.row(cpu.between(phase.started, phase.ended)))
     print()

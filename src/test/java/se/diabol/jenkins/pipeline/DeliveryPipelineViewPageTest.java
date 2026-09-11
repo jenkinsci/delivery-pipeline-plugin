@@ -44,6 +44,10 @@ import hudson.model.Result;
 import hudson.tasks.BuildTrigger;
 import java.net.URL;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.htmlunit.Page;
+import org.htmlunit.WebRequest;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlElement;
@@ -1060,6 +1064,40 @@ class DeliveryPipelineViewPageTest {
             assertThat("the stage's post section made it unstable, which its header shows",
                     page.querySelectorAll(".stage-header.UNSTABLE").size(), is(1));
         }
+    }
+
+    @Test
+    void apiAnswersUnchangedPollsWith304AndWritesTheServerTimeAfresh() throws Exception {
+        try (JenkinsRule.WebClient client = staticClient(jenkins)) {
+            URL url = new URL(jenkins.getURL(), VIEW_URL + "api/json?page=1&component=1&fullscreen=false");
+            Page first = client.getPage(url);
+            String etag = first.getWebResponse().getResponseHeaderValue("ETag");
+            assertThat("the JSON carries an ETag", etag, notNullValue());
+            assertThat(first.getWebResponse().getContentAsString(), containsString("\"components\":["));
+            WebRequest conditional = new WebRequest(url);
+            conditional.setAdditionalHeader("If-None-Match", etag);
+            Page unchanged = client.getPage(conditional);
+            assertThat("nothing changed, so the poll is answered without a body",
+                    unchanged.getWebResponse().getStatusCode(), is(304));
+            assertThat(unchanged.getWebResponse().getContentAsString(), is(""));
+            Page again = client.getPage(url);
+            assertThat("the exported bytes are reused, the server time is not",
+                    serverTimeOf(again) >= serverTimeOf(first), is(true));
+            assertThat(again.getWebResponse().getResponseHeaderValue("ETag"), is(etag));
+            jenkins.buildAndAssertSuccess(jenkins.getInstance().getItemByFullName("build", FreeStyleProject.class));
+            Page changed = client.getPage(conditional);
+            assertThat("a build changed the model, so the ETag no longer matches",
+                    changed.getWebResponse().getStatusCode(), is(200));
+            assertThat(changed.getWebResponse().getResponseHeaderValue("ETag"), not(is(etag)));
+            assertThat("Stapler's own parameters still export on the spot",
+                    body(jenkins, client, VIEW_URL + "api/json?tree=components[name]"), containsString("\"name\":\"Comp\""));
+        }
+    }
+
+    private static long serverTimeOf(Page page) {
+        Matcher matcher = Pattern.compile("\"serverTime\":(\\d+)").matcher(page.getWebResponse().getContentAsString());
+        assertThat("the response carries a server time", matcher.find(), is(true));
+        return Long.parseLong(matcher.group(1));
     }
 
     private static String hrefOfTask(HtmlPage page, String name) {

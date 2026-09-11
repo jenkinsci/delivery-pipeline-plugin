@@ -71,6 +71,14 @@ class Client:
     def get(self, path):
         return self.request(path)
 
+    def get_full(self, path, headers=None):
+        req = urllib.request.Request(URL + '/' + path.lstrip('/'), headers={'Authorization': self.auth, **(headers or {})})
+        try:
+            with self.opener.open(req, timeout=60) as r:
+                return r.status, dict(r.headers), r.read().decode('utf-8', 'replace')
+        except urllib.error.HTTPError as e:
+            return e.code, dict(e.headers), e.read().decode('utf-8', 'replace')
+
     def json(self, path):
         status, text = self.get(path)
         if status != 200:
@@ -321,6 +329,13 @@ for v in views + root_views:
     check(not errors, f'view {v["name"]}: no component errors {errors}')
     check('settings' in data and 'serverTime' in data, f'view {v["name"]}: settings and serverTime present')
 
+status, headers, text = admin.get_full(DEMO + 'view/Simple/api/json')
+etag = headers.get('ETag')
+check(status == 200 and bool(etag) and '"serverTime":' in text, f'simple: api/json carries an ETag and the server time ({etag})')
+status, _, text = admin.get_full(DEMO + 'view/Simple/api/json', {'If-None-Match': etag or ''})
+check(status == 304 and not text, f'simple: a poll that sends the ETag back is answered 304 without a body (status {status})')
+status, other, _ = Client('viewer', VIEWER_PASSWORD).get_full(DEMO + 'view/Simple/api/json')
+check(status == 200 and other.get('ETag') and other.get('ETag') != etag, 'simple: another viewer gets another ETag, since permissions differ')
 simple = view_json(DEMO + 'view/Simple/')['components'][0]
 latest = newest(simple)
 stages = stage_map(latest)

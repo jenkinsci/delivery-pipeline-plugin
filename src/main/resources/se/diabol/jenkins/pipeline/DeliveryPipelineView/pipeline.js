@@ -272,17 +272,28 @@
             controller.abort();
         }, REQUEST_TIMEOUT) : null;
         var request = {credentials: 'same-origin', cache: 'no-store', headers: {Accept: 'application/json'}};
+        if (this.etag) {
+            request.headers['If-None-Match'] = this.etag;
+        }
         if (controller) {
             request.signal = controller.signal;
         }
         fetch(this.apiUrl(), request).then(function (response) {
+            if (response.status === 304) {
+                return null;  // nothing changed since the last poll
+            }
             if (!response.ok) {
                 throw new Error(response.status + ' ' + response.statusText);
             }
+            self.etag = response.headers.get('ETag');
             return response.json();
         }).then(function (data) {
             window.clearTimeout(timeout);
-            self.refresh(data);
+            if (data === null) {
+                self.unchanged();
+            } else {
+                self.refresh(data);
+            }
             self.schedule();
         }).catch(function (error) {
             window.clearTimeout(timeout);
@@ -312,10 +323,19 @@
         });
     }
 
+    /** A poll that found the model unchanged: only the texts that tell time move on. */
+    View.prototype.unchanged = function () {
+        this.hideError();
+        if (this.lastComponents) {
+            this.updateLive(this.lastComponents);
+        }
+    };
+
     View.prototype.refresh = function (data) {
         this.hideError();
         this.settings = data.settings || this.settings;
         var components = data.components || [];
+        this.lastComponents = components;
         var print = fingerprint(components);
         if (this.lastRendered !== print) {
             this.render(components);

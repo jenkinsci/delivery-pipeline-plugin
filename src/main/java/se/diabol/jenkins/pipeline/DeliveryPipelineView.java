@@ -328,12 +328,16 @@ public class DeliveryPipelineView extends View {
      */
     @Exported
     public List<Component> getComponents() {
-        StaplerRequest2 request = Stapler.getCurrentRequest2();
+        return cached(Stapler.getCurrentRequest2()).components();
+    }
+
+    /** The cached model for the request's paging parameters, with the version that conditional requests compare. */
+    ModelCache.Cached cached(StaplerRequest2 request) {
         int page = Math.max(1, intParameter(request, "page", 1));
         int pagedComponent = intParameter(request, "component", 1);
         boolean fullscreen = request != null && Boolean.parseBoolean(request.getParameter("fullscreen"));
         boolean paging = pagingEnabled && !fullscreen;
-        return ModelCache.get().get(cacheKey(page, pagedComponent, paging),
+        return ModelCache.get().cached(cacheKey(page, pagedComponent, paging),
                 () -> resolveComponents(page, pagedComponent, paging));
     }
 

@@ -60,6 +60,11 @@ If not, see <http://www.gnu.org/licenses/>.
  * }
  * </pre>
  * Timestamps are epoch milliseconds and durations are milliseconds; URLs are relative to the Jenkins root URL.
+ * <p>The response carries an ETag made of the model's version and the viewer. A request that sends it back as
+ * {@code If-None-Match} and finds the model unchanged is answered with 304 Not Modified and no body; the page does
+ * this on every poll. The JSON is exported once per model and viewer, only {@code serverTime} is written afresh
+ * into every response. Requests with Stapler's {@code tree}, {@code depth} or {@code pretty} parameters are
+ * exported on the spot instead.
  * <p>A pipeline's {@code rebuildable} runs the whole pipeline again; a task's {@code rebuildable} builds the task's
  * job again, or when {@code restart} names a stage, restarts the Pipeline run from that stage. Static analysis
  * results sit on the task whose build produced them, or on the pipeline when they belong to a Pipeline run as a whole;
