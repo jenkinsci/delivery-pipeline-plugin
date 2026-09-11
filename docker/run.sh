@@ -8,6 +8,7 @@
 #   docker/run.sh up           start the controller (http://localhost:8080, admin/admin)
 #   docker/run.sh validate     run docker/validate.py against it
 #   docker/run.sh screenshots  capture docker/out/*.png with Playwright
+#   docker/run.sh perf         load test: PERF_VIEWERS (50) viewers polling the Performance board through a deployment
 #   docker/run.sh down         stop and remove the controller
 # LOCAL_MAVEN=1 uses a Maven on the PATH instead of the container.
 set -euo pipefail
@@ -40,6 +41,9 @@ screenshots() {
   mkdir -p docker/out
   "${COMPOSE[@]}" run --rm screenshots
 }
+perf() {
+  python3 docker/perf.py
+}
 down() {
   "${COMPOSE[@]}" down -v --remove-orphans
 }
@@ -50,8 +54,9 @@ case "${1:-all}" in
   up) up ;;
   validate) validate ;;
   screenshots) screenshots ;;
+  perf) perf ;;
   down) down ;;
   logs) "${COMPOSE[@]}" logs -f jenkins ;;
   all) build; up; validate; screenshots ;;
-  *) echo "usage: $0 {all|build|test|mvn ...|up|validate|screenshots|down|logs}" >&2; exit 2 ;;
+  *) echo "usage: $0 {all|build|test|mvn ...|up|validate|screenshots|perf|down|logs}" >&2; exit 2 ;;
 esac

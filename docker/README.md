@@ -42,6 +42,26 @@ zoo view in both themes.
 To add a shape, drop a `name.groovy` with a one-line comment on top (it becomes the job description) and a
 `name.expect.json` beside it, then run `docker/run.sh all`.
 
+## Load test
+
+    docker/run.sh up
+    docker/run.sh perf
+
+simulates a major deployment watched by many people at once. The seed carries a *Performance* folder with twenty
+chains of eight jobs and four Declarative Pipelines behind one board, the *Deployment* view (`PERF_CHAINS` scales the
+chains). `docker/perf.py` first has one viewer poll the quiet board for a baseline, then starts a build of every chain
+and Pipeline and has `PERF_VIEWERS` (50) viewers poll the board's JSON every `PERF_INTERVAL` (5) seconds, the way the
+page does and each over its own kept-alive connection accepting compressed responses, until the deployment has run
+through or `PERF_DURATION` (300)
+seconds have passed; finally the same viewers poll without any pause for `PERF_STORM` (20) seconds to find the
+ceiling. The report lists requests, throughput, latency percentiles, response size, errors and the controller's CPU
+per phase, and the run fails on any error, on a p95 above `PERF_P95_MAX_MS` (3000) during the deployment, or on a
+median more than ten times the quiet baseline. The controller has four executors, so most of the deployment waits in
+the queue, which is what a board full of queued tasks looks like. In a run on a laptop, fifty viewers during the
+deployment saw the same latency as one viewer on the quiet board, about 100 ms at the median and under 200 ms at the
+worst, because the cache serves them one computed model; the storm found the ceiling at about 64 polls a second,
+bound by the controller serializing the board rather than by the network, since the JSON travels compressed.
+
 ## Upgrading from 1.4.2
 
     docker/upgrade.sh

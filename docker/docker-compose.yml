@@ -29,6 +29,7 @@ services:
     environment:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
       VIEWER_PASSWORD: ${VIEWER_PASSWORD:-viewer}
+      PERF_CHAINS: ${PERF_CHAINS:-20}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/login"]
       interval: 10s

@@ -383,5 +383,52 @@ pipelineView('zoo/Jenkinsfiles', {
     zooFiles.each { file -> component(file.name - '.groovy', file.name - '.groovy') }
 }, [instances: 1, aggregated: false, columns: 2])
 
+// ---------------------------------------------------------------- perf: a large board for the load test (docker/run.sh perf)
+int perfChains = (System.getenv('PERF_CHAINS') ?: '20') as int
+folder('perf') {
+    displayName('Performance')
+    description("${perfChains} chains of eight jobs and four Pipelines behind one board, for docker/run.sh perf")
+}
+(1..perfChains).each { n ->
+    def names = (1..8).collect { "perf/chain${n}-${it}" }
+    names.eachWithIndex { jobName, i ->
+        job(jobName) {
+            deliveryPipelineConfiguration("Stage ${i + 1}", "step ${i + 1}")
+            quietPeriod(0)
+            steps { shell('sleep 2') }
+            if (i < names.size() - 1) {
+                publishers { downstream(names[i + 1], 'SUCCESS') }
+            }
+        }
+    }
+}
+(1..4).each { n ->
+    pipelineJob("perf/pipeline${n}") {
+        description('Declarative Pipeline of the performance board')
+        definition {
+            cps {
+                sandbox(true)
+                script('''pipeline {
+  agent none
+  stages {
+    stage('Build') { agent any; steps { sleep 3 } }
+    stage('Test') {
+      parallel {
+        stage('Unit') { agent any; steps { sleep 3 } }
+        stage('Integration') { agent any; steps { sleep 4 } }
+      }
+    }
+    stage('Deploy') { agent any; steps { sleep 2 } }
+  }
+}''')
+            }
+        }
+    }
+}
+pipelineView('perf/Deployment', {
+    (1..perfChains).each { n -> component("Chain ${n}", "chain${n}-1") }
+    (1..4).each { n -> component("Pipeline ${n}", "pipeline${n}") }
+}, [instances: 3, columns: 2])
+
 // The first builds are started by docker/validate.py: builds queued from this seed are discarded, because the
 // seed runs before the queue is loaded during startup.
