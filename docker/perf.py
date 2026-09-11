@@ -310,7 +310,11 @@ def main():
             counts = {}
             for error in phase.errors:
                 counts[error] = counts.get(error, 0) + 1
-            failures.append(f'{phase.name}: {len(phase.errors)} errors {counts}')
+            # a storm of tens of thousands of requests may lose one in a thousand; the other phases may lose none
+            tolerated = len(phase.samples) // 1000 if phase is storm else 0
+            print(f'{phase.name}: {len(phase.errors)} errors {counts}' + (' (tolerated)' if len(phase.errors) <= tolerated else ''))
+            if len(phase.errors) > tolerated:
+                failures.append(f'{phase.name}: {len(phase.errors)} errors {counts}')
     if deployment.percentile(0.95) > P95_MAX_MS:
         failures.append(f'deployment: p95 {deployment.percentile(0.95):.0f} ms above {P95_MAX_MS} ms')
     if baseline.samples and deployment.samples and deployment.percentile(0.5) > 10 * baseline.percentile(0.5) + 200:

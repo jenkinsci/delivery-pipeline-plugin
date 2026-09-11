@@ -29,6 +29,35 @@ were not built, and the run before it waited at an input step in its Approve sta
 
 ![The same Pipeline job in the dark theme](docs/dpp_pipelines_dark.png)
 
+Larger boards
+-------------
+
+A wall board: the full-screen page of a board with twenty chains of eight jobs and four Pipelines, as a screen in a
+team room shows it during a deployment.
+
+![A wall board of twenty chains](docs/dpp_wallboard.png)
+
+The same board as a page, at half scale, with the aggregated row above every chain:
+
+![A large board of chains](docs/dpp_large.png)
+
+Pipeline shapes side by side, from the test suite's corpus: runs that started other runs laid out on rows with arrows
+across, a chain of freestyle jobs behind a Pipeline, nested and parallel stages:
+
+![Pipeline shapes side by side](docs/dpp_shapes.png)
+
+A chain that fans out and in again:
+
+![A chain that fans out and in](docs/dpp_diamond.png)
+
+One Pipeline run that started two jobs from one stage, each on a row of its own, and the Pipeline one of them started
+in turn:
+
+![A run that started two others](docs/dpp_chain_of_runs.png)
+
+The same boards in the dark theme: [large](docs/dpp_large_dark.png), [shapes](docs/dpp_shapes_dark.png),
+[diamond](docs/dpp_diamond_dark.png), [chain of runs](docs/dpp_chain_of_runs_dark.png).
+
 Version 2.0
 -----------
 

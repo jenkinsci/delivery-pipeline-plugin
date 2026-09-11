@@ -67,18 +67,25 @@ with sync_playwright() as p:
     # the boards themselves, without the Jenkins frame and clipped to what they draw, in both themes: the sources
     # of the README images. The fan-out chain whole, the first component of the Pipelines board (a Declarative run
     # with parallel stages and an input gate), and one stage with its tasks for the help of the job property.
-    def board(page, url, name, selector):
+    def board(page, url, name, target, max_height=None):
         page.goto(url)
         settle(page)
-        target = page.locator(selector).first
+        target = page.locator(target).first if isinstance(target, str) else target
         box = target.bounding_box()
         extent = target.evaluate("""element => {
             const stages = Array.from(element.querySelectorAll('.stage')).map(e => e.getBoundingClientRect());
             const all = Array.from(element.querySelectorAll('.stage, h1, h2, h3')).map(e => e.getBoundingClientRect());
-            return {right: Math.max(...stages.map(b => b.right)), bottom: Math.max(...all.map(b => b.bottom))};
+            return stages.length === 0 ? null
+                : {right: Math.max(...stages.map(b => b.right)), bottom: Math.max(...all.map(b => b.bottom))};
         }""")
-        page.screenshot(path=os.path.join(OUT, name + '.png'), clip={
-            'x': box['x'], 'y': box['y'], 'width': extent['right'] - box['x'] + 12, 'height': extent['bottom'] - box['y'] + 12})
+        if extent is None:
+            print('skipped', name, '(nothing drawn)')
+            return
+        height = extent['bottom'] - box['y'] + 12
+        if max_height:
+            height = min(height, max_height)
+        page.screenshot(path=os.path.join(OUT, name + '.png'), full_page=True, clip={
+            'x': box['x'], 'y': box['y'], 'width': extent['right'] - box['x'] + 12, 'height': height})
         print('captured', name)
 
     for scheme in ('light', 'dark'):
@@ -89,6 +96,34 @@ with sync_playwright() as p:
         page.locator('.stage_Test').first.screenshot(path=os.path.join(OUT, f'board-stage-{scheme}.png'))
         board(page, f'{URL}/job/demo/view/Pipelines/', f'board-pipelines-{scheme}', 'section.pipeline-component')
         wide.close()
+    # larger and more complex boards for the README's gallery: the twenty-chain Performance board (built by
+    # docker/run.sh perf), the corpus of Pipeline shapes, a chain that fans out and in, and one Pipeline run that
+    # started two jobs from one stage. Wide viewports, since a chain of eight stages is wider than a screen and the
+    # part of a board that overflows its container is not painted; the twenty-chain board at half scale, so that
+    # both of its columns fit.
+    for scheme in ('light', 'dark'):
+        wide = browser.new_context(viewport={'width': 2800, 'height': 1200}, color_scheme=scheme)
+        page = wide.new_page()
+        login(page)
+        board(page, f'{URL}/job/zoo/view/Jenkinsfiles/', f'board-shapes-{scheme}', '.dpp-view', max_height=1100)
+        board(page, f'{URL}/job/demo/view/Diamond/', f'board-diamond-{scheme}', '.dpp-view')
+        fan_out = page.locator('section.pipeline-component', has=page.locator('h1.pipeline-title', has_text='build-fan-out'))
+        board(page, f'{URL}/job/zoo/view/Jenkinsfiles/', f'board-chain-of-runs-{scheme}', fan_out)
+        wide.close()
+        huge = browser.new_context(viewport={'width': 4000, 'height': 1400}, device_scale_factor=0.5, color_scheme=scheme)
+        page = huge.new_page()
+        login(page)
+        board(page, f'{URL}/job/perf/view/Deployment/', f'board-large-{scheme}', '.dpp-view', max_height=1300)
+        huge.close()
+    # the wall board: the large board on the full screen page, which is dark by design, at half scale
+    wall = browser.new_context(viewport={'width': 3800, 'height': 2000}, device_scale_factor=0.5, color_scheme='light')
+    page = wall.new_page()
+    login(page)
+    page.goto(f'{URL}/job/perf/view/Deployment/?fullscreen=true')
+    settle(page)
+    page.screenshot(path=os.path.join(OUT, 'board-wallboard.png'), full_page=False)
+    print('captured board-wallboard')
+    wall.close()
     phone = browser.new_context(viewport={'width': 430, 'height': 932}, device_scale_factor=2, is_mobile=True, has_touch=True)
     page = phone.new_page()
     login(page)
