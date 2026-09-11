@@ -197,6 +197,9 @@ deliveryPipelineView('Ancestry') {
 }
 ```
 
+Job names may be full names, as above, or relative to the view's folder; the configuration form keeps them as
+they are stored.
+
 Manually triggered tasks
 ------------------------
 

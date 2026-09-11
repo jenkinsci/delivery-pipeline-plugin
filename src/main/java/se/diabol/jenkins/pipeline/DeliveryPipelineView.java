@@ -134,6 +134,12 @@ public class DeliveryPipelineView extends View {
         }
         description = null;
         sorting = Sorting.fromId(sorting).getId();
+        if (componentSpecs != null && componentSpecs.isEmpty()) {
+            componentSpecs = null;
+        }
+        if (regexpFirstJobs != null && regexpFirstJobs.isEmpty()) {
+            regexpFirstJobs = null;
+        }
         if (updateInterval <= 0) {
             updateInterval = DEFAULT_INTERVAL;
         }
@@ -147,7 +153,8 @@ public class DeliveryPipelineView extends View {
     }
 
     public void setComponentSpecs(List<ComponentSpec> componentSpecs) {
-        this.componentSpecs = componentSpecs == null ? null : new ArrayList<>(componentSpecs);
+        this.componentSpecs = componentSpecs == null || componentSpecs.isEmpty()
+                ? null : new ArrayList<>(componentSpecs);
     }
 
     public List<RegExpSpec> getRegexpFirstJobs() {
@@ -155,7 +162,8 @@ public class DeliveryPipelineView extends View {
     }
 
     public void setRegexpFirstJobs(List<RegExpSpec> regexpFirstJobs) {
-        this.regexpFirstJobs = regexpFirstJobs == null ? null : new ArrayList<>(regexpFirstJobs);
+        this.regexpFirstJobs = regexpFirstJobs == null || regexpFirstJobs.isEmpty()
+                ? null : new ArrayList<>(regexpFirstJobs);
     }
 
     public int getNoOfPipelines() {
@@ -655,8 +663,8 @@ public class DeliveryPipelineView extends View {
     @Override
     protected void submit(StaplerRequest2 req) throws IOException, ServletException, Descriptor.FormException {
         req.bindJSON(this, req.getSubmittedForm());
-        componentSpecs = req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs"));
-        regexpFirstJobs = req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs"));
+        setComponentSpecs(req.bindJSONToList(ComponentSpec.class, req.getSubmittedForm().get("componentSpecs")));
+        setRegexpFirstJobs(req.bindJSONToList(RegExpSpec.class, req.getSubmittedForm().get("regexpFirstJobs")));
     }
 
     @Override
@@ -686,6 +694,47 @@ public class DeliveryPipelineView extends View {
         }
     }
 
+    /**
+     * The options {@code from} to {@code to} of a number picker, the stored value selected. A stored value outside
+     * that range is kept as an extra option, so that saving the form unchanged keeps it too.
+     */
+    static ListBoxModel numberOptions(int from, int to, String current) {
+        String stored = current == null ? "" : current.trim();
+        ListBoxModel options = new ListBoxModel();
+        boolean found = false;
+        for (int i = from; i <= to; i++) {
+            String value = String.valueOf(i);
+            boolean selected = value.equals(stored);
+            found |= selected;
+            options.add(new ListBoxModel.Option(value, value, selected));
+        }
+        if (!found && !stored.isEmpty()) {
+            options.add(0, new ListBoxModel.Option(stored, stored, true));
+        }
+        return options;
+    }
+
+    /**
+     * An option of a job picker. The item the stored value names is selected and keeps the value as it is stored,
+     * whether a full name or one relative to the folder, so that saving the form unchanged writes it back unchanged.
+     * Every other item is offered by its name relative to the folder.
+     */
+    static ListBoxModel.Option itemOption(Item item, String label, ItemGroup<?> base, Item stored,
+                                          String current) {
+        boolean selected = item == stored;
+        return new ListBoxModel.Option(label, selected ? current : item.getRelativeNameFrom(base), selected);
+    }
+
+    /**
+     * Keeps a stored value that no option carries, marked, at the given position. Without it the browser would
+     * select the first option and a save would silently replace the stored job with it.
+     */
+    static void keepStored(ListBoxModel options, int at, String current) {
+        if (!current.isEmpty() && options.stream().noneMatch(option -> option.selected)) {
+            options.add(at, new ListBoxModel.Option(current + " (not found)", current, true));
+        }
+    }
+
     @Extension
     @Symbol("deliveryPipelineView")
     public static class DescriptorImpl extends ViewDescriptor {
@@ -699,31 +748,27 @@ public class DeliveryPipelineView extends View {
         // The validators below are cheap, change nothing and reveal nothing, so they need no POST protection.
 
         @SuppressWarnings("lgtm[jenkins/csrf]")
-        public ListBoxModel doFillNoOfColumnsItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner) {
+        public ListBoxModel doFillNoOfColumnsItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                   @QueryParameter String noOfColumns) {
             checkConfigure(view, owner);
-            ListBoxModel options = new ListBoxModel();
-            for (int i = 1; i <= 3; i++) {
-                options.add(String.valueOf(i), String.valueOf(i));
-            }
-            return options;
+            return numberOptions(1, 3, noOfColumns);
         }
 
         @SuppressWarnings("lgtm[jenkins/csrf]")
-        public ListBoxModel doFillNoOfPipelinesItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner) {
+        public ListBoxModel doFillNoOfPipelinesItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                     @QueryParameter String noOfPipelines) {
             checkConfigure(view, owner);
-            ListBoxModel options = new ListBoxModel();
-            for (int i = 0; i <= MAX_NO_OF_PIPELINES; i++) {
-                options.add(String.valueOf(i), String.valueOf(i));
-            }
-            return options;
+            return numberOptions(0, MAX_NO_OF_PIPELINES, noOfPipelines);
         }
 
         @SuppressWarnings("lgtm[jenkins/csrf]")
-        public ListBoxModel doFillSortingItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner) {
+        public ListBoxModel doFillSortingItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                               @QueryParameter String sorting) {
             checkConfigure(view, owner);
+            Sorting current = Sorting.fromId(sorting);
             ListBoxModel options = new ListBoxModel();
-            for (Sorting sorting : Sorting.values()) {
-                options.add(sorting.getDisplayName(), sorting.getId());
+            for (Sorting option : Sorting.values()) {
+                options.add(new ListBoxModel.Option(option.getDisplayName(), option.getId(), option == current));
             }
             return options;
         }
@@ -800,35 +845,49 @@ public class DeliveryPipelineView extends View {
                 return "";
             }
 
-            /** Lists the jobs the caller may read, as {@code getAllItems} filters them. */
+            /**
+             * Lists the jobs the caller may read, as {@code getAllItems} filters them. The form sends the stored
+             * value along; the job it names is selected and keeps that spelling, see {@link #itemOption}.
+             */
             @SuppressWarnings("lgtm[jenkins/csrf]")
             public ListBoxModel doFillFirstJobItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
-                                                    @AncestorInPath ItemGroup<?> context) {
+                                                    @AncestorInPath ItemGroup<?> context,
+                                                    @QueryParameter String firstJob) {
                 checkConfigure(view, owner);
+                ItemGroup<?> base = context == null ? Jenkins.get() : context;
+                String current = firstJob == null ? "" : firstJob.trim();
+                Item stored = current.isEmpty() ? null : Jenkins.get().getItem(current, base, Item.class);
                 ListBoxModel options = new ListBoxModel();
                 for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
                     if (isPipelineStart(job)) {
-                        options.add(job.getFullDisplayName(), job.getRelativeNameFrom(context));
+                        options.add(itemOption(job, job.getFullDisplayName(), base, stored, current));
                     }
                 }
                 // a multibranch project or a folder: one pipeline per job inside it
                 for (Item item : Jenkins.get().getAllItems(Item.class)) {
                     if (item instanceof ItemGroup<?> group && !(item instanceof Job) && !jobsOf(group).isEmpty()) {
-                        options.add(item.getFullDisplayName() + " (every job in it)", item.getRelativeNameFrom(context));
+                        options.add(itemOption(item, item.getFullDisplayName() + " (every job in it)", base, stored,
+                                current));
                     }
                 }
+                keepStored(options, 0, current);
                 return options;
             }
 
             @SuppressWarnings("lgtm[jenkins/csrf]")
             public ListBoxModel doFillLastJobItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
-                                                   @AncestorInPath ItemGroup<?> context) {
+                                                   @AncestorInPath ItemGroup<?> context,
+                                                   @QueryParameter String lastJob) {
                 checkConfigure(view, owner);
+                ItemGroup<?> base = context == null ? Jenkins.get() : context;
+                String current = lastJob == null ? "" : lastJob.trim();
+                Item stored = current.isEmpty() ? null : Jenkins.get().getItem(current, base, Item.class);
                 ListBoxModel options = new ListBoxModel();
-                options.add("", "");
+                options.add(new ListBoxModel.Option("", "", current.isEmpty()));
                 for (AbstractProject<?, ?> job : Jenkins.get().getAllItems(AbstractProject.class)) {
-                    options.add(job.getFullDisplayName(), job.getRelativeNameFrom(context));
+                    options.add(itemOption(job, job.getFullDisplayName(), base, stored, current));
                 }
+                keepStored(options, 1, current);
                 return options;
             }
 

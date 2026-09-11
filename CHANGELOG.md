@@ -68,6 +68,11 @@ Old views keep loading; these settings are read and ignored, without old-data en
   `matrix` included) are its tasks. No `task` step is needed.
 - A *Delivery Pipeline manual step* post-build action (`deliveryPipelineManualStep` in Job DSL), so manual steps no
   longer need the Build Pipeline plugin. Build Pipeline's manual triggers are still recognised when it is installed.
+- The configuration form keeps what is stored. The initial and final job of a component are selected by the job they
+  name, whether stored as a full name, as Job DSL writes it, or relative to the view's folder, and the stored spelling
+  is written back unchanged; a job that no longer exists stays in the field marked "(not found)". Saving a view
+  without changing anything changes nothing. In 1.x the first job of the list silently replaced any stored name that
+  was not spelled relative to the folder as soon as the view was saved from the form.
 - Computed models are cached; a build or queue event drops only the models that show the job in question, and a
   job being created, reconfigured, renamed or deleted empties the cache, so many wall boards polling one view cost
   little more than one even on a busy controller. The system properties

@@ -18,12 +18,17 @@ If not, see <http://www.gnu.org/licenses/>.
 package se.diabol.jenkins.pipeline;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
+import hudson.model.FreeStyleProject;
+import hudson.util.ListBoxModel;
 import java.net.URL;
 import java.util.List;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlSelect;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -104,5 +109,141 @@ class DeliveryPipelineViewConfigTest {
             assertThat(html.contains("Delivery Pipeline View"), is(true));
             assertThat(html.contains("Delivery Pipeline View for Jenkins Pipelines"), is(false));
         }
+    }
+
+    /**
+     * A folder laid out like a seeded controller: the jobs live in a subfolder, another job sorts before the one the
+     * view shows, and the seed wrote the jobs' full names. The third component is spelled the way the 1.x form saved
+     * it, relative to the folder.
+     */
+    private static DeliveryPipelineView seededFolderView(JenkinsRule jenkins, String firstJob) throws Exception {
+        Folder ancestry = jenkins.getInstance().createProject(Folder.class, "Ancestry");
+        Folder zero = ancestry.createProject(Folder.class, "0");
+        zero.createProject(FreeStyleProject.class, "build_alpine");
+        zero.createProject(FreeStyleProject.class, "build_golang");
+        Folder apps = ancestry.createProject(Folder.class, "apps");
+        apps.createProject(FreeStyleProject.class, "svc");
+        DeliveryPipelineView view = new DeliveryPipelineView("golang");
+        view.setComponentSpecs(List.of(
+                new DeliveryPipelineView.ComponentSpec("0", firstJob, null, false),
+                new DeliveryPipelineView.ComponentSpec("apps", "Ancestry/apps", null, false),
+                new DeliveryPipelineView.ComponentSpec("legacy", "0/build_golang", "0/build_alpine", true)));
+        view.setNoOfPipelines(4);
+        view.setShowAggregatedPipeline(true);
+        view.setPagingEnabled(true);
+        view.setShowChanges(true);
+        view.setShowDescription(true);
+        view.setShowTotalBuildTime(true);
+        view.setAllowPipelineStart(true);
+        view.setAllowManualTriggers(true);
+        view.setAllowRebuild(true);
+        view.setUpdateInterval(10);
+        view.setMaxNumberOfVisiblePipelines(0);
+        view.setSorting(Sorting.LATEST_ACTIVITY.getId());
+        ancestry.addView(view);
+        return view;
+    }
+
+    /** The view as it is written to the folder's config.xml. */
+    private static String configXml(DeliveryPipelineView view) throws Exception {
+        String folder = ((Folder) view.getOwner()).getConfigFile().asString();
+        String start = "<se.diabol.jenkins.pipeline.DeliveryPipelineView>";
+        String end = "</se.diabol.jenkins.pipeline.DeliveryPipelineView>";
+        int from = folder.indexOf(start);
+        int to = folder.indexOf(end, from);
+        assertThat("the view is in the folder's config.xml", from >= 0 && to > from, is(true));
+        return folder.substring(from, to + end.length());
+    }
+
+    @Test
+    void savingTheFormUnchangedWritesTheConfigurationBackAsItWas(JenkinsRule jenkins) throws Exception {
+        DeliveryPipelineView view = seededFolderView(jenkins, "Ancestry/0/build_golang");
+        String before = configXml(view);
+        assertThat(before, containsString("<firstJob>Ancestry/0/build_golang</firstJob>"));
+        assertThat(before, containsString("<firstJob>Ancestry/apps</firstJob>"));
+        assertThat(before, containsString("<lastJob>0/build_alpine</lastJob>"));
+        assertThat(before, containsString("<maxNumberOfVisiblePipelines>0</maxNumberOfVisiblePipelines>"));
+
+        jenkins.configRoundtrip(view);
+
+        assertThat(configXml(view), is(before));
+        DeliveryPipelineView saved = (DeliveryPipelineView) view.getOwner().getView("golang");
+        assertThat(saved.getComponentSpecs().get(0).getFirstJob(), is("Ancestry/0/build_golang"));
+        assertThat(saved.getComponentSpecs().get(1).getFirstJob(), is("Ancestry/apps"));
+        assertThat(saved.getComponentSpecs().get(2).getFirstJob(), is("0/build_golang"));
+        assertThat(saved.getComponentSpecs().get(2).getLastJob(), is("0/build_alpine"));
+        assertThat(saved.getNoOfPipelines(), is(4));
+        assertThat(saved.getMaxNumberOfVisiblePipelines(), is(0));
+        assertThat(saved.getSorting(), is(Sorting.LATEST_ACTIVITY.getId()));
+    }
+
+    @Test
+    void changingOneValueInTheFormChangesThatValueAlone(JenkinsRule jenkins) throws Exception {
+        DeliveryPipelineView view = seededFolderView(jenkins, "Ancestry/0/build_golang");
+        String before = configXml(view);
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            HtmlForm form = client.getPage(view, "configure").getFormByName("viewConfig");
+            form.getSelectByName("_.noOfPipelines").setSelectedAttribute("8", true);
+            jenkins.submit(form);
+        }
+        assertThat(configXml(view),
+                is(before.replace("<noOfPipelines>4</noOfPipelines>", "<noOfPipelines>8</noOfPipelines>")));
+    }
+
+    @Test
+    void pickingAnotherInitialJobStoresThatJobAlone(JenkinsRule jenkins) throws Exception {
+        DeliveryPipelineView view = seededFolderView(jenkins, "Ancestry/0/build_golang");
+        String before = configXml(view);
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            HtmlForm form = client.getPage(view, "configure").getFormByName("viewConfig");
+            form.getSelectsByName("_.firstJob").get(0).setSelectedAttribute("0/build_alpine", true);
+            jenkins.submit(form);
+        }
+        assertThat(configXml(view), is(before.replace("<firstJob>Ancestry/0/build_golang</firstJob>",
+                "<firstJob>0/build_alpine</firstJob>")));
+    }
+
+    @Test
+    void aJobThatNoLongerExistsStaysInTheFormMarkedAsNotFound(JenkinsRule jenkins) throws Exception {
+        DeliveryPipelineView view = seededFolderView(jenkins, "Ancestry/0/build_gone");
+        String before = configXml(view);
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            HtmlForm form = client.getPage(view, "configure").getFormByName("viewConfig");
+            HtmlSelect select = form.getSelectsByName("_.firstJob").get(0);
+            assertThat(select.getSelectedOptions().get(0).getText(), is("Ancestry/0/build_gone (not found)"));
+            assertThat(select.getSelectedOptions().get(0).getValueAttribute(), is("Ancestry/0/build_gone"));
+            jenkins.submit(form);
+        }
+        assertThat(configXml(view), is(before));
+    }
+
+    @Test
+    void theJobPickerSelectsTheStoredJobAndKeepsItsSpelling(JenkinsRule jenkins) throws Exception {
+        DeliveryPipelineView view = seededFolderView(jenkins, "Ancestry/0/build_golang");
+        Folder folder = (Folder) view.getOwner();
+        DeliveryPipelineView.ComponentSpec.DescriptorImpl descriptor =
+                new DeliveryPipelineView.ComponentSpec.DescriptorImpl();
+
+        ListBoxModel full = descriptor.doFillFirstJobItems(view, folder, folder, "Ancestry/0/build_golang");
+        ListBoxModel.Option selected = full.stream().filter(option -> option.selected).findFirst().orElseThrow();
+        assertThat(selected.value, is("Ancestry/0/build_golang"));
+        assertThat(selected.name, is("Ancestry » 0 » build_golang"));
+        assertThat("other jobs are offered relative to the folder", full.get(0).value, is("0/build_alpine"));
+        assertThat(full.stream().filter(option -> option.selected).count(), is(1L));
+
+        ListBoxModel relative = descriptor.doFillFirstJobItems(view, folder, folder, "0/build_golang");
+        assertThat(relative.stream().filter(option -> option.selected).findFirst().orElseThrow().value,
+                is("0/build_golang"));
+
+        ListBoxModel group = descriptor.doFillFirstJobItems(view, folder, folder, "Ancestry/apps");
+        ListBoxModel.Option folderOption = group.stream().filter(option -> option.selected).findFirst().orElseThrow();
+        assertThat(folderOption.value, is("Ancestry/apps"));
+        assertThat(folderOption.name, is("Ancestry » apps (every job in it)"));
+
+        ListBoxModel last = descriptor.doFillLastJobItems(view, folder, folder, "");
+        assertThat("no final job selects the blank option", last.get(0).selected, is(true));
+        ListBoxModel lastFull = descriptor.doFillLastJobItems(view, folder, folder, "Ancestry/0/build_alpine");
+        assertThat(lastFull.stream().filter(option -> option.selected).findFirst().orElseThrow().value,
+                is("Ancestry/0/build_alpine"));
     }
 }
