@@ -1,7 +1,10 @@
 Delivery Pipeline Plugin
 ========================
 
-![Delivery Pipeline Plugin logo](docs/dpp_logo.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/dpp_logo_dark.png">
+  <img alt="Delivery Pipeline plugin for Jenkins" src="docs/dpp_logo.png" width="846">
+</picture>
 
 [![Build Status](https://ci.jenkins.io/job/Plugins/job/delivery-pipeline-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/delivery-pipeline-plugin/job/master/)
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/delivery-pipeline-plugin.svg)](https://plugins.jenkins.io/delivery-pipeline-plugin/)
