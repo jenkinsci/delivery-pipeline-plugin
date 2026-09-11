@@ -289,6 +289,7 @@ div.task-details {
     border-left: 6px solid #0092ef;
 }
 
+/* Greys come from the theme's text colour, so that they are light on a light board and dark on a dark one */
 .PAUSED_PENDING_INPUT {
     border-left: 6px solid lightskyblue;
     animation: dpp-pulse-grey 1s infinite;
@@ -296,13 +297,13 @@ div.task-details {
 
 @keyframes dpp-pulse-grey {
     0% {
-        background-color: #e2e0e0;
+        background-color: color-mix(in srgb, var(--text-color, #333333) 12%, transparent);
     }
     50% {
-        background-color: #79c2f7;
+        background-color: color-mix(in srgb, #0092ef 35%, transparent);
     }
     100% {
-        background-color: #e2e0e0;
+        background-color: color-mix(in srgb, var(--text-color, #333333) 12%, transparent);
     }
 }
 
@@ -326,8 +327,8 @@ div.task-details {
 .CANCELLED,
 .NOT_BUILT {
     border-left: 6px solid #8b8989;
-    background-color: #d3d3d3;
-    color: #1f1f1f;
+    background-color: color-mix(in srgb, var(--text-color, #333333) 18%, transparent);
+    color: var(--text-color, #333333);
     font-weight: bold;
 }
 
