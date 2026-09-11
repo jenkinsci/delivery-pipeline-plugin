@@ -16,7 +16,18 @@ component `delivery-pipeline-plugin`.
 
 This plugin was contributed to the community by [Diabol AB](https://www.diabol.se).
 
-![Delivery Pipeline view](docs/dpp_screenshot.png)
+![A chain of jobs on a Delivery Pipeline view](docs/dpp_screenshot.png)
+
+The same board follows the Jenkins dark theme:
+
+![The same chain in the dark theme](docs/dpp_screenshot_dark.png)
+
+A Pipeline job on the same kind of view: the newest run was restarted from its Deploy stage, so the stages before it
+were not built, and the run before it waited at an input step in its Approve stage.
+
+![A Pipeline job on a Delivery Pipeline view](docs/dpp_pipelines.png)
+
+![The same Pipeline job in the dark theme](docs/dpp_pipelines_dark.png)
 
 Version 2.0
 -----------

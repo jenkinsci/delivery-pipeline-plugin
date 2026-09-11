@@ -64,12 +64,31 @@ with sync_playwright() as p:
         page.screenshot(path=os.path.join(OUT, shot + '.png'), full_page=False)
         print('captured', shot)
     context.close()
-    # a wide light capture of the fan-out chain, the source of the README screenshot
-    wide = browser.new_context(viewport={'width': 1900, 'height': 1000}, color_scheme='light')
-    page = wide.new_page()
-    login(page)
-    shoot(page, f'{URL}/job/demo/view/Fan-out/', 'wide-fanout', full_page=False)
-    wide.close()
+    # the boards themselves, without the Jenkins frame and clipped to what they draw, in both themes: the sources
+    # of the README images. The fan-out chain whole, the first component of the Pipelines board (a Declarative run
+    # with parallel stages and an input gate), and one stage with its tasks for the help of the job property.
+    def board(page, url, name, selector):
+        page.goto(url)
+        settle(page)
+        target = page.locator(selector).first
+        box = target.bounding_box()
+        extent = target.evaluate("""element => {
+            const stages = Array.from(element.querySelectorAll('.stage')).map(e => e.getBoundingClientRect());
+            const all = Array.from(element.querySelectorAll('.stage, h1, h2, h3')).map(e => e.getBoundingClientRect());
+            return {right: Math.max(...stages.map(b => b.right)), bottom: Math.max(...all.map(b => b.bottom))};
+        }""")
+        page.screenshot(path=os.path.join(OUT, name + '.png'), clip={
+            'x': box['x'], 'y': box['y'], 'width': extent['right'] - box['x'] + 12, 'height': extent['bottom'] - box['y'] + 12})
+        print('captured', name)
+
+    for scheme in ('light', 'dark'):
+        wide = browser.new_context(viewport={'width': 1900, 'height': 1000}, color_scheme=scheme)
+        page = wide.new_page()
+        login(page)
+        board(page, f'{URL}/job/demo/view/Fan-out/', f'board-fanout-{scheme}', '.dpp-view')
+        page.locator('.stage_Test').first.screenshot(path=os.path.join(OUT, f'board-stage-{scheme}.png'))
+        board(page, f'{URL}/job/demo/view/Pipelines/', f'board-pipelines-{scheme}', 'section.pipeline-component')
+        wide.close()
     phone = browser.new_context(viewport={'width': 430, 'height': 932}, device_scale_factor=2, is_mobile=True, has_touch=True)
     page = phone.new_page()
     login(page)
