@@ -1,5 +1,5 @@
 <?jelly escape-by-default='true'?>
 <div>
-    Visualises delivery pipelines built from chained jobs or Pipeline (Jenkinsfile) jobs, for information radiators
-    and everyday use.
+    Visualises delivery pipelines built from chained jobs, Pipeline (Jenkinsfile) jobs and multibranch projects, for
+    information radiators and everyday use.
 </div>
