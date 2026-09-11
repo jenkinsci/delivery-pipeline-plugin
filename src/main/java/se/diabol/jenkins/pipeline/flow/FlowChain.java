@@ -178,10 +178,10 @@ public final class FlowChain {
                 tasks.add(withIds(task, from.id() + "/"));
             }
             stages.add(new Stage(stage.id(), stage.name(), stage.row(), stage.column(), version, tasks,
-                    stage.downstream()));
+                    stage.downstream(), source.status()));
         }
         return new Pipeline("aggregated", null, 0, true, null, null, false, List.of(), List.of(), List.of(), 0, 0,
-                List.of(), List.of(), stages);
+                List.of(), List.of(), stages, null);
     }
 
     private static Pipeline instanceOf(WorkflowRun run, ViewSettings settings, Map<String, Pipeline> instances) {
@@ -326,7 +326,7 @@ public final class FlowChain {
             }
             String name = jobName == null || jobName.equals(stage.name()) ? stage.name() : jobName + ": " + stage.name();
             placed.add(new Stage(prefix + stage.id(), name, firstRow + stage.row(), firstColumn + stage.column(),
-                    stage.version(), tasks, prefixed(stage.downstream(), prefix)));
+                    stage.version(), tasks, prefixed(stage.downstream(), prefix), stage.status()));
         }
         grid.addAll(placed);
         return new Placed(run, placed, prefix);
@@ -396,7 +396,7 @@ public final class FlowChain {
         List<String> downstream = new ArrayList<>(current.downstream());
         downstream.add(to.id());
         grid.set(index, new Stage(current.id(), current.name(), current.row(), current.column(), current.version(),
-                tasks, downstream));
+                tasks, downstream, current.status()));
     }
 
     /**
@@ -460,14 +460,14 @@ public final class FlowChain {
         Task task = new Task("build", taskName, url, job.getFullName(), run.getNumber(), status, null,
                 !run.isBuilding(), null, false, null, null, TaskDetailsContributor.testsOf(run),
                 TaskDetailsContributor.analysisOf(run), TaskDetailsContributor.promotionsOf(run), List.of());
-        return new Stage("build", stageName, 0, 0, null, List.of(task), List.of());
+        return new Stage("build", stageName, 0, 0, null, List.of(task), List.of(), status);
     }
 
     private static Stage queuedStage(Job<?, ?> job, Queue.Item item) {
         Task task = new Task("queued", job.getDisplayName(), job.getUrl(), job.getFullName(), null,
                 Status.queued(item.getInQueueSince()), null, false, null, false, null, null, List.of(), List.of(),
                 List.of(), List.of());
-        return new Stage("queued", job.getDisplayName(), 0, 0, null, List.of(task), List.of());
+        return new Stage("queued", job.getDisplayName(), 0, 0, null, List.of(task), List.of(), task.status());
     }
 
     private static Job<?, ?> jobNamed(String fullName) {

@@ -985,6 +985,83 @@ class DeliveryPipelineViewPageTest {
         }
     }
 
+    @Test
+    void stageStatusOutsideItsTasksShowsOnTheStageHeader() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "afterwards");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "node {",
+                "  stage('Test') {",
+                "    parallel(a: { echo 'a' }, b: { echo 'b' })",
+                "    writeFile file: 'unit.xml', text: '<testsuite name=\"unit\" tests=\"1\" failures=\"1\">"
+                        + "<testcase classname=\"A\" name=\"fails\"><failure message=\"boom\"/></testcase></testsuite>'",
+                "    junit 'unit.xml'",
+                "  }",
+                "}"), true));
+        jenkins.assertBuildStatus(Result.UNSTABLE, flow.scheduleBuild2(0));
+        DeliveryPipelineView view = view(jenkins, "Afterwards", "afterwards");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat("both branches passed", page.querySelectorAll(".stage-task.SUCCESS").size(), is(2));
+            DomElement header = page.querySelector(".stage-header");
+            assertThat("the stage header carries the status its tasks do not show",
+                    header.getAttribute("class"), containsString("UNSTABLE"));
+            assertThat(header.getAttribute("title"), containsString("outside its tasks"));
+            assertThat("the run is no worse than its stage, so the heading stays quiet",
+                    page.querySelectorAll(".pipeline-status").size(), is(0));
+        }
+    }
+
+    @Test
+    void runStatusOutsideItsStagesShowsOnTheRunHeading() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "trailing");
+        flow.setDefinition(new CpsFlowDefinition("node { stage('Build') { echo 'b' } }; error 'broken after the stages'", true));
+        jenkins.assertBuildStatus(Result.FAILURE, flow.scheduleBuild2(0));
+        DeliveryPipelineView view = view(jenkins, "Trailing", "trailing");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(1));
+            assertThat("the stage itself passed", page.querySelectorAll(".stage-header.FAILED").size(), is(0));
+            DomElement badge = page.querySelector(".pipeline-heading .pipeline-status");
+            assertThat("the heading says the run failed outside its stages", badge, notNullValue());
+            assertThat(badge.getAttribute("class"), containsString("FAILED"));
+            assertThat(badge.getTextContent(), is("Failed"));
+            assertThat(badge.getAttribute("title"), containsString("outside its stages"));
+        }
+    }
+
+    @Test
+    void declarativeStagePostSectionStatusShowsOnTheStageHeader() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "posted");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "pipeline {",
+                "  agent any",
+                "  stages {",
+                "    stage('Test') {",
+                "      parallel {",
+                "        stage('A') { steps { echo 'a' } }",
+                "        stage('B') { steps { echo 'b' } }",
+                "      }",
+                "      post {",
+                "        always {",
+                "          writeFile file: 'unit.xml', text: '<testsuite name=\"unit\" tests=\"1\" failures=\"1\">"
+                        + "<testcase classname=\"A\" name=\"fails\"><failure message=\"boom\"/></testcase></testsuite>'",
+                "          junit 'unit.xml'",
+                "        }",
+                "      }",
+                "    }",
+                "  }",
+                "}"), true));
+        jenkins.assertBuildStatus(Result.UNSTABLE, flow.scheduleBuild2(0));
+        DeliveryPipelineView view = view(jenkins, "Posted", "posted");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(taskNames(page), contains("A", "B"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(2));
+            assertThat("the stage's post section made it unstable, which its header shows",
+                    page.querySelectorAll(".stage-header.UNSTABLE").size(), is(1));
+        }
+    }
+
     private static String hrefOfTask(HtmlPage page, String name) {
         for (DomNode link : page.querySelectorAll(".stage-task .taskname a")) {
             if (link.getTextContent().trim().equals(name)) {

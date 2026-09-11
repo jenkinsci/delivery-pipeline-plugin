@@ -42,6 +42,8 @@ import org.kohsuke.stapler.export.ExportedBean;
  * @param tests test results the run recorded outside the tasks shown, such as in a Declarative post section
  * @param analysis static analysis results that belong to the run as a whole rather than to one of its tasks
  * @param stages the stages in grid order
+ * @param status the status of the pipeline's own run: for a Pipeline job the run's result, for a chain of jobs the
+ *               first job's build; null for the aggregated row
  */
 @ExportedBean(defaultVisibility = 100)
 public record Pipeline(@Exported String id, @Exported String version, @Exported long timestamp,
@@ -49,7 +51,8 @@ public record Pipeline(@Exported String id, @Exported String version, @Exported 
                        @Exported boolean rebuildable, @Exported List<Trigger> triggers,
                        @Exported List<Contributor> contributors, @Exported List<Change> changes,
                        @Exported int commits, @Exported long totalBuildTime, @Exported List<TestSummary> tests,
-                       @Exported List<AnalysisSummary> analysis, @Exported List<Stage> stages) {
+                       @Exported List<AnalysisSummary> analysis, @Exported List<Stage> stages,
+                       @Exported Status status) {
 
     public Pipeline {
         triggers = List.copyOf(triggers);
@@ -69,7 +72,7 @@ public record Pipeline(@Exported String id, @Exported String version, @Exported 
     /** The same pipeline with other stages and total build time, for a source that adds the runs this one started. */
     public Pipeline withStages(List<Stage> stages, long totalBuildTime) {
         return new Pipeline(id, version, timestamp, aggregated, jobFullName, buildNumber, rebuildable, triggers,
-                contributors, changes, commits, totalBuildTime, tests, analysis, stages);
+                contributors, changes, commits, totalBuildTime, tests, analysis, stages, status);
     }
 
     /**
@@ -91,7 +94,7 @@ public record Pipeline(@Exported String id, @Exported String version, @Exported 
         return changed
                 ? new Pipeline(id, version, timestamp, aggregated, jobFullName, buildNumber, rebuildable, triggers,
                         contributors, keepChanges ? changes : List.of(), commits, totalBuildTime,
-                        keepTests ? tests : List.of(), keepAnalysis ? analysis : List.of(), filtered)
+                        keepTests ? tests : List.of(), keepAnalysis ? analysis : List.of(), filtered, status)
                 : this;
     }
 

@@ -177,6 +177,19 @@ div.stage-header {
     font-weight: normal;
 }
 
+/* A stage whose own steps ended worse than any of its tasks carries the status class on its header; a run that
+   ended worse than any of its stages gets a badge in its heading. */
+span.pipeline-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-left: 0;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
 /* Tasks */
 div.stage-task {
     position: relative;

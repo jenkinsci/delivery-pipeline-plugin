@@ -118,7 +118,7 @@ public final class FlowRuns {
         Pipeline pipeline = new Pipeline(run.getParent().getFullName() + "#" + run.getNumber(), run.getDisplayName(),
                 run.getTimeInMillis(), false, run.getParent().getFullName(), run.getNumber(), !run.isBuilding(),
                 Triggers.of(run.getCauses()), Changes.contributorsOf(changes), changes, changes.size(), totalBuildTime,
-                remainingTests(run, stages), TaskDetailsContributor.analysisOf(run), stages);
+                remainingTests(run, stages), TaskDetailsContributor.analysisOf(run), stages, FlowStages.runStatus(run));
         return new Analysis(timings, pipeline);
     }
 
@@ -161,7 +161,8 @@ public final class FlowRuns {
         if (previous == null || previous.pipeline().stages().isEmpty()) {
             Task task = new Task("queued", "Queued", job.getUrl(), job.getFullName(), null, Status.queued(since), null,
                     false, null, false, null, null, List.of(), List.of(), List.of(), List.of());
-            stages.add(new Stage("queued", job.getDisplayName(), 0, 0, null, List.of(task), List.of()));
+            stages.add(new Stage("queued", job.getDisplayName(), 0, 0, null, List.of(task), List.of(),
+                    Status.queued(since)));
         } else {
             boolean first = true;
             for (Stage stage : previous.pipeline().stages()) {
@@ -171,13 +172,14 @@ public final class FlowRuns {
                             first ? Status.queued(since) : Status.idle(), null, false, null, false, null, null,
                             List.of(), List.of(), List.of(), task.downstream()));
                 }
-                stages.add(stage.withTasks(tasks, null));
+                stages.add(new Stage(stage.id(), stage.name(), stage.row(), stage.column(), null, tasks,
+                        stage.downstream(), first ? Status.queued(since) : Status.idle()));
                 first = false;
             }
         }
         return new Pipeline(job.getFullName() + "#queued", "#" + job.getNextBuildNumber(), since, false,
                 job.getFullName(), null, false, Triggers.of(item.getCauses()), List.of(), List.of(), 0, 0, List.of(),
-                List.of(), stages);
+                List.of(), stages, Status.queued(since));
     }
 
     /** Status and timing of a top-level stage. */

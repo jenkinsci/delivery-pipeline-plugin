@@ -223,6 +223,13 @@ for name, expected in zoo.items():
             counts = [(r['total'], r['failed'], r['skipped']) for r in shown.get(task_name) or []]
             check((total, failed, skipped) in counts,
                   f'zoo/{name}: {stage_name} / {task_name} test counts {counts} (expected {[total, failed, skipped]})')
+    for stage_name, expected_status in expected.get('stage_status', {}).items():
+        st = stages.get(stage_name)
+        shown = st and st.get('status') and st['status']['type']
+        check(shown == expected_status, f'zoo/{name}: stage {stage_name} status {shown} (expected {expected_status})')
+    if 'run_status' in expected:
+        shown = (newest(component).get('status') or {}).get('type')
+        check(shown == expected['run_status'], f'zoo/{name}: run status {shown} (expected {expected["run_status"]})')
     for stage_name, targets in expected.get('downstream', {}).items():
         by_id = {st['id']: st['name'] for st in stages.values()}
         linked = [by_id.get(i, i) for i in stages.get(stage_name, {'downstream': []})['downstream']]

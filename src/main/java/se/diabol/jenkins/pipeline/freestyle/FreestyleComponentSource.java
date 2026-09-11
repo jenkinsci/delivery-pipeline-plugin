@@ -208,7 +208,7 @@ public class FreestyleComponentSource extends ComponentSource {
                 firstBuild.getDisplayName(), firstBuild.getTimeInMillis(), false,
                 chain.index().first().getFullName(), firstBuild.getNumber(), false,
                 Triggers.of(firstBuild.getCauses()), contributors, settings.showChanges() ? changes : List.of(),
-                changes.size(), totalBuildTime, List.of(), List.of(), stages);
+                changes.size(), totalBuildTime, List.of(), List.of(), stages, Statuses.of(firstBuild));
     }
 
     /** The pipeline instance of a first job that is waiting in the queue. */
@@ -218,7 +218,8 @@ public class FreestyleComponentSource extends ComponentSource {
         return new Pipeline(first.getFullName() + "#queued", "#" + first.getNextBuildNumber(),
                 item == null ? 0 : item.getInQueueSince(), false, first.getFullName(), null, false,
                 item == null ? List.of() : Triggers.of(item.getCauses()), List.of(), List.of(), 0, 0, List.of(),
-                List.of(), stagesFor(chain, null, settings));
+                List.of(), stagesFor(chain, null, settings),
+                item == null ? Status.idle() : Status.queued(item.getInQueueSince()));
     }
 
     private static List<Stage> stagesFor(Chain chain, AbstractBuild<?, ?> firstBuild, ViewSettings settings) {
@@ -229,7 +230,7 @@ public class FreestyleComponentSource extends ComponentSource {
                 tasks.add(task(chain, node, firstBuild, settings));
             }
             stages.add(new Stage(template.id(), template.id(), template.row(), template.column(), null, tasks,
-                    template.downstream()));
+                    template.downstream(), null));
         }
         return stages;
     }
@@ -263,10 +264,10 @@ public class FreestyleComponentSource extends ComponentSource {
                 tasks.add(taskOf(node, build, status, settings, null, false));
             }
             stages.add(new Stage(template.id(), template.id(), template.row(), template.column(),
-                    version == null ? null : version.getDisplayName(), tasks, template.downstream()));
+                    version == null ? null : version.getDisplayName(), tasks, template.downstream(), null));
         }
         return new Pipeline("aggregated", null, 0, true, null, null, false, List.of(), List.of(), List.of(), 0, 0,
-                List.of(), List.of(), stages);
+                List.of(), List.of(), stages, null);
     }
 
     private static Task taskOf(ChainGraph.Node node, AbstractBuild<?, ?> build, Status status, ViewSettings settings,

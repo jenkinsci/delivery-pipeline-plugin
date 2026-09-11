@@ -86,6 +86,9 @@ scripts keep working; what changed is underneath and around them.
   components too. It is laid out like the newest run that completed its stages, since a failed scripted run stops at
   the failing stage, and each stage shows the newest run in which it ran, with that run's display name as the
   version.
+- Every stage and every run carries its own status too. When a stage's own steps fail or go unstable outside its
+  tasks, as a `junit` step after the branches or a stage's `post` section does, the stage header shows it; when a
+  run fails outside its stages, its heading says so. A board no longer shows all green for an unstable run.
 - A *Delivery Pipeline manual step* post-build action of its own, so manual steps no longer need the Build
   Pipeline plugin.
 - The required dependencies are plugins a fresh Jenkins installs with its suggested set (Pipeline: Job,

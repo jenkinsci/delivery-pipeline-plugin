@@ -103,6 +103,9 @@ Old views keep loading; these settings are read and ignored, without old-data en
   each stage shows the newest run in which it ran, with that run's display name as the version.
 - A component can name a multibranch project, or any folder: it becomes one pipeline per job inside, named
   "component / branch", the primary branch first.
+- Every stage and every run carries its own status (`status` on stages and pipelines in the JSON). A stage whose
+  own steps fail or go unstable outside its tasks shows it on its header, and a run that fails outside its stages
+  on its heading.
 - A Declarative stage skipped because an earlier stage failed shows as not built, like one skipped by a `when`
   condition; matrix cells are named by their axes, a stage inside a scripted parallel branch is shown as
   "branch: stage", a `parallel` nested inside a branch shows its inner branches as tasks, and a stage nested in a

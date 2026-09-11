@@ -68,7 +68,8 @@ final class FlowStages {
                 tasks.add(task(run, stageStart, timing.name(), timing, previous, timing.name(), restartable, console));
             }
             List<String> downstream = i + 1 < stageStarts.size() ? List.of(stageStarts.get(i + 1).getId()) : List.of();
-            stages.add(new Stage(stageStart.getId(), timing.name(), 0, i, null, tasks, downstream));
+            stages.add(new Stage(stageStart.getId(), timing.name(), 0, i, null, tasks, downstream,
+                    statusOf(timing, previous, timing.name(), timing.name())));
         }
         if (stages.isEmpty()) {
             stages.add(wholeRun(run, allNodes, previous, restartable, console));
@@ -89,7 +90,8 @@ final class FlowStages {
             Task starting = new Task("starting", "Starting", run.getUrl(), job.getFullName(), run.getNumber(),
                     Status.running(run.getTimeInMillis(), run.getEstimatedDuration()), null, false, null, false, null,
                     null, List.of(), List.of(), List.of(), List.of());
-            return new Stage("starting", job.getDisplayName(), 0, 0, null, List.of(starting), List.of());
+            return new Stage("starting", job.getDisplayName(), 0, 0, null, List.of(starting), List.of(),
+                    starting.status());
         }
         List<Task> tasks = allNodes.isEmpty() ? new ArrayList<>()
                 : nestedTasks(run, allNodes.get(0), allNodes, allNodes, previous, restartable, console);
@@ -102,11 +104,11 @@ final class FlowStages {
                     requiresInput ? inputUrlOf(run, "run") : null, null, TaskDetailsContributor.testsOf(run),
                     List.of(), List.of(), List.of()));
         }
-        return new Stage("run", job.getDisplayName(), 0, 0, null, tasks, List.of());
+        return new Stage("run", job.getDisplayName(), 0, 0, null, tasks, List.of(), runStatus(run));
     }
 
     /** The status of a run as a whole: waiting at an input step, running, or finished with its result. */
-    private static Status runStatus(WorkflowRun run) {
+    static Status runStatus(WorkflowRun run) {
         if (run.isBuilding() && pendingInputOf(run, "run") != null) {
             return Status.pausedPendingInput(run.getTimeInMillis(), -1);
         }

@@ -31,7 +31,7 @@ If not, see <http://www.gnu.org/licenses/>.
  *     "paging": { "page", "pageSize", "total", "pages" } | null,
  *     "pipelines": [ {
  *       "id", "version", "timestamp", "aggregated", "jobFullName", "buildNumber", "rebuildable", "commits",
- *       "totalBuildTime",
+ *       "totalBuildTime", "status": { "type", "timestamp", "duration", "progress" },
  *       "permissions": { "build", "cancel" },
  *       "triggers": [ { "type", "description" } ],
  *       "contributors": [ { "name", "url" } ],
@@ -40,6 +40,7 @@ If not, see <http://www.gnu.org/licenses/>.
  *       "analysis": [ { "name", "url", "high", "normal", "low" } ],
  *       "stages": [ {
  *         "id", "name", "row", "column", "version", "downstream": [ stage id ],
+ *         "status": { "type", "timestamp", "duration", "progress" } | null,
  *         "tasks": [ {
  *           "id", "name", "url", "jobFullName", "buildNumber", "description", "rebuildable", "restart",
  *           "requiresInput", "inputUrl",
@@ -70,5 +71,8 @@ If not, see <http://www.gnu.org/licenses/>.
  * run's stage and task ids carry its {@code job#number/} as a prefix, and its stage names its job's name, as
  * "job: stage". The tasks name their own job and build in {@code jobFullName} and {@code buildNumber}, which the
  * actions are posted for.
+ * <p>A pipeline's {@code status} is that of its own run and a stage's {@code status} that of the whole stage block of a
+ * Pipeline stage; either can be worse than every task shows when steps outside the tasks failed or went unstable,
+ * which the page marks on the stage header and the run heading.
  */
 package se.diabol.jenkins.pipeline.model;

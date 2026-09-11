@@ -33,10 +33,14 @@ import org.kohsuke.stapler.export.ExportedBean;
  *                display name of the newest run that ran the stage; null otherwise
  * @param tasks the tasks, in order
  * @param downstream ids of the stages this stage leads to, for drawing arrows
+ * @param status the stage's own status: for a Pipeline stage that of the whole stage block, which can be worse than
+ *               any of its tasks when steps outside them failed or went unstable; null for a stage of a chain of
+ *               jobs, whose tasks are builds of their own
  */
 @ExportedBean(defaultVisibility = 100)
 public record Stage(@Exported String id, @Exported String name, @Exported int row, @Exported int column,
-                    @Exported String version, @Exported List<Task> tasks, @Exported List<String> downstream) {
+                    @Exported String version, @Exported List<Task> tasks, @Exported List<String> downstream,
+                    @Exported Status status) {
 
     public Stage {
         tasks = List.copyOf(tasks);
@@ -44,11 +48,11 @@ public record Stage(@Exported String id, @Exported String name, @Exported int ro
     }
 
     public Stage withPosition(int row, int column) {
-        return new Stage(id, name, row, column, version, tasks, downstream);
+        return new Stage(id, name, row, column, version, tasks, downstream, status);
     }
 
     public Stage withTasks(List<Task> tasks, String version) {
-        return new Stage(id, name, row, column, version, tasks, downstream);
+        return new Stage(id, name, row, column, version, tasks, downstream, status);
     }
 
     /** The same stage with only the task details the view shows. */
@@ -60,6 +64,6 @@ public record Stage(@Exported String id, @Exported String name, @Exported int ro
             changed |= filteredTask != task;
             filtered.add(filteredTask);
         }
-        return changed ? new Stage(id, name, row, column, version, filtered, downstream) : this;
+        return changed ? new Stage(id, name, row, column, version, filtered, downstream, status) : this;
     }
 }

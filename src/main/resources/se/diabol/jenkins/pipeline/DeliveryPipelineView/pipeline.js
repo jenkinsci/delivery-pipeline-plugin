@@ -18,6 +18,24 @@
     var PAGE_WINDOW = 10;
     var viewCount = 0;
 
+    /* ------------------------------------------------------------------ statuses outside tasks */
+
+    // how bad a status is; only these can be worse than what the tasks of a stage or run already show
+    var BADNESS = {UNSTABLE: 1, CANCELLED: 2, FAILED: 3};
+    var OUTCOME = {UNSTABLE: ['went unstable', 'Unstable'], CANCELLED: ['was aborted', 'Aborted'], FAILED: ['failed', 'Failed']};
+
+    function badness(status) {
+        return status && BADNESS[status.type] ? BADNESS[status.type] : 0;
+    }
+
+    function worstBadness(tasks) {
+        var worst = 0;
+        (tasks || []).forEach(function (task) {
+            worst = Math.max(worst, badness(task.status));
+        });
+        return worst;
+    }
+
     /* ------------------------------------------------------------------ DOM helpers */
 
     function append(node, children) {
@@ -446,6 +464,15 @@
         var started = el('span', {class: 'pipeline-started'}, formatDate(pipeline.timestamp, this.settings.showAbsoluteDateTime));
         this.liveTasks.push({element: started, timestamp: pipeline.timestamp, kind: 'time'});
         append(heading, [' started ', started]);
+        var shown = 0;
+        (pipeline.stages || []).forEach(function (stage) {
+            shown = Math.max(shown, badness(stage.status), worstBadness(stage.tasks));
+        });
+        if (badness(pipeline.status) > shown) {
+            heading.appendChild(document.createTextNode(' '));
+            heading.appendChild(el('span', {class: 'pipeline-status ' + pipeline.status.type,
+                title: 'The run ' + OUTCOME[pipeline.status.type][0] + ' outside its stages'}, OUTCOME[pipeline.status.type][1]));
+        }
         var permissions = pipeline.permissions || {};
         if (this.settings.allowRebuild && pipeline.rebuildable && permissions.build && pipeline.buildNumber && pipeline.jobFullName) {
             heading.appendChild(document.createTextNode(' '));
@@ -493,6 +520,10 @@
     View.prototype.renderStage = function (component, pipeline, stage, instanceIndex) {
         var self = this;
         var header = el('div', {class: 'stage-header'}, el('div', {class: 'stage-name'}, stage.name));
+        if (badness(stage.status) > worstBadness(stage.tasks)) {
+            header.classList.add(stage.status.type);
+            header.title = 'The stage ' + OUTCOME[stage.status.type][0] + ' in steps outside its tasks';
+        }
         if (pipeline.aggregated) {
             header.appendChild(el('div', {class: 'stage-version'}, stage.version || 'N/A'));
         }
