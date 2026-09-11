@@ -17,6 +17,8 @@ token-macro
 structs
 # Pipeline job support for the seeded Pipeline jobs, and the console the view links stages to
 workflow-aggregator
+workflow-multibranch
+git
 pipeline-model-definition
 pipeline-graph-view
 # Job types and optional integrations the plugin recognises when present

@@ -28,13 +28,16 @@ Configuration lives in `casc.yaml` (Configuration as Code), the jobs in `jobs.gr
 ## The Jenkinsfile zoo
 
 `docker/jenkinsfiles/` holds one Pipeline script per shape a Jenkinsfile can take: Declarative and scripted, nested
-and parallel stages, a parallel nested in a branch, a matrix, `when` and `post` sections, failures and skipped stages,
-retries and timeouts, an input with parameters, a Pipeline that starts another, one that starts two at once and one that starts a chain of
-freestyle jobs, plain
-steps without a stage. The seed creates one job per file in the *Jenkinsfile zoo* folder and a view over all of them;
-`validate.py` runs every job and compares the view with the `.expect.json` next to each script: the run result, the
-stages and tasks with their statuses and test counts, the arrows and grid positions of a chain, and where an input
-task links. The screenshots include the zoo view in both themes.
+and parallel stages, stages nested in stages inside branches, a parallel nested in a branch, a matrix, `when` and
+`post` sections, failures and skipped stages, retries and timeouts, an input with parameters, a Pipeline that starts
+another, one that starts two at once and one that starts a chain of freestyle jobs, plain steps without a stage and
+parallel branches without a stage. The seed creates one job per file in the *Jenkinsfile zoo* folder and a view over
+all of them; `validate.py` runs every job and compares the view with the `.expect.json` next to each script: the run
+result, the stages and tasks with their statuses and test counts, the arrows and grid positions of a chain, and where
+an input task links. The folder also holds a freestyle job whose build trigger starts a Pipeline job, shown by the
+*Triggered* view as one chain, and a multibranch project over a git repository the image carries with two branches,
+which the *Branches* view names as one component and shows as one pipeline per branch. The screenshots include the
+zoo view in both themes.
 
 To add a shape, drop a `name.groovy` with a one-line comment on top (it becomes the job description) and a
 `name.expect.json` beside it, then run `docker/run.sh all`.

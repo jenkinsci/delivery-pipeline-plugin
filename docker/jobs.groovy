@@ -355,6 +355,30 @@ job('zoo/free-deploy') {
     description('Freestyle job triggered by free-build')
     steps { shell('echo deploying') }
 }
+// a freestyle job whose build trigger starts a Pipeline job; the Triggered view follows its component into that run
+job('zoo/free-trigger') {
+    description('Freestyle job whose build trigger starts declarative-basic; the Triggered view follows into that run')
+    steps { shell('echo triggering') }
+    publishers { downstream('zoo/declarative-basic', 'SUCCESS') }
+}
+pipelineView('zoo/Triggered', { component('Triggered', 'free-trigger') }, [instances: 1, aggregated: false])
+// a multibranch project over the git repository the image carries; the Branches view names it as one component
+multibranchPipelineJob('zoo/app') {
+    displayName('Multibranch app')
+    branchSources {
+        branchSource {
+            source {
+                git {
+                    id('app')
+                    remote('file:///srv/zoo/app.git')
+                    traits { gitBranchDiscovery() }
+                }
+            }
+        }
+    }
+    orphanedItemStrategy { discardOldItems { numToKeep(10) } }
+}
+pipelineView('zoo/Branches', { component('App', 'app') }, [instances: 1, aggregated: false])
 pipelineView('zoo/Jenkinsfiles', {
     zooFiles.each { file -> component(file.name - '.groovy', file.name - '.groovy') }
 }, [instances: 1, aggregated: false, columns: 2])

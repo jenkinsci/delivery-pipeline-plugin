@@ -57,7 +57,9 @@ import se.diabol.jenkins.pipeline.model.ViewSettings;
  * the step; the runs they started follow in turn. Their stage and task ids carry the started run's id as a prefix,
  * their stage names its job's name. A started run still waiting in the queue is one queued task; one that was
  * cancelled before it started, or has been deleted since, is left out. A started job that is not a Pipeline brings
- * the chain of jobs downstream of it, laid out as a component of that job would show it.
+ * the chain of jobs downstream of it, laid out as a component of that job would show it, and the Pipeline runs the
+ * builds of that chain triggered follow their tasks the same way; {@link #expand} does the same for the instance of
+ * a chain of jobs, so that chains and Pipeline runs mix freely.
  *
  * <p>Which runs a run started comes from {@link DownstreamRuns}. The jobs are looked up as the system, so that the
  * pipeline, which is cached and served to every viewer, does not depend on who computed it: as with chains of jobs,
@@ -67,7 +69,7 @@ import se.diabol.jenkins.pipeline.model.ViewSettings;
  * <p>The class also builds the aggregated row of a Pipeline job, in which every stage shows the newest run that ran
  * it.
  */
-final class FlowChain {
+public final class FlowChain {
 
     /** How far a chain is followed: runs that start runs that start runs, this many levels deep. */
     private static final int MAX_DEPTH = 8;
@@ -78,7 +80,7 @@ final class FlowChain {
     /** How many runs back the aggregated row looks for the newest run in which a stage ran. */
     private static final int AGGREGATED_RUNS = 20;
 
-    /** The stages of one run as placed on the grid, with the prefix their ids carry. */
+    /** The stages of one run as placed on the grid, with the prefix their ids carry; the run is null for a chain of jobs. */
     private record Placed(Run<?, ?> run, List<Stage> stages, String prefix) {
     }
 
@@ -110,6 +112,26 @@ final class FlowChain {
         chain.grid.sort(Comparator.comparingInt(Stage::row).thenComparingInt(Stage::column));
         long totalBuildTime = Math.max(own.totalBuildTime(), chain.latestEnd - run.getTimeInMillis());
         return own.withStages(chain.grid, totalBuildTime);
+    }
+
+    /**
+     * The instance of a chain of jobs with the Pipeline runs its builds triggered, and what those started, following
+     * their tasks the way {@link #of} follows the stages of a Pipeline run. An instance without any stays as it is.
+     */
+    public static Pipeline expand(Pipeline instance, ViewSettings settings) {
+        if (instance.stages().isEmpty() || instance.aggregated()) {
+            return instance;
+        }
+        FlowChain chain = new FlowChain(settings);
+        chain.latestEnd = endOf(instance.stages());
+        Placed root = chain.place(null, instance.stages(), 0, "", null);
+        chain.follow(root, 1);
+        if (chain.runs == 0) {
+            return instance;
+        }
+        chain.grid.sort(Comparator.comparingInt(Stage::row).thenComparingInt(Stage::column));
+        long totalBuildTime = Math.max(instance.totalBuildTime(), chain.latestEnd - instance.timestamp());
+        return instance.withStages(chain.grid, totalBuildTime);
     }
 
     /**
@@ -186,47 +208,72 @@ final class FlowChain {
         return false;
     }
 
-    /** Adds the runs the placed run started, and theirs, to the grid. */
+    /**
+     * Adds the runs the placed run started, and theirs, to the grid. For a Pipeline run they follow the stage that
+     * holds the step; for a chain of jobs, whose tasks are builds, they follow the task of the build that triggered
+     * them.
+     */
     private void follow(Placed placed, int depth) {
         if (depth > MAX_DEPTH) {
             return;
         }
-        for (DownstreamRuns.Started started : DownstreamRuns.of(placed.run())) {
-            if (runs >= MAX_RUNS) {
+        if (placed.run() instanceof WorkflowRun run) {
+            for (DownstreamRuns.Started started : DownstreamRuns.of(run)) {
+                if (runs >= MAX_RUNS) {
+                    return;
+                }
+                attach(placed, stageOf(placed, started.flowNodeId()), started.flowNodeId(), started, depth);
+            }
+            return;
+        }
+        for (Stage stage : placed.stages()) {
+            for (Task task : stage.tasks()) {
+                Run<?, ?> build = buildOf(task);
+                if (build == null) {
+                    continue;
+                }
+                for (DownstreamRuns.Started started : DownstreamRuns.of(build)) {
+                    if (runs >= MAX_RUNS) {
+                        return;
+                    }
+                    attach(placed, stage, rawId(task.id(), placed.prefix()), started, depth);
+                }
+            }
+        }
+    }
+
+    /** Places one started run after the stage that started it, links them, and follows what it started. */
+    private void attach(Placed placed, Stage from, String holder, DownstreamRuns.Started started, int depth) {
+        Job<?, ?> job = jobNamed(started.jobFullName());
+        if (job == null) {
+            return;
+        }
+        Placed next;
+        Run<?, ?> startedRun = started.buildNumber() == null ? null : job.getBuildByNumber(started.buildNumber());
+        if (startedRun != null) {
+            if (!visited.add(startedRun.getExternalizableId())) {
                 return;
             }
-            Job<?, ?> job = jobNamed(started.jobFullName());
-            if (job == null) {
-                continue;
+            List<Stage> stages = stagesOf(startedRun);
+            if (stages.isEmpty()) {
+                return;
             }
-            Stage from = stageOf(placed, started.flowNodeId());
-            Placed next;
-            Run<?, ?> startedRun = started.buildNumber() == null ? null : job.getBuildByNumber(started.buildNumber());
-            if (startedRun != null) {
-                if (!visited.add(startedRun.getExternalizableId())) {
-                    continue;
-                }
-                List<Stage> stages = stagesOf(startedRun);
-                if (stages.isEmpty()) {
-                    continue;
-                }
-                next = place(startedRun, stages, from.column() + 1, startedRun.getExternalizableId() + "/",
-                        job.getDisplayName());
-                latestEnd = Math.max(latestEnd, Math.max(endOf(startedRun), endOf(stages)));
-            } else {
-                Queue.Item item = started.buildNumber() == null && job instanceof Queue.Task task
-                        ? Jenkins.get().getQueue().getItem(task) : null;
-                if (item == null) {
-                    continue;
-                }
-                next = place(null, List.of(queuedStage(job, item)), from.column() + 1,
-                        job.getFullName() + "#queued-" + runs + "/", job.getDisplayName());
+            next = place(startedRun, stages, from.column() + 1, startedRun.getExternalizableId() + "/",
+                    job.getDisplayName());
+            latestEnd = Math.max(latestEnd, Math.max(endOf(startedRun), endOf(stages)));
+        } else {
+            Queue.Item item = started.buildNumber() == null && job instanceof Queue.Task task
+                    ? Jenkins.get().getQueue().getItem(task) : null;
+            if (item == null) {
+                return;
             }
-            runs++;
-            link(placed, from, started.flowNodeId(), firstOf(next.stages()));
-            if (startedRun != null) {
-                follow(next, depth + 1);
-            }
+            next = place(null, List.of(queuedStage(job, item)), from.column() + 1,
+                    job.getFullName() + "#queued-" + runs + "/", job.getDisplayName());
+        }
+        runs++;
+        link(placed, from, holder, firstOf(next.stages()));
+        if (startedRun != null) {
+            follow(next, depth + 1);
         }
     }
 
@@ -246,6 +293,15 @@ final class FlowChain {
             }
         }
         return List.of(buildStage(run));
+    }
+
+    /** The build a task of a chain of jobs shows, or null when it shows none. */
+    private static Run<?, ?> buildOf(Task task) {
+        if (task.buildNumber() == null || task.jobFullName() == null) {
+            return null;
+        }
+        Job<?, ?> job = jobNamed(task.jobFullName());
+        return job == null ? null : job.getBuildByNumber(task.buildNumber());
     }
 
     /**
@@ -306,8 +362,11 @@ final class FlowChain {
         return first;
     }
 
-    /** Draws the arrows from the stage, and from its task that holds the step, to the first stage of a started run. */
-    private void link(Placed placed, Stage from, String nodeId, Stage to) {
+    /**
+     * Draws the arrows from the stage, and from the task in it that holds the step or is the build that triggered
+     * the run, to the first stage of a started run.
+     */
+    private void link(Placed placed, Stage from, String holder, Stage to) {
         Stage current = from;
         int index = -1;
         for (int i = 0; i < grid.size(); i++) {
@@ -319,20 +378,20 @@ final class FlowChain {
         if (index < 0) {
             return;
         }
-        FlowNode node = nodeOf(placed.run(), nodeId);
+        FlowNode node = nodeOf(placed.run(), holder);
         List<String> enclosing = node == null ? List.of() : node.getAllEnclosingIds();
         String target = to.tasks().get(0).id();
         List<Task> tasks = new ArrayList<>(current.tasks());
-        int holder = 0;
+        int holderIndex = 0;
         for (int i = 0; i < tasks.size(); i++) {
             String raw = rawId(tasks.get(i).id(), placed.prefix());
-            if (raw.equals(nodeId) || enclosing.contains(raw)) {
-                holder = i;
+            if (raw.equals(holder) || enclosing.contains(raw)) {
+                holderIndex = i;
                 break;
             }
         }
         if (!tasks.isEmpty()) {
-            tasks.set(holder, withDownstream(tasks.get(holder), target));
+            tasks.set(holderIndex, withDownstream(tasks.get(holderIndex), target));
         }
         List<String> downstream = new ArrayList<>(current.downstream());
         downstream.add(to.id());
@@ -446,7 +505,7 @@ final class FlowChain {
         return result;
     }
 
-    /** The id without the prefix of its run: the flow node id of a Pipeline task or stage. */
+    /** The id without the prefix of its run: the flow node id of a Pipeline task or stage, the job of a chained one. */
     static String rawId(String id, String prefix) {
         return id.startsWith(prefix) ? id.substring(prefix.length()) : id;
     }

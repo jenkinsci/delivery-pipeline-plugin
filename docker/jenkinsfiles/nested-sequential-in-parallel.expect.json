@@ -5,8 +5,13 @@
       "Build": "SUCCESS"
     },
     "Test": {
-      "Linux": "SUCCESS",
-      "Windows": "SUCCESS"
+      "Linux: Compile": "SUCCESS",
+      "Linux: Unit": "SUCCESS",
+      "Windows: Compile": "SUCCESS",
+      "Windows: Unit": "SUCCESS"
     }
+  },
+  "task_count": {
+    "Test": 4
   }
 }

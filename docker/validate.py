@@ -257,6 +257,50 @@ for name, expected in zoo.items():
         status, _ = admin.post(f'{ZOO}job/{name}/{build["number"]}/stop')
         check(status in (200, 302), f'zoo/{name}: paused run stopped after the check (status {status})')
 
+# ---------------------------------------------------------------- a chain of jobs that triggers a Pipeline job
+print('== triggered pipeline')
+info = admin.json(ZOO + 'job/free-trigger/api/json?tree=builds[number],inQueue')
+if not info['builds'] and not info['inQueue']:
+    status, _ = admin.post(ZOO + 'job/free-trigger/build')
+    check(status in (200, 201), f'triggered: started free-trigger (status {status})')
+
+
+def triggered_shown():
+    components = view_json(ZOO + 'view/Triggered/')['components']
+    run = newest(components[0]) if components else None
+    deploy = stage_map(run).get('declarative-basic: Deploy') if run else None
+    return bool(deploy) and deploy['tasks'][0]['status']['type'] == 'SUCCESS'
+
+
+wait_for('the triggered Pipeline run to follow the job that triggered it', triggered_shown, timeout=600)
+trig = stage_map(newest(view_json(ZOO + 'view/Triggered/')['components'][0]))
+check(list(trig) == ['free-trigger', 'declarative-basic: Build', 'declarative-basic: Test', 'declarative-basic: Deploy'],
+      f'triggered: the Pipeline run follows the job that triggered it {list(trig)}')
+trig_ids = {s['id']: s['name'] for s in trig.values()}
+check([trig_ids.get(i, i) for i in trig['free-trigger']['downstream']] == ['declarative-basic: Build'],
+      'triggered: an arrow from the job to the run it triggered')
+check([(s['row'], s['column']) for s in trig.values()] == [(0, 0), (0, 1), (0, 2), (0, 3)],
+      f'triggered: the run continues the row {[(s["row"], s["column"]) for s in trig.values()]}')
+
+# ---------------------------------------------------------------- a multibranch project as one component
+print('== multibranch')
+status, _ = admin.post(ZOO + 'job/app/build?delay=0')
+check(status in (200, 201, 302), f'multibranch: repository scan started (status {status})')
+
+
+def branches_built():
+    jobs = admin.json(ZOO + 'job/app/api/json?tree=jobs[name,lastBuild[number,building]]').get('jobs') or []
+    return {j['name'] for j in jobs if j.get('lastBuild') and not j['lastBuild']['building']} >= {'main', 'release'}
+
+
+wait_for('the branch jobs to be created and built', branches_built, timeout=600)
+branches = view_json(ZOO + 'view/Branches/')['components']
+branch_names = [c['name'] for c in branches]
+check(branch_names == ['App / main', 'App / release'], f'multibranch: one component per branch, the primary first {branch_names}')
+check(all(not c['error'] and newest(c) for c in branches), 'multibranch: every branch component shows its run')
+check(all(newest(c) and {'Build', 'Test', 'Deploy'} <= set(stage_map(newest(c))) for c in branches),
+      'multibranch: each branch run shows its stages')
+
 # ---------------------------------------------------------------- views
 print('== views')
 views = [v for v in admin.json(DEMO + 'api/json?tree=views[name,url,_class]')['views'] if 'diabol' in v['_class']]

@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import se.diabol.jenkins.pipeline.PipelineException;
+import se.diabol.jenkins.pipeline.flow.FlowChain;
 import se.diabol.jenkins.pipeline.details.TaskDetailsContributor;
 import se.diabol.jenkins.pipeline.model.Change;
 import se.diabol.jenkins.pipeline.model.Component;
@@ -120,7 +121,7 @@ public class FreestyleComponentSource extends ComponentSource {
         for (int i = 0; i < settings.noOfPipelines() && it.hasNext(); i++) {
             AbstractBuild<?, ?> build = it.next();
             Chain chain = request.showUpstream() ? chainOf(chains, build.getProject(), last) : main;
-            pipelines.add(instance(chain, build, settings));
+            pipelines.add(FlowChain.expand(instance(chain, build, settings), settings));
         }
         return new Component(request.name(), request.index(), JobRef.of(first), paging, pipelines, null);
     }

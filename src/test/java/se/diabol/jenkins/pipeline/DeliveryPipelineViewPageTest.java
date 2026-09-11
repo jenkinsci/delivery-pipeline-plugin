@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static se.diabol.jenkins.pipeline.PageTestSupport.body;
 import static se.diabol.jenkins.pipeline.PageTestSupport.jsClient;
 import static se.diabol.jenkins.pipeline.PageTestSupport.render;
@@ -37,6 +38,7 @@ import static se.diabol.jenkins.pipeline.PageTestSupport.texts;
 import static se.diabol.jenkins.pipeline.PageTestSupport.view;
 
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.tasks.BuildTrigger;
@@ -889,6 +891,97 @@ class DeliveryPipelineViewPageTest {
             assertThat(page.querySelectorAll(".pipeline-aggregated .stage-task.SUCCESS").size(), is(1));
             assertThat("the newest run itself is shown below the aggregated row, with its one stage",
                     texts(page, ".pipeline:not(.pipeline-aggregated) .stage-name"), contains("Build"));
+        }
+    }
+
+    @Test
+    void stagesNestedInsideBranchStagesAreTasksNamedAfterBoth() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "deep");
+        flow.setDefinition(new CpsFlowDefinition(String.join("\n",
+                "pipeline {",
+                "  agent any",
+                "  stages {",
+                "    stage('Test') {",
+                "      parallel {",
+                "        stage('Linux') {",
+                "          stages {",
+                "            stage('Compile') { steps { echo 'c' } }",
+                "            stage('Unit') { steps { echo 'u' } }",
+                "          }",
+                "        }",
+                "        stage('Windows') {",
+                "          stages {",
+                "            stage('Compile') { steps { echo 'c' } }",
+                "            stage('Unit') { steps { echo 'u' } }",
+                "          }",
+                "        }",
+                "      }",
+                "    }",
+                "  }",
+                "}"), true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = view(jenkins, "Deep", "deep");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(page.querySelectorAll(".stage").size(), is(1));
+            assertThat("the innermost stages are the tasks, named after the branch stage and themselves",
+                    taskNames(page), containsInAnyOrder("Linux: Compile", "Linux: Unit", "Windows: Compile", "Windows: Unit"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(4));
+        }
+    }
+
+    @Test
+    void parallelBranchesOfARunWithoutStagesAreItsTasks() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "branchy");
+        flow.setDefinition(new CpsFlowDefinition("node { parallel a: { echo 'a' }, b: { echo 'b' } }", true));
+        jenkins.buildAndAssertSuccess(flow);
+        DeliveryPipelineView view = view(jenkins, "Branchy", "branchy");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat(texts(page, ".stage-name"), contains("branchy"));
+            assertThat("the branches of a run without stages are the tasks of its one stage",
+                    taskNames(page), contains("a", "b"));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(2));
+        }
+    }
+
+    @Test
+    void folderComponentShowsOnePipelinePerJobInsideIt() throws Exception {
+        Folder apps = jenkins.getInstance().createProject(Folder.class, "apps");
+        for (String name : List.of("two", "one")) {
+            WorkflowJob job = apps.createProject(WorkflowJob.class, name);
+            job.setDefinition(new CpsFlowDefinition("node { stage('Build') { echo 'b' } }", true));
+            jenkins.buildAndAssertSuccess(job);
+        }
+        DeliveryPipelineView view = view(jenkins, "Apps", "apps");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat("one component per job inside the folder, by name",
+                    texts(page, "h1.pipeline-title"), contains(startsWith("Apps / one"), startsWith("Apps / two")));
+            assertThat(page.querySelectorAll(".stage-task.SUCCESS").size(), is(2));
+            String json = body(jenkins, client, view.getViewUrl() + "api/json");
+            assertThat(json, containsString("\"name\":\"Apps / one\""));
+        }
+    }
+
+    @Test
+    void chainOfJobsFollowsIntoThePipelineJobItTriggers() throws Exception {
+        WorkflowJob flow = jenkins.getInstance().createProject(WorkflowJob.class, "flow");
+        flow.setDefinition(new CpsFlowDefinition("node { stage('Deploy') { echo 'd' } }", true));
+        FreeStyleProject trig = jenkins.createFreeStyleProject("trig");
+        trig.getPublishersList().add(new BuildTrigger("flow", Result.SUCCESS));
+        jenkins.getInstance().rebuildDependencyGraph();
+        jenkins.buildAndAssertSuccess(trig);
+        jenkins.waitUntilNoActivity();
+        assertThat("the core build trigger started the Pipeline job", flow.getLastBuild(), notNullValue());
+        DeliveryPipelineView view = view(jenkins, "Trig", "trig");
+        try (JenkinsRule.WebClient client = jsClient(jenkins)) {
+            HtmlPage page = render(jenkins, client, view.getViewUrl());
+            assertThat("the triggered run follows the job that triggered it, on the same row",
+                    texts(page, ".stage-name"), contains("trig", "flow: Deploy"));
+            assertThat(taskNames(page), contains("trig", "Deploy"));
+            assertThat(page.querySelectorAll("path.relation").size(), is(1));
+            assertThat(hrefOfTask(page, "Deploy"), endsWith("/job/flow/1/"));
         }
     }
 

@@ -24,7 +24,9 @@ import hudson.model.Api;
 import hudson.model.Descriptor;
 import hudson.model.Describable;
 import hudson.model.Item;
+import hudson.Functions;
 import hudson.model.ItemGroup;
+import hudson.model.Items;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
@@ -40,6 +42,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,6 +85,9 @@ public class DeliveryPipelineView extends View {
 
     private List<ComponentSpec> componentSpecs;
     private List<RegExpSpec> regexpFirstJobs;
+
+    /** The action the SCM API puts on the primary branch of a multibranch project. */
+    private static final String PRIMARY_BRANCH_ACTION = "jenkins.scm.api.metadata.PrimaryInstanceMetadataAction";
     private int noOfPipelines = DEFAULT_NO_OF_PIPELINES;
     private int noOfColumns = 1;
     private String sorting = Sorting.NONE.getId();
@@ -354,6 +360,19 @@ public class DeliveryPipelineView extends View {
         ViewSettings settings = getSettings();
         int index = 1;
         for (ComponentSpec spec : getComponentSpecs()) {
+            ItemGroup<?> group = findJob(spec.getFirstJob()) == null ? findGroup(spec.getFirstJob()) : null;
+            if (group != null) {
+                List<Job<?, ?>> jobs = jobsOf(group);
+                if (jobs.isEmpty()) {
+                    components.add(Component.failed(spec.getName(), index++, "No jobs in " + spec.getFirstJob() + " yet"));
+                }
+                for (Job<?, ?> job : jobs) {
+                    components.add(resolve(spec.getName() + " / " + Functions.getRelativeDisplayNameFrom(job, group), job,
+                            null, spec.isShowUpstream(), index, index == pagedComponent ? page : 1, paging, settings));
+                    index++;
+                }
+                continue;
+            }
             components.add(resolve(spec.getName(), spec.getFirstJob(), spec.getLastJob(), spec.isShowUpstream(),
                     index, index == pagedComponent ? page : 1, paging, settings));
             index++;
@@ -409,6 +428,42 @@ public class DeliveryPipelineView extends View {
         }
         ItemGroup<?> context = getOwnerItemGroup();
         return Jenkins.get().getItem(name.trim(), context == null ? Jenkins.get() : context, Job.class);
+    }
+
+    /**
+     * The multibranch project or folder with the given name relative to the view's item group, or null. Such a
+     * component becomes one pipeline per job inside the group.
+     */
+    ItemGroup<?> findGroup(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        ItemGroup<?> context = getOwnerItemGroup();
+        Item item = Jenkins.get().getItem(name.trim(), context == null ? Jenkins.get() : context, Item.class);
+        return item instanceof ItemGroup<?> group ? group : null;
+    }
+
+    /** The jobs a pipeline can start at inside the group: the primary branch of a multibranch project first, then by name. */
+    static List<Job<?, ?>> jobsOf(ItemGroup<?> group) {
+        List<Job<?, ?>> result = new ArrayList<>();
+        for (Job<?, ?> job : Items.getAllItems(group, Job.class)) {
+            if (isPipelineStart(job)) {
+                result.add(job);
+            }
+        }
+        result.sort(Comparator.comparing((Job<?, ?> job) -> !isPrimaryBranch(job))
+                .thenComparing(job -> Functions.getRelativeDisplayNameFrom(job, group), String.CASE_INSENSITIVE_ORDER));
+        return result;
+    }
+
+    /** Whether the job is the primary branch of its multibranch project, as the SCM API marks it. */
+    private static boolean isPrimaryBranch(Job<?, ?> job) {
+        for (hudson.model.Action action : job.getAllActions()) {
+            if (PRIMARY_BRANCH_ACTION.equals(action.getClass().getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Jobs whose full name matches the expression, keyed by its first capture group, in item order. */
@@ -523,7 +578,22 @@ public class DeliveryPipelineView extends View {
     public Collection<TopLevelItem> getItems() {
         Set<TopLevelItem> items = new LinkedHashSet<>();
         for (ComponentSpec spec : getComponentSpecs()) {
-            addJobs(items, findJob(spec.getFirstJob()), findJob(spec.getLastJob()));
+            Job<?, ?> first = findJob(spec.getFirstJob());
+            if (first != null) {
+                addJobs(items, first, findJob(spec.getLastJob()));
+                continue;
+            }
+            ItemGroup<?> group = findGroup(spec.getFirstJob());
+            if (group instanceof TopLevelItem groupItem) {
+                items.add(groupItem);
+            }
+            if (group != null) {
+                for (Job<?, ?> job : jobsOf(group)) {
+                    if (job instanceof TopLevelItem jobItem) {
+                        items.add(jobItem);
+                    }
+                }
+            }
         }
         for (RegExpSpec spec : getRegexpFirstJobs()) {
             for (Job<?, ?> job : matches(spec.getRegexp()).values()) {
@@ -735,6 +805,12 @@ public class DeliveryPipelineView extends View {
                 for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
                     if (isPipelineStart(job)) {
                         options.add(job.getFullDisplayName(), job.getRelativeNameFrom(context));
+                    }
+                }
+                // a multibranch project or a folder: one pipeline per job inside it
+                for (Item item : Jenkins.get().getAllItems(Item.class)) {
+                    if (item instanceof ItemGroup<?> group && !(item instanceof Job) && !jobsOf(group).isEmpty()) {
+                        options.add(item.getFullDisplayName() + " (every job in it)", item.getRelativeNameFrom(context));
                     }
                 }
                 return options;

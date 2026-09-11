@@ -1,4 +1,4 @@
-// Declarative: sequential stages nested inside parallel branches; the branches are the tasks
+// Declarative: sequential stages nested inside parallel branches; the innermost stages are the tasks, named after both
 pipeline {
   agent any
   stages {

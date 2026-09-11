@@ -71,33 +71,38 @@ final class FlowStages {
             stages.add(new Stage(stageStart.getId(), timing.name(), 0, i, null, tasks, downstream));
         }
         if (stages.isEmpty()) {
-            stages.add(wholeRun(run, previous));
+            stages.add(wholeRun(run, allNodes, previous, restartable, console));
         }
         return stages;
     }
 
     /**
-     * A run without stages, as a scripted Pipeline of plain steps is, shown as one task named after its job, the way
-     * a chained job without a stage name is; it carries the run's status, its test results and its link. A run that
-     * is still starting when the previous run had stages is shown as starting instead: its stages are yet to come.
+     * A run without stages, as a scripted Pipeline of plain steps is, shown as one stage named after its job whose
+     * tasks are the run's parallel branches, or else the run itself as one task the way a chained job without a
+     * stage name is, with the run's status, its test results and its link. A run that is still starting when the
+     * previous run had stages is shown as starting instead: its stages are yet to come.
      */
-    private static Stage wholeRun(WorkflowRun run, FlowRuns.Analysis previous) {
+    private static Stage wholeRun(WorkflowRun run, List<FlowNode> allNodes, FlowRuns.Analysis previous,
+                                  Set<String> restartable, String console) {
         WorkflowJob job = run.getParent();
-        Task task;
         if (run.isBuilding() && previous != null && !previous.pipeline().stages().isEmpty()) {
-            task = new Task("starting", "Starting", run.getUrl(), job.getFullName(), run.getNumber(),
+            Task starting = new Task("starting", "Starting", run.getUrl(), job.getFullName(), run.getNumber(),
                     Status.running(run.getTimeInMillis(), run.getEstimatedDuration()), null, false, null, false, null,
                     null, List.of(), List.of(), List.of(), List.of());
-        } else {
+            return new Stage("starting", job.getDisplayName(), 0, 0, null, List.of(starting), List.of());
+        }
+        List<Task> tasks = allNodes.isEmpty() ? new ArrayList<>()
+                : nestedTasks(run, allNodes.get(0), allNodes, allNodes, previous, restartable, console);
+        if (tasks.isEmpty()) {
             Status status = runStatus(run);
             boolean requiresInput = status.type() == StatusType.PAUSED_PENDING_INPUT;
-            task = new Task("run", job.getDisplayName(),
+            tasks.add(new Task("run", job.getDisplayName(),
                     taskUrl(run.getUrl(), null, null, status.type() == StatusType.RUNNING), job.getFullName(),
                     run.getNumber(), status, null, false, null, requiresInput,
                     requiresInput ? inputUrlOf(run, "run") : null, null, TaskDetailsContributor.testsOf(run),
-                    List.of(), List.of(), List.of());
+                    List.of(), List.of(), List.of()));
         }
-        return new Stage(task.id(), job.getDisplayName(), 0, 0, null, List.of(task), List.of());
+        return new Stage("run", job.getDisplayName(), 0, 0, null, tasks, List.of());
     }
 
     /** The status of a run as a whole: waiting at an input step, running, or finished with its result. */
@@ -110,13 +115,13 @@ final class FlowStages {
 
     /**
      * Declarative and scripted Pipelines nest stages (sequential or inside parallel branches) and parallel branches
-     * inside a stage. Each stage that sits directly in the stage becomes a task; if there are none, each block of
-     * the deprecated {@code task} step does, and failing that each parallel branch that sits directly in the stage.
+     * inside a stage. Each innermost stage nested in the stage becomes a task; if there are none, each block of the
+     * deprecated {@code task} step does, and failing that each parallel branch, down to the innermost.
      */
     private static List<Task> nestedTasks(WorkflowRun run, FlowNode stageStart, List<FlowNode> nodes,
                                           List<FlowNode> allNodes, FlowRuns.Analysis previous,
                                           Set<String> restartable, String console) {
-        List<BlockStartNode> blocks = FlowGraph.directChildren(nodes, stageStart, FlowGraph::isStage);
+        List<BlockStartNode> blocks = leafStages(nodes, stageStart);
         if (blocks.isEmpty()) {
             blocks = FlowGraph.directChildren(nodes, stageStart, FlowGraph::isTaskStep);
         }
@@ -130,10 +135,33 @@ final class FlowStages {
             FlowRuns.StageTiming timing = FlowRuns.timingOf(run, block, last, FlowGraph.nodeAfter(allNodes, last));
             ThreadNameAction branch = block.getAction(ThreadNameAction.class);
             String name = branch != null && !FlowGraph.isStage(block) ? branch.getThreadName() : block.getDisplayName();
-            result.add(task(run, block, cellName(taskName(block, name)), timing, previous, stageStart.getDisplayName(),
-                    restartable, console));
+            result.add(task(run, block, cellName(taskName(block, name, stageStart)), timing, previous,
+                    stageStart.getDisplayName(), restartable, console));
         }
         return result;
+    }
+
+    /**
+     * The stages nested in the block, down to the innermost: a stage that holds other stages is shown as those, so
+     * that sequential stages inside a parallel branch each get a task. A matrix cell stays one task: its stages are
+     * the same for every cell, and the cell is what tells one combination from another.
+     */
+    private static List<BlockStartNode> leafStages(List<FlowNode> nodes, FlowNode block) {
+        List<BlockStartNode> result = new ArrayList<>();
+        for (BlockStartNode stage : FlowGraph.directChildren(nodes, block, FlowGraph::isStage)) {
+            List<BlockStartNode> inner = isMatrixCell(stage)
+                    ? List.of() : leafStages(FlowGraph.enclosedBy(nodes, stage), stage);
+            if (inner.isEmpty()) {
+                result.add(stage);
+            } else {
+                result.addAll(inner);
+            }
+        }
+        return result;
+    }
+
+    private static boolean isMatrixCell(FlowNode stage) {
+        return stage.getDisplayName().startsWith("Matrix - ");
     }
 
     /**
@@ -154,26 +182,38 @@ final class FlowStages {
     }
 
     /**
-     * A stage inside a parallel branch of another name, as scripted Pipelines write them, or a branch of a parallel
-     * nested inside a branch, is shown as "branch: name": every branch enclosing it below the stage adds its name,
-     * outermost first, so that two branches with the same stages stay apart. Declarative names a branch after the
-     * stage it wraps, and those keep the plain name.
+     * The name of a task: its own, prefixed with the names of the stages and parallel branches between it and its
+     * top-level stage, outermost first, as "linux: Compile" for a stage inside a scripted branch or "Linux: Unit"
+     * for a stage nested in a stage inside a Declarative branch, so that the same stage in two branches stays
+     * apart. A branch that Declarative names after the stage it wraps adds nothing, and a block of the deprecated
+     * task step keeps its own name.
      */
-    private static String taskName(FlowNode block, String name) {
+    private static String taskName(FlowNode block, String name, FlowNode stageStart) {
         if (!FlowGraph.isStage(block) && !FlowGraph.isBranch(block)) {
             return name;
         }
         String result = name;
+        String innermost = name;
         for (BlockStartNode enclosing : block.getEnclosingBlocks()) {
-            if (FlowGraph.isStage(enclosing)) {
+            if (enclosing.getId().equals(stageStart.getId())) {
                 break;
             }
-            ThreadNameAction branch = enclosing.getAction(ThreadNameAction.class);
-            if (branch != null && !branch.getThreadName().equals(name)) {
-                result = branch.getThreadName() + ": " + result;
+            String label = labelOf(enclosing);
+            if (label != null && !label.equals(innermost)) {
+                result = label + ": " + result;
+                innermost = label;
             }
         }
         return result;
+    }
+
+    /** The name a stage or a parallel branch lends to the tasks inside it; null for any other block. */
+    private static String labelOf(BlockStartNode block) {
+        if (FlowGraph.isStage(block)) {
+            return block.getDisplayName();
+        }
+        ThreadNameAction branch = block.getAction(ThreadNameAction.class);
+        return branch == null ? null : branch.getThreadName();
     }
 
     /** Declarative names every cell of a matrix "Matrix - OS = 'linux', ..."; the axes alone say what the cell is. */
