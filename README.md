@@ -6,7 +6,7 @@ Delivery Pipeline Plugin
   <img alt="Delivery Pipeline plugin for Jenkins" src="docs/dpp_logo.png" width="846">
 </picture>
 
-[![Build Status](https://ci.jenkins.io/job/Plugins/job/delivery-pipeline-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/delivery-pipeline-plugin/job/master/)
+[![docker-suite](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml/badge.svg?branch=rewrite-2.0)](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml)
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/delivery-pipeline-plugin.svg)](https://plugins.jenkins.io/delivery-pipeline-plugin/)
 
 The Delivery Pipeline plugin visualises delivery pipelines in Jenkins: chains of jobs with upstream/downstream
