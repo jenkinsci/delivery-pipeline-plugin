@@ -1,0 +1,12 @@
+{
+  "result": "FAILURE",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    }
+  },
+  "stage_status": {
+    "Build": "SUCCESS"
+  },
+  "run_status": "FAILED"
+}

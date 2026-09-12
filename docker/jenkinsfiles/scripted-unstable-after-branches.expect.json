@@ -1,0 +1,13 @@
+{
+  "result": "UNSTABLE",
+  "stages": {
+    "Test": {
+      "a": "SUCCESS",
+      "b": "SUCCESS"
+    }
+  },
+  "stage_status": {
+    "Test": "UNSTABLE"
+  },
+  "run_status": "UNSTABLE"
+}

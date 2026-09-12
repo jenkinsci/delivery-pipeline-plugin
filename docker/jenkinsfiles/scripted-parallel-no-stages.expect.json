@@ -1,0 +1,12 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "scripted-parallel-no-stages": {
+      "a": "SUCCESS",
+      "b": "SUCCESS"
+    }
+  },
+  "task_count": {
+    "scripted-parallel-no-stages": 2
+  }
+}

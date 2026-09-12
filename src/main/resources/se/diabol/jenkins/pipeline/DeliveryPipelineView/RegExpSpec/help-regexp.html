@@ -1,4 +1,1 @@
-<div>
-    Find jenkins job matching regular expression<br/>
-    ^build-(.+?)-project
-</div>
+<div>A regular expression matched against the full names of all jobs that can start a pipeline. Every match becomes a component, named by the expression's one capture group, for example <code>^(.*)-build$</code>. The jobs inside a multibranch project are its branches, so <code>app/(.*)</code> gives one component per branch of <code>app</code>.</div>

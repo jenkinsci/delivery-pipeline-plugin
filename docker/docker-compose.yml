@@ -1,0 +1,55 @@
+# docker/run.sh build     compiles the plugin in a container and builds the test controller image
+# docker/run.sh up        starts the controller;  docker/run.sh validate / screenshots / down
+services:
+  # Maven and a JDK for building the plugin, so that nothing but Docker is needed on the machine. The checkout is
+  # mounted, so target/delivery-pipeline-plugin.hpi ends up in it; the Maven repository is cached in docker/.m2.
+  build:
+    image: maven:3.9-eclipse-temurin-21
+    profiles: ["build"]
+    working_dir: /workspace
+    user: "${DPP_UID:-0}:${DPP_GID:-0}"
+    environment:
+      HOME: /var/maven
+      MAVEN_CONFIG: /var/maven/.m2
+      MAVEN_OPTS: -Duser.home=/var/maven
+    volumes:
+      - ..:/workspace
+      - ${MAVEN_REPO:-./.m2}:/var/maven/.m2
+    command: ["mvn", "-B", "-ntp", "-DskipTests", "package"]
+
+  jenkins:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        JENKINS_VERSION: ${JENKINS_VERSION:-2.568.3}
+    image: delivery-pipeline-plugin-test:latest
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      VIEWER_PASSWORD: ${VIEWER_PASSWORD:-viewer}
+      PERF_CHAINS: ${PERF_CHAINS:-20}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+  # docker compose -f docker/docker-compose.yml run --rm screenshots   -> docker/out/*.png
+  screenshots:
+    image: mcr.microsoft.com/playwright/python:v1.59.0-noble
+    profiles: ["screenshots"]
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_USER: admin
+      JENKINS_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./screenshots.py:/work/screenshots.py:ro
+      - ./out:/out
+    # the image ships the browsers; the Python package is installed at start (pinned to the image's version)
+    command: ["sh", "-c", "pip install -q --break-system-packages playwright==1.59.0 && python3 /work/screenshots.py"]

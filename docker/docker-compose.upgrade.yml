@@ -1,0 +1,28 @@
+# Overlay for docker/upgrade.sh: a controller with Delivery Pipeline 1.4.2 and the 2.0 controller sharing one
+# Jenkins home, so that what 1.4.2 wrote is what 2.0 has to load.
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.upgrade.yml ...
+services:
+  jenkins-legacy:
+    build:
+      context: ..
+      dockerfile: docker/upgrade/Dockerfile
+      args:
+        JENKINS_VERSION: ${JENKINS_VERSION:-2.568.3}
+    image: delivery-pipeline-plugin-legacy:latest
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    volumes:
+      - dpp-upgrade-home:/var/jenkins_home
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+  jenkins:
+    volumes:
+      - dpp-upgrade-home:/var/jenkins_home
+volumes:
+  dpp-upgrade-home:

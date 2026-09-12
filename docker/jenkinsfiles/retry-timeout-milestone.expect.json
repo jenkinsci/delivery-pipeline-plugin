@@ -1,0 +1,17 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Build": {
+      "Build": [
+        "SUCCESS",
+        "UNSTABLE"
+      ]
+    },
+    "Test": {
+      "Test": "SUCCESS"
+    },
+    "Deploy": {
+      "Deploy": "SUCCESS"
+    }
+  }
+}

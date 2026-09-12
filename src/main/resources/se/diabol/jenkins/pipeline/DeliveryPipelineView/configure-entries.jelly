@@ -1,122 +1,69 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
-
-    <f:section title="View settings">
-        <f:entry title="Description" field="description">
-            <f:textbox>${instance.getDescription()}</f:textbox>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:section title="${%Pipelines}">
+        <f:entry title="${%Components}">
+            <f:repeatableProperty minimum="0" field="componentSpecs" header="${%Component}" add="${%Add component}"/>
         </f:entry>
-
-        <f:entry title="Number of pipeline instances per pipeline" field="noOfPipelines">
-            <f:select/>
-        </f:entry>
-
-        <f:entry title="Display aggregated pipeline for each pipeline" field="showAggregatedPipeline">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Display aggregated changelog in aggregated view" field="showAggregatedChanges">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Group aggregated changelog by regular expression" field="aggregatedChangesGroupingPattern">
-            <f:textbox/>
-        </f:entry>
-
-        <f:entry title="Number of columns" field="noOfColumns">
-            <f:select/>
-        </f:entry>
-
-        <f:entry title="Sorting" field="sorting">
-            <f:select/>
-        </f:entry>
-
-        <f:entry title="Max number of pipelines" field="maxNumberOfVisiblePipelines" default="-1">
-            <f:textbox/>
-        </f:entry>
-
-        <f:entry title="Update interval" field="updateInterval" default="2">
-            <f:textbox/>
-        </f:entry>
-
-        <f:entry title="Enable start of new pipeline build" field="allowPipelineStart">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Enable manual triggers" field="allowManualTriggers">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Enable rebuild" field="allowRebuild">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Allow cancelling pipeline builds" field="allowAbort">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show avatars" field="showAvatars">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show commit messages" field="showChanges">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show absolute date and time" field="showAbsoluteDateTime">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show job description" field="showDescription">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show job promotions" field="showPromotions">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show test results" field="showTestResults">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show static analysis results" field="showStaticAnalysisResults">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Show total build time" field="showTotalBuildTime">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Use relative links for easier navigation" field="linkRelative">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="Use direct link to console log" field="linkToConsoleLog">
-            <f:checkbox/>
-        </f:entry>
-
-        <f:entry title="URL for custom CSS file" field="embeddedCss">
-            <f:textbox/>
-        </f:entry>
-
-        <f:entry title="URL for custom CSS file (fullscreen)" field="fullScreenCss">
-            <f:textbox/>
-        </f:entry>
-        
-        <f:entry title="Enable paging" field="pagingEnabled">
-            <f:checkbox/>
-        </f:entry>
-
-    </f:section>
-
-    <f:section title="Pipelines">
-        <f:entry title="Components">
-            <f:repeatableProperty minimum="0" field="componentSpecs" header="Component"/>
-        </f:entry>
-        <f:entry title="Regular Expression">
-            <f:repeatableProperty minimum="0" field="regexpFirstJobs" header="RegEx"/>
+        <f:entry title="${%Regular expressions}">
+            <f:repeatableProperty minimum="0" field="regexpFirstJobs" header="${%Regular expression}" add="${%Add regular expression}"/>
         </f:entry>
     </f:section>
-
-
+    <f:section title="${%Display}">
+        <f:entry title="${%Pipeline instances per component}" field="noOfPipelines">
+            <f:select/>
+        </f:entry>
+        <f:entry title="${%Show aggregated pipeline}" field="showAggregatedPipeline">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Columns}" field="noOfColumns">
+            <f:select/>
+        </f:entry>
+        <f:entry title="${%Sorting}" field="sorting">
+            <f:select/>
+        </f:entry>
+        <f:entry title="${%Maximum number of components}" field="maxNumberOfVisiblePipelines">
+            <f:number default="-1"/>
+        </f:entry>
+        <f:entry title="${%Update interval (seconds)}" field="updateInterval">
+            <f:number default="5" min="1"/>
+        </f:entry>
+        <f:entry title="${%Enable paging}" field="pagingEnabled">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show commit messages}" field="showChanges">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show task descriptions}" field="showDescription">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show total build time}" field="showTotalBuildTime">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show test results}" field="showTestResults">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show static analysis results}" field="showStaticAnalysisResults">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show promotions}" field="showPromotions">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Show absolute date and time}" field="showAbsoluteDateTime">
+            <f:checkbox/>
+        </f:entry>
+    </f:section>
+    <f:section title="${%Actions}">
+        <f:entry title="${%Allow starting a pipeline}" field="allowPipelineStart">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Allow manual triggers}" field="allowManualTriggers">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Allow rebuilding a task}" field="allowRebuild">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Allow aborting a build}" field="allowAbort">
+            <f:checkbox/>
+        </f:entry>
+    </f:section>
 </j:jelly>

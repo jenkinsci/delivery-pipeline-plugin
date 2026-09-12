@@ -1,196 +1,301 @@
 Delivery Pipeline Plugin
 ========================
 
-![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_logo.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/dpp_logo_dark.png">
+  <img alt="Delivery Pipeline plugin for Jenkins" src="docs/dpp_logo.png" width="846">
+</picture>
 
-[![Build Status](https://travis-ci.org/Diabol/delivery-pipeline-plugin.png)](https://travis-ci.org/Diabol/delivery-pipeline-plugin)
+[![docker-suite](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml/badge.svg?branch=rewrite-2.0)](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml)
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/delivery-pipeline-plugin.svg)](https://plugins.jenkins.io/delivery-pipeline-plugin/)
 
-The purpose of the Delivery Pipeline plugin is to provide visualisation of delivery/build pipelines in Jenkins. The plugin is perfect for Continuous Delivery pipeline visualisation on information radiators.
+The Delivery Pipeline plugin visualises delivery pipelines in Jenkins: chains of jobs with upstream/downstream
+dependencies, and Pipeline (Jenkinsfile) jobs. It is made for information radiators (there is a full screen page)
+and for everyday use next to the jobs.
 
-In Continuous Delivery, fast feedback and visualisation of the delivery process is one of the most important aspects. When using Jenkins as a build server it is now possible to visualise one or more delivery pipelines in the same view (even in full screen!) using the Delivery Pipeline plugin. You can install the Delivery Pipeline plugin using the Jenkins plugin management.
+Plugin documentation: [plugins.jenkins.io/delivery-pipeline-plugin](https://plugins.jenkins.io/delivery-pipeline-plugin/).
+Bugs and feature requests go to the [Jenkins issue tracker](https://issues.jenkins.io/issues/?jql=component%20%3D%20delivery-pipeline-plugin),
+component `delivery-pipeline-plugin`.
 
-Project wiki page can be found here: [Delivery Pipeline Plugin - Wiki](https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin).
+This plugin was contributed to the community by [Diabol AB](https://www.diabol.se).
 
-We use the official Jenkins [issue tracker](https://issues.jenkins-ci.org/secure/IssueNavigator.jspa?mode=hide&reset=true&jqlQuery=project+%3D+JENKINS+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27delivery-pipeline-plugin%27) for bugs, improvements and new features. Please report any issues on component [delivery-pipeline-plugin](https://issues.jenkins-ci.org/browse/JENKINS/component/18134).
+![A chain of jobs on a Delivery Pipeline view](docs/dpp_screenshot.png)
 
-This plugin has been contributed to the community by [Diabol AB](https://www.diabol.se).
+The same board follows the Jenkins dark theme:
 
+![The same chain in the dark theme](docs/dpp_screenshot_dark.png)
 
----
+A Pipeline job on the same kind of view: the newest run was restarted from its Deploy stage, so the stages before it
+were not built, and the run before it waited at an input step in its Approve stage.
 
-![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_screenshot.png)
+![A Pipeline job on a Delivery Pipeline view](docs/dpp_pipelines.png)
 
-Recent Changes
----
-- **1.5.0**: Version bump; continued modernization and dependency maintenance.
-- **Plugin modernized** — updated build tooling, POM structure, and CI configuration to current Jenkins plugin standards.
-- **Functional tests restored** — integration test suite re-enabled after prior removal.
-- **JDK 25 support** — build and CI updated to support Java 25.
-- **Dependency updates** — upgraded build-pipeline-plugin, analysis-core, build-name-setter, byte-buddy, objenesis, and commons-logging to current versions.
-- **UI fixes** — corrected missing arrow graphics and clock rendering in the pipeline view.
+![The same Pipeline job in the dark theme](docs/dpp_pipelines_dark.png)
+
+Larger boards
+-------------
+
+A wall board: the full-screen page of a board with twenty chains of eight jobs and four Pipelines, as a screen in a
+team room shows it during a deployment.
+
+![A wall board of twenty chains](docs/dpp_wallboard.png)
+
+The same board as a page, at half scale, with the aggregated row above every chain:
+
+![A large board of chains](docs/dpp_large.png)
+
+Pipeline shapes side by side, from the test suite's corpus: runs that started other runs laid out on rows with arrows
+across, a chain of freestyle jobs behind a Pipeline, nested and parallel stages:
+
+![Pipeline shapes side by side](docs/dpp_shapes.png)
+
+A chain that fans out and in again:
+
+![A chain that fans out and in](docs/dpp_diamond.png)
+
+One Pipeline run that started two jobs from one stage, each on a row of its own, and the Pipeline one of them started
+in turn:
+
+![A run that started two others](docs/dpp_chain_of_runs.png)
+
+The same boards in the dark theme: [large](docs/dpp_large_dark.png), [shapes](docs/dpp_shapes_dark.png),
+[diamond](docs/dpp_diamond_dark.png), [chain of runs](docs/dpp_chain_of_runs_dark.png).
+
+Version 2.0
+-----------
+
+2.0 is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
+scripts keep working; what changed is underneath and around them.
+
+**What stays the same**
+
+- The view type, `Delivery Pipeline View`, with the same persisted configuration. Views created by 1.x and by Job
+  DSL's `deliveryPipelineView { ... }` load unchanged.
+- The `Delivery Pipeline configuration` job property (stage name, task name, description template) and the
+  `deliveryPipelineConfiguration` Job DSL call.
+- The `Create Delivery Pipeline version` build wrapper with its `PIPELINE_VERSION` variable and token.
+- The URLs: the view page, `?fullscreen=true` for the wall board page, `?component=N&page=P` for paging.
+
+**What is new**
+
+- One view type for both kinds of pipelines. A component of a view points at the first job of a chain, or at a
+  Pipeline job. The "Delivery Pipeline View for Jenkins Pipelines" of 1.x is gone as a type; a saved one is turned
+  into a Delivery Pipeline View with the same components when Jenkins loads it.
+- Pipeline jobs are read from the run's flow graph. Every top-level stage is a stage; the innermost stages nested
+  in it, or else its parallel branches, are its tasks, so that sequential stages inside a parallel branch each get
+  a task, named "Linux: Unit" after the branch and the stage. Declarative `parallel` and `matrix` blocks render one
+  task per branch; matrix cells are named by their axes and stay one task each. A stage inside a scripted parallel
+  branch is shown as "branch: stage", so that two branches with the same stages stay apart, and a `parallel`
+  nested inside a branch shows its inner branches as tasks, named the same way. A run without any stage, as a
+  scripted Pipeline of plain steps is, is shown as its parallel branches, or else as one task named after its job,
+  the way a chained job without a stage name is. No `task` step is needed; the step of 1.x is deprecated but still
+  works, shows its block as a task as before, and prints a reminder to use a nested `stage`.
+- The view model is a set of immutable records with one documented JSON contract, served by `<view>/api/json`
+  (see `se.diabol.jenkins.pipeline.model`). The page script renders that JSON; it uses no third-party libraries
+  and no page globals, works under a Content-Security-Policy and follows the Jenkins theme, dark themes included.
+- Computed models are cached for a short while and dropped whenever a build starts, ends or is deleted, the queue
+  changes or a job is reconfigured, so many wall boards polling the same view cost little more than one.
+- Actions the page posts (start, manual trigger, rebuild, abort, proceed input) are checked on the server against the
+  view's settings and the user's permissions; buttons only appear for users who may use them.
+- Task descriptions are rendered through the markup formatter configured for Jenkins, exactly like job
+  descriptions. To use HTML in description templates, configure a formatter that allows it (for example the
+  OWASP Markup Formatter plugin with "Safe HTML").
+- Stages are laid out by the longest path from the first stage, so arrows always point to the right.
+- Pipeline runs can be run again with the same parameters from the button next to the run's heading. Declarative
+  runs can also be restarted from any of their stages, from the button of the stage's task, through the "Restart
+  from Stage" feature of the Pipeline: Declarative plugin when it is installed.
+- Test results recorded by a `junit` step inside a stage or a parallel branch show on that task. Warnings Next
+  Generation results of a Pipeline run belong to the run as a whole and show under the run's heading.
+- Only the stages a Jenkinsfile declares are shown; the stages Declarative Pipeline generates around them
+  ("Declarative: Checkout SCM", "Post Actions", "Tool Install") are left out, and test results recorded there, or
+  anywhere outside the tasks shown, are listed under the run's heading. A run waiting in the queue is shown before it
+  starts, laid out like the previous run. A task waiting at an input step with parameters links to the input page,
+  since only that page can collect them; one without parameters is proceeded from the view.
+- When the Pipeline Graph View plugin is installed (it is one of the plugins a fresh Jenkins suggests), every stage,
+  nested stage and parallel branch links to its own log in that plugin's console page. Without it, a running stage
+  links to the run's console and a finished one to the run.
+- A Pipeline that starts other jobs with the `build` step shows the runs it started as part of the same pipeline:
+  their stages follow the stage that started them, named "job: stage", on the first row with room, with an arrow
+  from that stage, and the runs they start in turn follow them. A started job that is not a Pipeline brings the
+  chain of jobs downstream of it, laid out as a component of that job would show it. A chained job that triggers a
+  Pipeline job, through the core build trigger, the Parameterized Trigger plugin or the Pipeline job's own "build
+  after other projects" trigger, is followed into that run the same way, in components of chained jobs too, so
+  chains of jobs and Pipeline runs mix freely. A run still waiting in the queue is a queued task; one cancelled
+  before it started is left out. The `build` step part needs the
+  Pipeline: Build Step plugin, part of the suggested set, at version 539 (December 2023) or newer, which records the
+  started runs; with an older one the runs stay separate. As with chains of jobs, everyone who can see the view sees
+  every job the chain reaches; acting on one still needs the permission on that job.
+- The aggregated row, in which every stage shows the latest version that reached it, is drawn for Pipeline
+  components too. It is laid out like the newest run that completed its stages, since a failed scripted run stops at
+  the failing stage, and each stage shows the newest run in which it ran, with that run's display name as the
+  version.
+- Every stage and every run carries its own status too. When a stage's own steps fail or go unstable outside its
+  tasks, as a `junit` step after the branches or a stage's `post` section does, the stage header shows it; when a
+  run fails outside its stages, its heading says so. A board no longer shows all green for an unstable run.
+- A *Delivery Pipeline manual step* post-build action of its own, so manual steps no longer need the Build
+  Pipeline plugin.
+- The required dependencies are plugins a fresh Jenkins installs with its suggested set (Pipeline: Job,
+  Pipeline: API, Pipeline: Input Step, JUnit, Token Macro, Structs) plus Pipeline Graph Analysis, the small library
+  that reads stage status and timing from a run's flow graph; the plugin manager installs it alongside. Everything
+  else is optional and activates when the plugin is present: Build Pipeline (manual triggers), Promoted Builds
+  (promotions, promotion-triggered jobs), Warnings Next Generation (static analysis results), Parameterized Trigger
+  (blocking sub-projects, Pipeline jobs it triggers), Pipeline: Declarative (restart from stage), Pipeline Graph View (a log per stage),
+  Pipeline: Build Step (the runs a `build` step started, as a chain).
+
+A component can also name a multibranch project, or any folder: it becomes one pipeline per job inside, named
+"component / branch", the primary branch first. A regular expression such as `app/(.*)` still picks branches by name.
+
+**What was removed** (settings of 1.x that 2.0 ignores when loading an old view)
+
+- Custom CSS URLs (`embeddedCss`, `fullScreenCss`) and themes: the view follows the Jenkins theme instead.
+- `showAvatars`, `linkRelative` and `linkToConsoleLog`: links are always relative to the Jenkins root and running
+  tasks always link to their console.
+- The aggregated change log (`showAggregatedChanges`, `aggregatedChangesGroupingPattern`).
+- The Dashboard View portlet.
 
 Requirements
----
-Delivery Pipeline plugin 1.5.0 and later requires Java 11 and Jenkins core 2.541.2 or later (Java 25 supported for plugin development).
+------------
 
-Delivery Pipeline plugin 1.4.0 and later requires Java 8 and Jenkins core 2.164 or later (Java 11 required for plugin development).
+Delivery Pipeline plugin 2.0 requires Jenkins 2.555.3 or later and Java 21.
 
-Delivery Pipeline plugin 1.3.0 and later requires Java 8 and Jenkins core 2.73.3 or later.
+Delivery Pipeline plugin 1.5 and 1.6 require Java 17 and Jenkins 2.541.2 or later; 1.4.0 and later require Java 8
+and Jenkins 2.164 or later.
 
-Delivery Pipeline plugin 1.2.0 and later requires Java 8 and Jenkins core 2.62 or later.
+Configuring a view
+------------------
 
-Delivery Pipeline plugin 1.1.0 and later requires Java 8 and Jenkins core 1.642.3 or later.
+Create a view of type `Delivery Pipeline View`. Under *Pipelines*, add a component per pipeline: a name and the
+initial job. For a chain of jobs the view follows the downstream dependencies of the initial job (build triggers,
+parameterized triggers, promotions); an optional final job stops the chain there. Alternatively a regular expression
+over job names creates one component per match, named by the expression's capture group.
 
-Delivery Pipeline plugin 1.0.0 and later requires Java 7 and Jenkins core 1.642.3 or later.
+Jobs are grouped into stages by the *Delivery Pipeline configuration* property of each job: jobs with the same
+stage name share a stage, and the task name is what the job's box says. Without the property, the job's display name
+is used for both.
 
-Delivery Pipeline plugin 0.10.3 requires Java 6 and Jenkins core 1.565 or later.
+The *Display* and *Actions* sections control what the view shows (aggregated pipeline, change log, descriptions,
+test results, static analysis results, promotions, total build time, paging, columns, sorting) and what the page
+lets users do (start a pipeline, trigger manual steps, rebuild a task, abort a build).
+
+The same options are available from Job DSL:
+
+```groovy
+deliveryPipelineView('Ancestry') {
+    pipelineInstances(4)
+    showAggregatedPipeline()
+    enablePaging()
+    showChangeLog()
+    showDescription()
+    showTotalBuildTime()
+    allowPipelineStart()
+    allowRebuild()
+    enableManualTriggers()
+    updateInterval(45)
+    pipelines {
+        component('Ancestry', 'Ancestry_Automated/build')
+    }
+}
+```
+
+Job names may be full names, as above, or relative to the view's folder; the configuration form keeps them as
+they are stored.
+
+Manually triggered tasks
+------------------------
+
+Add the *Delivery Pipeline manual step* post-build action to a job and list the jobs a person starts by hand. They
+show up downstream of the job in the view, nothing starts them automatically, and with *Allow manual triggers*
+enabled each one gets a play button once the upstream build has finished, for users who may build it. The build
+that is started gets the upstream build's parameters where the job defines them, the job's defaults for the rest,
+and belongs to the same pipeline instance. From Job DSL:
+
+```groovy
+job('build') {
+    publishers {
+        deliveryPipelineManualStep {
+            downstreamProjectNames('deploy_staging, deploy_production')
+        }
+    }
+}
+```
+
+Jobs listed in the [Build Pipeline plugin](https://plugins.jenkins.io/build-pipeline-plugin/)'s *Build other
+projects (manual step)* action are recognised in the same way when that plugin is installed. Pipeline runs waiting
+at an `input` step show a button that lets them proceed.
+
+The JSON API
+------------
+
+`<view>/api/json` returns the components with their pipelines, stages and tasks, plus the view's settings. The
+contract is documented in the `se.diabol.jenkins.pipeline.model` package. Timestamps are epoch milliseconds,
+durations are milliseconds and URLs are relative to the Jenkins root. The page polls this endpoint every
+*update interval* seconds.
+
+Performance and caching
+-----------------------
+
+Computing a view means walking the build history of every job in its pipelines, or the flow graph of every run
+of a Pipeline job. The plugin does that once per view and page, keeps the result in memory, and serves it to
+every browser that polls the view; only the per-user facts (whether the buttons may be shown) are added when the
+JSON is written. Each cached model remembers the jobs it shows: when a build of one of them starts, ends or is
+deleted, or one of them enters or leaves the queue, only the models showing that job are dropped, so a busy
+controller does not recompute every board on every event. A job being created, reconfigured, renamed or deleted
+empties the cache, because that can change which jobs belong to which pipeline. Between events an entry is served
+for a limited time:
+
+| System property | Default | Applies to |
+|---|---|---|
+| `se.diabol.jenkins.pipeline.cache.ModelCache.idleSeconds` | 30 | a view in which nothing is running or queued |
+| `se.diabol.jenkins.pipeline.cache.ModelCache.activeSeconds` | 2 | a view with a running or queued build |
+
+The active limit bounds how stale a progress bar or the stages of a running Pipeline can be, because stages come
+and go without any of the events above. The idle limit only matters for a controller where builds are rare and the
+views are large. Zero turns the cache off, which is useful when measuring.
+
+Set the properties at startup with the Java options of the controller, for example
+`-Dse.diabol.jenkins.pipeline.cache.ModelCache.activeSeconds=5`, or change them at runtime from the script console
+with `System.setProperty(...)`: they are read on every request. Raise `activeSeconds` when many wall boards show
+Pipeline jobs that run for a long time; raise `idleSeconds` when large chains of jobs are shown on many screens and
+builds are rare. The *update interval* of each view is the other knob: polls that arrive within the cached time
+cost almost nothing, so a short interval is fine as long as the limits above fit the controller.
+
+The JSON itself is exported once per model and viewer and kept with the cached model, and every response carries an
+ETag made of the model's version and the viewer. The page sends it back on the next poll, and a poll that finds the
+model unchanged is answered with 304 Not Modified and no body, so a quiet board costs a header exchange per poll and
+a busy one costs one export per model and viewer however many screens watch it. Only `serverTime` is written afresh
+into every response. Requests with Stapler's `tree`, `depth`, `pretty` or `xpath` parameters are exported on the spot.
+
+To see what a view costs, time `<view>/api/json` twice: the first answer after an event is the computation, the
+second one is the cache. On a controller with views of several hundred tasks the first takes a few seconds and
+the second a fraction of one.
+
+Finished Pipeline runs are analysed once and remembered separately until they are deleted, so a Pipeline job with
+a long history costs the flow graph walk only for the runs that are still going on.
 
 Building the project
----
-Requires Java 11, Apache Maven 3.3.x or later.
+--------------------
 
-    mvn clean install
+Only Docker is needed. Maven and the JDK run in a container, with the Maven repository cached in `docker/.m2`:
 
-The project contains a rigorous test suite which takes some time to run. If you just want to build the project for the first time, you can shortcut it by running:
+    docker/run.sh build        # target/delivery-pipeline-plugin.hpi, ready to upload to a controller
+    docker/run.sh test         # the test suite and SpotBugs (mvn verify) in the container
+    docker/run.sh mvn hpi:run  # any other Maven command, here a local Jenkins with the plugin
 
-    mvn clean install -DskipTests
+The test suite renders the view in HtmlUnit with JavaScript enabled and takes a few minutes. With Java 21 and
+Maven 3.9 installed, `mvn clean verify` works as usual, and `LOCAL_MAVEN=1 docker/run.sh ...` uses that Maven.
 
-Run locally
----
-During development you can easily start a local Jenkins instance with the Delivery Pipeline plugin installed based on your current source code revision.
-Build the project using the step mentioned above and run:
+Testing against a real controller
+---------------------------------
 
-    mvn hpi:run
+The suite also carries a *Jenkinsfile zoo* in `docker/jenkinsfiles/`: one Pipeline script per shape (nested and
+parallel stages, a matrix, skipped and failed stages, retries, an input with parameters, a Pipeline starting another),
+each with the stages, tasks and statuses the view must show. Add a script and its expectations to cover a new shape.
 
-This will start a local Jenkins with the Delivery Pipeline plugin installed. It will by default be available at http://localhost:8080/jenkins.
+    docker/run.sh all
 
-Bootstrap your local Jenkins with jobs
----
-To bootstrap your local Jenkins instance with jobs, you can use the provided [examples](https://github.com/Diabol/delivery-pipeline-plugin/blob/master/examples/).
-
-You would need to have [Jenkins Job Builder](https://docs.openstack.org/infra/jenkins-job-builder/) (JJB) or [JobDSL](https://github.com/jenkinsci/job-dsl-plugin) available in order to use them. To use the JJB .yaml job configurations without the need to install JJB explicitly, you could run it in a Docker container.
-Provide the [example jenkins.ini](https://github.com/Diabol/delivery-pipeline-plugin/blob/master/examples/jenkins.ini) to JJB. When running inside a container, you might need to add your host ip address in the jenkins.ini instead of localhost to allow JJB to connect to your Jenkins instance.
-Mount the examples directory to the Docker container, and then invoke JJB ising the _jenkins-jobs_ command, such as:
-
-    docker run -it --rm --net=host -v PATH_TO/delivery-pipeline-plugin/examples/jenkins.ini:/etc/jenkins_jobs/jenkins_jobs.ini -v PATH_TO/delivery-pipeline-plugin/examples:/root/jenkins-job-builder tynja/jenkins-job-builder jenkins-jobs update demo.yaml
-
-
-Run function tests
----
-The project contains a set of functional tests that run in a separate Maven goal. These can be run using:
-
-    mvn integration-test
-
-Create Jenkins plugin artifact
----
-To create a Jenkins plugin artifact, build the project and run:
-
-    mvn hpi:hpi
-
-This creates a delivery-pipeline-plugin.hpi file in the target directory.
-This file can be manually uploaded through the Jenkins plugin management console (under the Advanced tab) to load the built plugin into Jenkins.
-
-Build and run in a Docker container
-----
-To build and run the Delivery Pipeline plugin together with Jenkins in a Docker container, you first need to build the project before building the Docker image: 
-
-    mvn clean package
-    docker build -t dpp .
-    docker run -p 8080:8080 dpp
-
-You can then access your local Jenkins instance on http://localhost:8080.
-
-If you just want to run Jenkins and the Delivery Pipeline plugin in a Docker container without building it yourself, you can pull certain versions from [Docker hub](https://hub.docker.com/r/diabol/delivery-pipeline-plugin/):
-
-    docker pull diabol/delivery-pipeline-plugin:1.3.0
-    docker run -it -p 8080:8080 diabol/delivery-pipeline-plugin:1.3.0
-
-The Docker container will be bootstrapped with a few Jenkins job configurations and a delivery pipeline view. 
-Jenkins will be available at http://localhost:8080.
-
-Configuring manually triggered jobs for views based on traditional Jenkins jobs with downstream dependencies
-----
-**Note:** This requires the [Build Pipeline plugin](https://github.com/jenkinsci/build-pipeline-plugin) to be installed.
-
-To be able to configure a certain job in the pipeline as a manual step, you have to configure the upstream job that triggers the job which is to be performed manually to be marked as a manual step.
-
-In the Jenkins UI this shows up as a Post-Build Action: Build other projects (manual step), where you configure the name of the job to be manually triggered in the "Downstream Project Names".
-
-If you're creating your jobs with JobDSL, use the following syntax in the publishers section (parameters is optional):
-
-    publishers {
-        buildPipelineTrigger('name-of-the-manually-triggered-job') {
-            parameters {
-                propertiesFile('env.${BUILD_NUMBER}.properties')
-            }
-        }
-    }
-
-In your pipeline configuration, make sure to enable manual triggers. The manual triggers (a play button) will not be shown in the UI for aggregate pipelines, only for pipeline instances. If you want to access manual triggers from the UI, make sure to show at least one pipeline instance.
-
-Here is an example of a corresponding JobDSL pipeline view configuration:
-
-    deliveryPipelineView("my-pipeline") {
-        name("my-pipeline")
-        description("Delivery pipeline with a manual trigger")
-        pipelineInstances(1)
-        showAggregatedPipeline(false)
-        columns(1)
-        updateInterval(2)
-        enableManualTriggers(true)
-        showAvatars(false)
-        showChangeLog(true)
-        pipelines {
-            component("My pipeline", "the-name-of-the-first-job-in-the-pipeline")
-        }
-    }
-
-Using a custom CSS
-----
-Here is an example of how to specify a custom CSS for the Delivery Pipeline Plugin using a JobDSL pipeline view configuration:
-
-    deliveryPipelineView("my-pipeline") {
-        name("my-pipeline")
-        description("Delivery pipeline with custom full screen CSS")
-        pipelineInstances(1)
-        showAggregatedPipeline(false)
-        columns(1)
-        updateInterval(2)
-        enableManualTriggers(true)
-        showAvatars(false)
-        showChangeLog(true)
-        configure { node ->
-            node << {
-                fullScreenCss('https://my-jenkins-instance/userContent/my-pipeline-fullscreen.css')
-            }
-        }
-        pipelines {
-            component("My pipeline", "the-name-of-the-first-job-in-the-pipeline")
-        }
-    }
-
-Examples
-----
-Example configurations can be found in the [examples subdirectory](https://github.com/Diabol/delivery-pipeline-plugin/blob/master/examples/).
-
-For [Jenkins Job Builder](https://docs.openstack.org/infra/jenkins-job-builder/) job configuration examples, see: [demo.yaml](https://github.com/Diabol/delivery-pipeline-plugin/blob/master/examples/demo.yaml)
-
-For [JobDSL](https://github.com/jenkinsci/job-dsl-plugin) job configuration examples, see: [demo.groovy](https://github.com/Diabol/delivery-pipeline-plugin/blob/master/examples/demo.groovy)
-
-For examples on how to use the Jenkins pipeline task step to visualize steps within a stage, see this [example pipeline](https://github.com/Diabol/delivery-pipeline-plugin/blob/master/examples/JENKINS-45738-declarative-pipeline-with-task-closures.txt)
-
-How to contribute
----
-Read GitHub's general contribution guidelines: https://guides.github.com/activities/contributing-to-open-source/#contributing
-
-It basically comes down to the following guidelines:
- 1. If applicable, create a [GitHub issue](https://github.com/jenkinsci/delivery-pipeline-plugin/issues) ([old Jira issues](https://issues.jenkins-ci.org/issues/?jql=project+%3D+JENKINS+AND+component+%3D+delivery-pipeline-plugin))
-    + Make sure a similar issue doesn't already exist
- 2. Fork the repo
- 3. Contribute and have fun!
- 4. Add as much unit testing as possible to any new code changes
-    + This will make the code much easier to maintain and to understand its intent
- 5. Make sure your code is well formatted and aligns with the projects code style conventions. This will be enforced by the CI build that runs on each pull request.
- 6. Make sure to prefix the commit message with the associated GitHub issue number together with a descriptive commit message
- 7. Create a pull request to start a discussion and to get feedback from the maintainers
-    + Add a link to the pull request in the associated GitHub issue
+builds the plugin and a Jenkins 2.568.3 image with it, seeds a folder of chains and Pipeline jobs that exercise
+every feature (fan-out, fan-in, manual steps of both kinds, failures, a disabled job, a matrix job, an eight-stage
+chain, parallel and nested stages, an `input` gate, unstable and skipped stages), runs `docker/validate.py` against
+it, which checks every view's JSON and page and performs every action the page can post, and captures light, dark,
+full screen and phone screenshots into `docker/out/`. `docker/upgrade.sh` upgrades a controller from 1.4.2 to
+this checkout on one Jenkins home and checks what loaded. See [docker/README.md](docker/README.md).

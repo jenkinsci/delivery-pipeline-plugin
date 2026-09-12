@@ -1,0 +1,79 @@
+# Docker test controller
+
+A Jenkins controller with the plugin from this checkout and a seeded set of jobs that exercise it: chains of
+freestyle jobs (a simple three-stage chain with a version, tests and a description; a fan-out with a native manual
+step; a Build Pipeline plugin manual trigger with parameters; a failing chain with a disabled job; a diamond; a
+long eight-stage chain; a matrix job) and Pipeline jobs (declarative with parallel nested stages and an `input`
+gate, scripted with an unstable branch, a skipped stage, a failing branch, a long-running one). Each has a Delivery
+Pipeline view; a root view finds them all with a regular expression in two columns.
+
+    docker/run.sh all
+
+compiles the plugin in a Maven container (nothing but Docker is needed; `docker/run.sh test` runs the test suite
+the same way), builds the image, starts the controller on
+[http://localhost:8080](http://localhost:8080) (users `admin`/`admin` and the read-only `viewer`/`viewer`), waits for
+the seeded builds, runs `docker/validate.py` and captures screenshots into `docker/out/`.
+
+`validate.py` checks the JSON of every view (stages, tasks, statuses, layout, manual steps, test counts,
+descriptions, paging), the pages and adjuncts, the old-data monitor and the log, the permission gating for the
+read-only user, and then performs every action the page can post: the native manual step, the Build Pipeline
+trigger, proceeding an `input` step, a rebuild, an abort and a start. It exits non-zero on any failure.
+
+`screenshots.py` runs in the official Playwright image and captures each view in light and dark, the full screen
+page and a phone viewport, so the rendering can be reviewed without a browser session on the controller.
+
+Configuration lives in `casc.yaml` (Configuration as Code), the jobs in `jobs.groovy` (Job DSL), the plugin set in
+`plugins.txt`. Override the Jenkins version with `JENKINS_VERSION=2.579.1 docker/run.sh build`. The same suite,
+the load test and the upgrade exercise run in GitHub Actions (`.github/workflows/docker-suite.yml`) on every push and
+pull request that touches the plugin or the suite.
+
+## The Jenkinsfile zoo
+
+`docker/jenkinsfiles/` holds one Pipeline script per shape a Jenkinsfile can take: Declarative and scripted, nested
+and parallel stages, stages nested in stages inside branches, a parallel nested in a branch, a matrix, `when` and
+`post` sections, failures and skipped stages, retries and timeouts, an input with parameters, a Pipeline that starts
+another, one that starts two at once and one that starts a chain of freestyle jobs, plain steps without a stage and
+parallel branches without a stage, and a status set outside the tasks, on a stage or on the run. The seed creates one job per file in the *Jenkinsfile zoo* folder and a view over
+all of them; `validate.py` runs every job and compares the view with the `.expect.json` next to each script: the run
+result, the stages and tasks with their statuses and test counts, the arrows and grid positions of a chain, and where
+an input task links. The folder also holds a freestyle job whose build trigger starts a Pipeline job, shown by the
+*Triggered* view as one chain, and a multibranch project over a git repository the image carries with two branches,
+which the *Branches* view names as one component and shows as one pipeline per branch. The screenshots include the
+zoo view in both themes.
+
+To add a shape, drop a `name.groovy` with a one-line comment on top (it becomes the job description) and a
+`name.expect.json` beside it, then run `docker/run.sh all`.
+
+## Load test
+
+    docker/run.sh up
+    docker/run.sh perf
+
+simulates a major deployment watched by many people at once. The seed carries a *Performance* folder with twenty
+chains of eight jobs and four Declarative Pipelines behind one board, the *Deployment* view (`PERF_CHAINS` scales the
+chains). `docker/perf.py` first has one viewer poll the quiet board for a baseline, then starts a build of every chain
+and Pipeline and has `PERF_VIEWERS` (50) viewers poll the board's JSON every `PERF_INTERVAL` (5) seconds, the way the
+page does and each over its own kept-alive connection accepting compressed responses, until the deployment has run
+through or `PERF_DURATION` (300)
+seconds have passed; finally the same viewers poll without any pause for `PERF_STORM` (20) seconds to find the
+ceiling. The viewers send the ETag back like the page does, so the report counts the polls answered 304 as well;
+the storm asks for full responses to find the export ceiling rather than the 304 one (`PERF_CONDITIONAL=0` makes
+every phase do so). The report lists requests, throughput, latency percentiles, response size, errors and the
+controller's CPU per phase, and the run fails on any error, on a p95 above `PERF_P95_MAX_MS` (3000) during the
+deployment, or on a median more than ten times the quiet baseline. The controller has four executors, so most of the deployment waits in
+the queue, which is what a board full of queued tasks looks like. In a run on a laptop, a poll of the quiet board took
+6 ms, answered 304; the fifty viewers during the deployment saw an 8 ms median and a 109 ms p99 while the controller
+spent its CPU on the builds; and the storm, asking for full responses, found the ceiling at about 2000 polls a second,
+a 20 ms median with eight cores busy. The viewers log in once and poll with their session, as the page does: sending
+the password with every request would cost Jenkins about 80 ms of hashing per request, which dwarfs the board.
+
+## Upgrading from 1.4.2
+
+    docker/upgrade.sh
+
+builds a controller with Delivery Pipeline 1.4.2 from the update center, lets it write a configuration that uses
+every 1.x option including the removed ones and the old Pipeline-only view type, builds the chain, then starts the
+2.0 image on the same Jenkins home and checks with `docker/upgrade_check.py` that the views loaded, kept their
+options, migrated the old view type, recognise the manual step, show no old-data warning and render. `KEEP=1`
+leaves the upgraded controller running for a look.
+

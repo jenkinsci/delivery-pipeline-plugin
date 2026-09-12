@@ -1,0 +1,13 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Test": {
+      "a: a1": "SUCCESS",
+      "a: a2": "SUCCESS",
+      "b": "SUCCESS"
+    }
+  },
+  "task_count": {
+    "Test": 3
+  }
+}
