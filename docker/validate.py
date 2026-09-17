@@ -542,6 +542,126 @@ status, _ = admin.post(f'{DEMO}job/simple-build/build?delay=0sec')
 check(status in (200, 201), f'start button endpoint accepted (status {status})')
 wait_for('the new simple build', lambda: len(job('simple-build')['builds']) > builds_before, timeout=120)
 
+# ---------------------------------------------------------------- the consolidated pipeline
+# Seven image trees whose prune jobs are held while any build or push is running, run three at a time.
+print('== consolidated pipeline')
+IMAGES = 'job/images/'
+IMAGES_VIEW = IMAGES + 'view/All%20images/'
+ROOTS = ['alpine', 'debian', 'nginx', 'postgres', 'python', 'redis', 'busybox']
+CHILDREN = {'alpine': ['golang', 'node'], 'python': ['flask']}
+
+
+def consolidated_component():
+    component = view_json(IMAGES_VIEW)['components'][0]
+    return component, component['consolidated'], component['pipelines'][0]['stages']
+
+
+def statuses_by_batch(stages):
+    return [[task['status']['type'] for task in stage['tasks']] for stage in stages]
+
+
+def image_builds(name):
+    return admin.json(f'{IMAGES}job/{name}/api/json?tree=builds[number,timestamp,duration,building,result,actions[causes[shortDescription]]]')['builds']
+
+
+component, consolidated, stages = consolidated_component()
+check(component['name'] == 'Consolidated pipeline' and component['index'] == 0 and consolidated is not None,
+      'the consolidated pipeline is the first component of the view')
+check(len(view_json(IMAGES_VIEW)['components']) == 8, 'followed by the seven image trees')
+check(consolidated['state'] == 'IDLE' and consolidated['total'] == 7 and consolidated['batches'] == 3
+      and consolidated['concurrentPipelines'] == 3 and consolidated['sleepSeconds'] == 5,
+      f'seeded through configure: 7 pipelines, 3 at a time, 5 seconds between batches {consolidated}')
+check([stage['name'] for stage in stages] == ['Batch 1', 'Batch 2', 'Batch 3']
+      and [[t['name'] for t in stage['tasks']] for stage in stages] == [ROOTS[0:3], ROOTS[3:6], ROOTS[6:7]],
+      'a stage per batch and a task per pipeline, in the order of the configuration')
+check(stages[0]['downstream'] == ['batch-2'] and stages[2]['downstream'] == [], 'every batch leads to the next')
+check(consolidated['permitted'] is True, 'the administrator may run the pipelines')
+viewer_consolidated = json.loads(viewer.get(IMAGES_VIEW + 'api/json')[1])['components'][0]['consolidated']
+check(viewer_consolidated['permitted'] is False, 'the read-only user may not')
+status, _ = viewer.post(IMAGES_VIEW + 'startConsolidated')
+check(status == 403, f'and cannot start a run (status {status})')
+status, _ = admin.get(IMAGES_VIEW + 'startConsolidated')
+check(status == 405, f'a GET starts nothing (status {status})')
+
+# a run that is stopped in its first batch lets that batch finish and starts no other
+status, text = admin.post(IMAGES_VIEW + 'startConsolidated')
+check(status == 200, f'run started (status {status} {text[:120]})')
+status, _ = admin.post(IMAGES_VIEW + 'startConsolidated')
+check(status == 409, f'one run at a time (status {status})')
+_, consolidated, stages = consolidated_component()
+check(consolidated['state'] == 'RUNNING' and consolidated['number'] == 1 and consolidated['batch'] == 1
+      and consolidated['startedBy'] == USER, f'run #1 is in its first batch {consolidated}')
+check(all(s in ('QUEUED', 'RUNNING') for s in statuses_by_batch(stages)[0])
+      and all(s == 'IDLE' for batch in statuses_by_batch(stages)[1:] for s in batch),
+      f'the first three pipelines are on their way, the others wait {statuses_by_batch(stages)}')
+status, _ = viewer.post(IMAGES_VIEW + 'stopConsolidated')
+check(status == 403, f'the read-only user cannot stop the run (status {status})')
+status, text = admin.post(IMAGES_VIEW + 'stopConsolidated')
+check(status == 200, f'run stopped (status {status} {text[:120]})')
+check(consolidated_component()[1]['state'] == 'STOPPING', 'the run waits for its batch')
+wait_for('the stopped run to end', lambda: consolidated_component()[1]['state'] == 'STOPPED', timeout=300, interval=2)
+_, consolidated, stages = consolidated_component()
+by_batch = statuses_by_batch(stages)
+check(by_batch[0] == ['SUCCESS'] * 3 and all(s == 'NOT_BUILT' for batch in by_batch[1:] for s in batch),
+      f'its batch finished and nothing else was started {by_batch}')
+check(consolidated['stoppedBy'] == USER and consolidated['finished'] == 3, f'stopped by the user after three pipelines {consolidated}')
+check(not image_builds('build_postgres'), 'no pipeline of the second batch was built')
+
+# a whole run: never more than three pipelines at a time, and every prune of a batch before the next batch starts
+status, text = admin.post(IMAGES_VIEW + 'startConsolidated')
+check(status == 200, f'second run started (status {status} {text[:120]})')
+most_active = 0
+early = []
+slept = False
+held = False
+deadline = time.time() + 900
+while time.time() < deadline:
+    _, consolidated, stages = consolidated_component()
+    by_batch = statuses_by_batch(stages)
+    most_active = max(most_active, sum(1 for batch in by_batch for s in batch if s in ('QUEUED', 'RUNNING')))
+    for index, batch in enumerate(by_batch):
+        if consolidated['number'] == 2 and index + 1 > consolidated['batch'] and any(s != 'IDLE' for s in batch):
+            early.append((consolidated['batch'], index + 1, batch))
+    if consolidated['state'] == 'SLEEPING':
+        slept = slept or (consolidated['nextBatchAt'] is not None and all(s not in ('QUEUED', 'RUNNING') for batch in by_batch for s in batch))
+    queue = admin.json('queue/api/json?tree=items[blocked,task[name]]')['items']
+    if any(item['blocked'] and item['task']['name'].startswith('prune_') for item in queue) and consolidated['state'] == 'RUNNING':
+        held = True
+    if consolidated['state'] in ('FINISHED', 'STOPPED'):
+        break
+    time.sleep(1)
+_, consolidated, stages = consolidated_component()
+check(consolidated['state'] == 'FINISHED' and consolidated['number'] == 2 and consolidated['batch'] == 3,
+      f'run #2 went through its three batches {consolidated}')
+check(consolidated['finished'] == 7 and consolidated['failed'] == 0, 'seven pipelines finished, none failed')
+check(all(s == 'SUCCESS' for batch in statuses_by_batch(stages) for s in batch), f'every pipeline succeeded {statuses_by_batch(stages)}')
+check(most_active == 3, f'never more than three pipelines at a time (saw {most_active})')
+check(not early, f'no pipeline started before its batch {early[:3]}')
+check(slept, 'the run slept between batches with nothing running')
+check(held, 'prune jobs were held in the queue while the builds of their batch ran')
+
+
+def tree_jobs(root):
+    images = [root] + CHILDREN.get(root, [])
+    return [f'{step}_{image}' for image in images for step in ('build', 'push', 'prune')]
+
+
+batch_ends = []
+batch_starts = []
+for batch in (ROOTS[0:3], ROOTS[3:6], ROOTS[6:7]):
+    newest_builds = [image_builds(name)[0] for root in batch for name in tree_jobs(root)]
+    batch_ends.append(max(b['timestamp'] + b['duration'] for b in newest_builds))
+    batch_starts.append(min(image_builds(f'build_{root}')[0]['timestamp'] for root in batch))
+check(all(batch_ends[i] + 5000 <= batch_starts[i + 1] for i in range(2)),
+      f'every job of a batch, prunes and child images included, ended five seconds or more before the next batch started '
+      f'(gaps {[batch_starts[i + 1] - batch_ends[i] for i in range(2)]} ms)')
+causes = [c.get('shortDescription', '') for a in image_builds('build_busybox')[0]['actions'] for c in a.get('causes', [])]
+check(any('run #2 of the consolidated pipeline of view All images' in c for c in causes), f'the builds say what started them {causes}')
+busybox = {c['name']: c for c in view_json(IMAGES_VIEW)['components']}['busybox']
+check(any(t['type'] == 'CONSOLIDATED' for t in newest(busybox)['triggers']), f'and so does the pipeline {newest(busybox)["triggers"]}')
+status, _, text = admin.get_full(IMAGES_VIEW)
+check(status == 200 and 'class="dpp-consolidated"' in text, 'the page has a place for the consolidated pipeline')
+
 # ---------------------------------------------------------------- summary
 print(f'== {passed} checks passed, {len(failures)} failed')
 for f in failures:

@@ -222,7 +222,9 @@
         this.crumbValue = data.crumbValue;
         this.errorDiv = root.querySelector('.dpp-error');
         this.messageDiv = root.querySelector('.dpp-message');
+        this.consolidatedDiv = root.querySelector('.dpp-consolidated');
         this.columnsDiv = root.querySelector('.dpp-columns');
+        this.clockOffset = 0;
         var query = currentQuery();
         this.page = query.page;
         this.component = query.component;
@@ -329,11 +331,15 @@
         if (this.lastComponents) {
             this.updateLive(this.lastComponents);
         }
+        this.countDown();
     };
 
     View.prototype.refresh = function (data) {
         this.hideError();
         this.settings = data.settings || this.settings;
+        if (data.serverTime) {
+            this.clockOffset = data.serverTime - Date.now();  // countdowns run on the server's clock
+        }
         var components = data.components || [];
         this.lastComponents = components;
         var print = fingerprint(components);
@@ -344,6 +350,7 @@
             this.updateLive(components);
         }
         this.drawConnectors();
+        this.countDown();
     };
 
     View.prototype.render = function (components) {
@@ -362,14 +369,125 @@
         this.relations = [];
         this.liveTasks = [];
         clear(this.messageDiv);
-        if (components.length === 0) {
+        if (this.consolidatedDiv) {
+            clear(this.consolidatedDiv);
+        }
+        // the consolidated pipeline spans the view; the components share the columns
+        var shown = components.filter(function (component) {
+            if (component.consolidated && self.consolidatedDiv) {
+                self.consolidatedDiv.appendChild(self.renderConsolidated(component));
+                return false;
+            }
+            return true;
+        });
+        if (shown.length === 0) {
             append(this.messageDiv, ['No pipelines configured or found. Please review the ',
                 el('a', {href: this.url(this.viewUrl + 'configure')}, 'configuration'), '.']);
         }
-        components.forEach(function (component, index) {
+        shown.forEach(function (component, index) {
             self.columns[index % count].appendChild(self.renderComponent(component, index));
         });
         equalizeStageHeights(this.root);
+    };
+
+    /* ------------------------------------------------------------------ the consolidated pipeline */
+
+    function plural(count, noun) {
+        return count + ' ' + noun + (count === 1 ? '' : 's');
+    }
+
+    /** One sentence on where the run of the consolidated pipeline stands; "now" is on the server's clock. */
+    function consolidatedSummary(c, now, absolute) {
+        var when = function (millis) {
+            return absolute ? formatAbsolute(new Date(millis)) : formatRelative(new Date(millis), new Date(now));
+        };
+        var failed = c.failed > 0 ? ', ' + c.failed + ' failed' : '';
+        var by = c.startedBy ? ' by ' + c.startedBy : '';
+        var run = 'Run #' + c.number;
+        switch (c.state) {
+            case 'RUNNING':
+                return run + ': batch ' + c.batch + ' of ' + c.batches + ' is running, ' + c.finished + ' of '
+                    + plural(c.total, 'pipeline') + ' finished' + failed + '; started ' + when(c.startedAt) + by;
+            case 'SLEEPING':
+                var left = Math.ceil((c.nextBatchAt - now) / 1000);
+                return run + ': batch ' + c.batch + ' of ' + c.batches + ' has finished, the next batch '
+                    + (left > 0 ? 'starts in ' + plural(left, 'second') : 'is about to start') + '; ' + c.finished
+                    + ' of ' + plural(c.total, 'pipeline') + ' finished' + failed;
+            case 'STOPPING':
+                return run + ': stopped' + (c.stoppedBy ? ' by ' + c.stoppedBy : '') + ', waiting for the pipelines of batch '
+                    + c.batch + ' to finish; no further batch will start';
+            case 'FINISHED':
+                return run + ' finished ' + when(c.finishedAt) + ' after ' + formatDuration(c.finishedAt - c.startedAt)
+                    + ': ' + plural(c.total, 'pipeline') + (c.failed > 0 ? ', ' + c.failed + ' failed' : ', none failed')
+                    + (by ? '; started' + by : '');
+            case 'STOPPED':
+                return run + ' was stopped' + (c.stoppedBy ? ' by ' + c.stoppedBy : '') + ' ' + when(c.finishedAt)
+                    + ' after batch ' + c.batch + ' of ' + c.batches + ': ' + c.finished + ' of '
+                    + plural(c.total, 'pipeline') + ' ran' + failed;
+            default:
+                return c.total === 0 ? 'The view has no pipelines to run.'
+                    : 'Runs the ' + plural(c.total, 'pipeline') + ' of this view, ' + c.concurrentPipelines
+                    + ' at a time, and sleeps ' + plural(c.sleepSeconds, 'second') + ' between two batches.';
+        }
+    }
+
+    View.prototype.now = function () {
+        return Date.now() + this.clockOffset;
+    };
+
+    /** While the run sleeps between two batches its countdown moves every second, and a poll follows its end. */
+    View.prototype.countDown = function () {
+        var self = this;
+        window.clearInterval(this.countdownTimer);
+        this.countdownTimer = null;
+        var sleeping = null;
+        (this.lastComponents || []).forEach(function (component) {
+            if (component.consolidated && component.consolidated.state === 'SLEEPING') {
+                sleeping = component.consolidated;
+            }
+        });
+        if (!sleeping) {
+            return;
+        }
+        this.countdownTimer = window.setInterval(function () {
+            self.updateLive(self.lastComponents);
+            // one early poll per sleep: when it is still sleeping then, the regular polls take over
+            if (self.now() > sleeping.nextBatchAt + 3000 && self.polledAfter !== sleeping.nextBatchAt) {
+                self.polledAfter = sleeping.nextBatchAt;
+                window.clearTimeout(self.timer);
+                self.poll();
+            }
+        }, 1000);
+    };
+
+    View.prototype.renderConsolidated = function (component) {
+        var c = component.consolidated;
+        var section = el('section', {class: 'pipeline-component pipeline-consolidated consolidated-' + c.state,
+            'data-component': component.index});
+        var heading = el('h1', {class: 'pipeline-title'}, component.name);
+        if (this.settings.allowPipelineStart && c.permitted) {
+            if (!c.active) {
+                heading.appendChild(button('consolidated-start', 'consolidated-start', 'play',
+                    'Run the ' + plural(c.total, 'pipeline') + ', ' + c.concurrentPipelines + ' at a time',
+                    {'data-total': c.total, 'data-concurrent': c.concurrentPipelines}));
+            } else if (c.state !== 'STOPPING') {
+                heading.appendChild(button('consolidated-stop', 'consolidated-stop', 'stop',
+                    'Stop the run: no further batch starts, the running pipelines go on', {}));
+            } else {
+                // the way out when a pipeline of the batch can never end
+                heading.appendChild(button('consolidated-stop consolidated-abandon', 'consolidated-stop', 'stop',
+                    'End the run now, without waiting for the running pipelines', {'data-abandon': 'true'}));
+            }
+        }
+        section.appendChild(heading);
+        var summary = el('h2', {class: 'pipeline-heading consolidated-summary'},
+            consolidatedSummary(c, this.now(), this.settings.showAbsoluteDateTime));
+        this.liveTasks.push({element: summary, kind: 'consolidated'});
+        section.appendChild(summary);
+        (component.pipelines || []).forEach(function (pipeline, i) {
+            section.appendChild(this.renderPipeline(component, pipeline, i));
+        }, this);
+        return section;
     };
 
     View.prototype.renderComponent = function (component, index) {
@@ -562,7 +680,8 @@
         var header = el('div', {class: 'task-header'},
             el('div', {class: 'taskname'}, el('a', {href: this.url(task.url)}, task.name)));
         var actions = el('div', {class: 'task-actions'});
-        if (!pipeline.aggregated) {
+        // a task of the consolidated pipeline is a whole pipeline, which is acted on in its own component
+        if (!pipeline.aggregated && !component.consolidated) {
             if (settings.allowManualTriggers && task.manual && task.manual.enabled && permissions.build) {
                 actions.appendChild(button('task-manual', 'manual', 'play', 'Trigger manual build', {
                     'data-project': task.jobFullName, 'data-upstream': task.manual.upstreamJob, 'data-build': task.manual.upstreamBuild}));
@@ -620,7 +739,9 @@
     View.prototype.updateLive = function (components) {
         var byKey = {};
         var pipelinesByKey = {};
+        var consolidated = null;
         components.forEach(function (component) {
+            consolidated = component.consolidated || consolidated;
             (component.pipelines || []).forEach(function (pipeline) {
                 pipelinesByKey[component.index + '|' + pipeline.id] = pipeline;
                 (pipeline.stages || []).forEach(function (stage) {
@@ -631,9 +752,16 @@
             });
         });
         var settings = this.settings;
+        var now = this.now();
         this.liveTasks.forEach(function (live) {
             if (live.kind === 'time') {
                 live.element.textContent = formatDate(live.timestamp, settings.showAbsoluteDateTime);
+                return;
+            }
+            if (live.kind === 'consolidated') {
+                if (consolidated) {
+                    live.element.textContent = consolidatedSummary(consolidated, now, settings.showAbsoluteDateTime);
+                }
                 return;
             }
             if (live.kind === 'total') {
@@ -804,6 +932,13 @@
             var d;
             if (Math.abs(sy - ty) < 1) {
                 d = 'M' + sx + ',' + sy + ' L' + tx + ',' + ty;
+            } else if (tx <= sx && targetRect.top >= sourceRect.bottom) {
+                // on to the next row of a pipeline that wraps: out to the right, back between the rows, in from the left
+                var out = sx + CONNECTOR_STUB;
+                var back = Math.max(1, tx - CONNECTOR_STUB);
+                var between = (sourceRect.bottom + targetRect.top) / 2 - originY;
+                d = 'M' + sx + ',' + sy + ' L' + out + ',' + sy + ' L' + out + ',' + between + ' L' + back + ',' + between
+                    + ' L' + back + ',' + ty + ' L' + tx + ',' + ty;
             } else {
                 var elbow = Math.max(sx + CONNECTOR_STUB, tx - CONNECTOR_STUB);
                 d = 'M' + sx + ',' + sy + ' L' + elbow + ',' + sy + ' L' + elbow + ',' + ty + ' L' + tx + ',' + ty;
@@ -866,6 +1001,19 @@
             case 'abort':
                 target.disabled = true;
                 this.post(viewUrl + 'abort', {project: d.project, buildId: d.build}, 'abort ' + d.project);
+                break;
+            case 'consolidated-start':
+                if (window.confirm('Run all ' + d.total + ' pipelines of this view, ' + d.concurrent + ' at a time?')) {
+                    target.disabled = true;
+                    this.post(viewUrl + 'startConsolidated', {}, 'start the consolidated pipeline');
+                }
+                break;
+            case 'consolidated-stop':
+                if (window.confirm(d.abandon ? 'End the run now? The pipelines that are running go on, but the run no longer waits for them.'
+                        : 'Stop the run? No further batch will start; the pipelines that are running go on.')) {
+                    target.disabled = true;
+                    this.post(viewUrl + 'stopConsolidated', {}, 'stop the consolidated pipeline');
+                }
                 break;
             case 'page':
                 event.preventDefault();

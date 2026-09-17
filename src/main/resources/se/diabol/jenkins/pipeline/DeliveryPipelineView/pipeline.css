@@ -341,6 +341,29 @@ div.stage-task.manual {
     border-right: 6px solid #ffe4e1;
 }
 
+/* The consolidated pipeline: the parent that runs the view's pipelines, a batch per stage */
+section.pipeline-consolidated {
+    margin-bottom: 1.5em;
+    padding-bottom: 0.5em;
+    border-bottom: solid 1px var(--dpp-line);
+}
+
+h1.pipeline-title button.dpp-button svg {
+    width: 24px;
+    height: 24px;
+}
+
+h2.consolidated-summary {
+    font-size: 14px;
+    font-weight: normal;
+    margin-top: 0;
+}
+
+/* room on the left for the arrow that leads on to the next row of batches */
+section.pipeline-consolidated section.pipeline {
+    margin-left: 30px;
+}
+
 /* Arrows between stages */
 svg.pipeline-connectors {
     position: absolute;

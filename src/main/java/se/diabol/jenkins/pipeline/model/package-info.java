@@ -29,6 +29,9 @@ If not, see <http://www.gnu.org/licenses/>.
  *     "name", "index", "error",
  *     "firstJob": { "fullName", "displayName", "url", "parameterized" },
  *     "paging": { "page", "pageSize", "total", "pages" } | null,
+ *     "consolidated": { "state", "active", "permitted", "number", "batch", "batches", "finished", "failed", "total",
+ *                       "concurrentPipelines", "sleepSeconds", "nextBatchAt", "startedAt", "finishedAt",
+ *                       "startedBy", "stoppedBy" } | null,
  *     "pipelines": [ {
  *       "id", "version", "timestamp", "aggregated", "jobFullName", "buildNumber", "rebuildable", "commits",
  *       "totalBuildTime", "status": { "type", "timestamp", "duration", "progress" },
@@ -76,6 +79,16 @@ If not, see <http://www.gnu.org/licenses/>.
  * run's stage and task ids carry its {@code job#number/} as a prefix, and its stage names its job's name, as
  * "job: stage". The tasks name their own job and build in {@code jobFullName} and {@code buildNumber}, which the
  * actions are posted for.
+ * <p>A view that shows its consolidated pipeline lists it first, with {@code index} 0 and {@code consolidated} set:
+ * its one pipeline has a stage per batch, each leading to the next, and a task per pipeline of the view, whose
+ * {@code status} is that of the pipeline as a whole, {@code jobFullName} and {@code buildNumber} the build that
+ * started it and {@code url} where that build is. {@code state} is {@code IDLE} before the first run, then
+ * {@code RUNNING}, {@code SLEEPING} until {@code nextBatchAt}, {@code STOPPING}, and at last {@code FINISHED} or
+ * {@code STOPPED}, which stay until the next run; {@code active} tells the first three apart from the rest. While a
+ * run is going the numbers and the tasks are those of the run, afterwards the tasks are what a run started now would
+ * do, each with the outcome it had in the last run. {@code permitted} says whether the caller may post to
+ * {@code startConsolidated} and {@code stopConsolidated}. A pipeline that such a run started lists a trigger of type
+ * {@code CONSOLIDATED}.
  * <p>A pipeline's {@code status} is that of its own run and a stage's {@code status} that of the whole stage block of a
  * Pipeline stage; either can be worse than every task shows when steps outside the tasks failed or went unstable,
  * which the page marks on the stage header and the run heading.

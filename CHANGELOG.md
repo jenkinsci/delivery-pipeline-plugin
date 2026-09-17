@@ -4,6 +4,24 @@ Release notes are generated on GitHub for every release:
 
 <https://github.com/jenkinsci/delivery-pipeline-plugin/releases/>
 
+### Unreleased
+
+#### New
+
+- The consolidated pipeline: a parent above the components of a view that runs the view's pipelines a few at a
+  time. *Show the consolidated pipeline* switches it on, *Number of concurrent pipelines* (default 3) sets how many
+  pipelines a batch holds and *Sleep time between concurrent pipelines* (default 10 seconds) the pause between two
+  batches. A batch ends when none of its pipelines has a task running or waiting in the queue, blocked queue items
+  included, so jobs that wait for every build to finish, such as a clean-up on a shared agent, get their turn before
+  the next batch starts. The component shows a stage per batch and a task per pipeline; users who may build the
+  first job of every pipeline can start and stop a run from the view, or with a POST to `<view>/startConsolidated`
+  and `<view>/stopConsolidated`. A run survives a restart and a reconfiguration of its view. See *The consolidated
+  pipeline* in the README.
+- `components` of `<view>/api/json` gained `consolidated`, null on every component but the consolidated pipeline,
+  which comes first with `index` 0. A trigger of `type` `CONSOLIDATED` names the run that started a pipeline.
+
+Views saved by an earlier 1117+ release load unchanged, with the consolidated pipeline off.
+
 ### Version 1117+
 
 1117 is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL

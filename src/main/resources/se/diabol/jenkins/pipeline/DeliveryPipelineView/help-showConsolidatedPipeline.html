@@ -1,0 +1,15 @@
+<div>
+    <p>Shows, above the components, one parent pipeline that runs every pipeline of the view: a stage per batch, a task
+    per pipeline. With <em>Allow starting a pipeline</em> switched on, users who may build the first job of every
+    pipeline get a button that runs them all, and one that stops the run.</p>
+    <p>A run takes the pipelines in the order the view is configured in, builds the first job of as many as the
+    <em>Number of concurrent pipelines</em>, waits until all of them have come to an end, sleeps for the <em>Sleep time
+    between concurrent pipelines</em> and goes on with the next batch, whatever the outcome of the last. First jobs with
+    parameters are built with their default values.</p>
+    <p>A pipeline has come to an end when none of its tasks is running or waiting in the queue any more, blocked ones
+    included. So the agents are idle between two batches, and jobs that wait for the others to finish, such as a
+    clean-up that the builds of a batch block, get their turn before the next batch starts.</p>
+    <p>The run is planned when it starts and goes on when the view is reconfigured or Jenkins restarts. Stopping a run
+    starts no further batch; the pipelines that are running go on, and the run ends when they have. Stopping it a second
+    time ends it at once, without waiting for them.</p>
+</div>

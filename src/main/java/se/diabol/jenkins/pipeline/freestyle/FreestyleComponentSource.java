@@ -126,6 +126,17 @@ public class FreestyleComponentSource extends ComponentSource {
         return new Component(request.name(), request.index(), JobRef.of(first), paging, pipelines, null);
     }
 
+    @Override
+    public Pipeline instance(Job<?, ?> firstJob, Job<?, ?> lastJob, int buildNumber, ViewSettings settings)
+            throws PipelineException {
+        AbstractProject<?, ?> first = (AbstractProject<?, ?>) firstJob;
+        AbstractBuild<?, ?> build = first.getBuildByNumber(buildNumber);
+        if (build == null) {
+            return null;
+        }
+        return FlowChain.expand(instance(chain(first, asProject(lastJob)), build, settings), settings);
+    }
+
     private static AbstractProject<?, ?> asProject(Job<?, ?> job) {
         return job instanceof AbstractProject<?, ?> project ? project : null;
     }

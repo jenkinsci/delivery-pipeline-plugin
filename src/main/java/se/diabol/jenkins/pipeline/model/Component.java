@@ -30,13 +30,21 @@ import org.kohsuke.stapler.export.ExportedBean;
  * @param paging where the shown pipelines are among all of them, or null when the view does not page
  * @param pipelines the aggregated pipeline (first, when shown) and the run instances, newest first
  * @param error why the component could not be resolved, or null
+ * @param consolidated set on the consolidated pipeline of the view, which comes first and has index 0: its one
+ *                     pipeline runs the pipelines of the other components, a batch per stage; null on every other
  */
 @ExportedBean(defaultVisibility = 100)
 public record Component(@Exported String name, @Exported int index, @Exported JobRef firstJob, @Exported Paging paging,
-                        @Exported List<Pipeline> pipelines, @Exported String error) {
+                        @Exported List<Pipeline> pipelines, @Exported String error,
+                        @Exported Consolidated consolidated) {
 
     public Component {
         pipelines = List.copyOf(pipelines);
+    }
+
+    /** A component that shows the pipelines of a job. */
+    public Component(String name, int index, JobRef firstJob, Paging paging, List<Pipeline> pipelines, String error) {
+        this(name, index, firstJob, paging, pipelines, error, null);
     }
 
     public static Component failed(String name, int index, String error) {

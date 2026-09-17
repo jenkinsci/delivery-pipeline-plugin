@@ -66,4 +66,15 @@
             <f:checkbox/>
         </f:entry>
     </f:section>
+    <f:section title="${%Consolidated pipeline}">
+        <f:entry title="${%Show the consolidated pipeline}" field="showConsolidatedPipeline">
+            <f:checkbox/>
+        </f:entry>
+        <f:entry title="${%Number of concurrent pipelines}" field="noOfConcurrentPipelines">
+            <f:number default="3" min="1" max="100"/>
+        </f:entry>
+        <f:entry title="${%Sleep time between concurrent pipelines (seconds)}" field="sleepBetweenConcurrentPipelines">
+            <f:number default="10" min="0" max="86400"/>
+        </f:entry>
+    </f:section>
 </j:jelly>

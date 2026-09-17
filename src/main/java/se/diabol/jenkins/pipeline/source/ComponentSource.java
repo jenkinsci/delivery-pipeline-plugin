@@ -25,6 +25,8 @@ import hudson.model.TopLevelItem;
 import java.util.Collection;
 import se.diabol.jenkins.pipeline.PipelineException;
 import se.diabol.jenkins.pipeline.model.Component;
+import se.diabol.jenkins.pipeline.model.Pipeline;
+import se.diabol.jenkins.pipeline.model.ViewSettings;
 
 /**
  * Builds the model of a component from a kind of job: a chain of jobs with downstream dependencies, or a Pipeline
@@ -40,6 +42,16 @@ public abstract class ComponentSource implements ExtensionPoint {
 
     /** The jobs that make up the component, which the view lists as its items. */
     public abstract Collection<? extends Job<?, ?>> jobsOf(Job<?, ?> firstJob, Job<?, ?> lastJob);
+
+    /**
+     * The pipeline instance that the build of the first job with the given number started, as {@link #resolve}
+     * would show it, whatever page it is on; null when there is no such build or the source cannot tell. The
+     * consolidated pipeline of a view asks for it to find out whether a pipeline it started has come to an end.
+     */
+    public Pipeline instance(Job<?, ?> firstJob, Job<?, ?> lastJob, int buildNumber, ViewSettings settings)
+            throws PipelineException {
+        return null;
+    }
 
     /** Schedules a build of the job like the one with the given number: same causes and parameters. */
     public void rebuild(Job<?, ?> job, int buildNumber) throws PipelineException {

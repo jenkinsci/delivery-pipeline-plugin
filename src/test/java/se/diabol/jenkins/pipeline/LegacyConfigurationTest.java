@@ -118,6 +118,9 @@ class LegacyConfigurationTest {
         assertThat(view.isShowDescription(), is(true));
         assertThat(view.isPagingEnabled(), is(true));
         assertThat("the description 1.x kept on the subclass becomes the view's", view.getDescription(), is("Our pipelines"));
+        assertThat("a view saved before the consolidated pipeline has it off", view.isShowConsolidatedPipeline(), is(false));
+        assertThat("and gets the defaults for one", view.getNoOfConcurrentPipelines(), is(3));
+        assertThat(view.getSleepBetweenConcurrentPipelines(), is(10));
         String saved = Jenkins.XSTREAM2.toXML(view);
         assertThat("removed options are not written back", saved.contains("showAvatars"), is(false));
         assertThat(saved.contains("embeddedCss"), is(false));

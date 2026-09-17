@@ -45,6 +45,8 @@ with sync_playwright() as p:
         for view in VIEWS:
             shoot(page, f'{URL}/job/demo/view/{urllib.parse.quote(view)}/', f'{scheme}-{view.lower()}')
         shoot(page, f'{URL}/view/All%20pipelines/', f'{scheme}-all-pipelines')
+        # the image trees under their consolidated pipeline, as the last run left it
+        shoot(page, f'{URL}/job/images/view/All%20images/', f'{scheme}-consolidated')
         shoot(page, f'{URL}/job/zoo/view/Jenkinsfiles/', f'{scheme}-jenkinsfiles')
         shoot(page, f'{URL}/job/demo/view/Fan-out/?fullscreen=true', f'{scheme}-fanout-fullscreen', full_page=False)
         context.close()
@@ -95,6 +97,8 @@ with sync_playwright() as p:
         board(page, f'{URL}/job/demo/view/Fan-out/', f'board-fanout-{scheme}', '.dpp-view')
         page.locator('.stage_Test').first.screenshot(path=os.path.join(OUT, f'board-stage-{scheme}.png'))
         board(page, f'{URL}/job/demo/view/Pipelines/', f'board-pipelines-{scheme}', 'section.pipeline-component')
+        # the consolidated pipeline above the image trees, as its last run left it
+        board(page, f'{URL}/job/images/view/All%20images/', f'board-consolidated-{scheme}', 'section.pipeline-consolidated')
         wide.close()
     # larger and more complex boards for the README's gallery: the twenty-chain Performance board (built by
     # docker/run.sh perf), the corpus of Pipeline shapes, a chain that fans out and in, and one Pipeline run that

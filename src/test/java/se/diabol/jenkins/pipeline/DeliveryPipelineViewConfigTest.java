@@ -66,6 +66,9 @@ class DeliveryPipelineViewConfigTest {
         view.setShowPromotions(true);
         view.setShowTestResults(true);
         view.setShowStaticAnalysisResults(true);
+        view.setShowConsolidatedPipeline(true);
+        view.setNoOfConcurrentPipelines(5);
+        view.setSleepBetweenConcurrentPipelines(42);
         jenkins.getInstance().addView(view);
         try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
             HtmlPage page = client.getPage(new URL(jenkins.getURL(), view.getViewUrl() + "configure"));
@@ -100,6 +103,28 @@ class DeliveryPipelineViewConfigTest {
         assertThat(saved.isShowPromotions(), is(true));
         assertThat(saved.isShowTestResults(), is(true));
         assertThat(saved.isShowStaticAnalysisResults(), is(true));
+        assertThat(saved.isShowConsolidatedPipeline(), is(true));
+        assertThat(saved.getNoOfConcurrentPipelines(), is(5));
+        assertThat(saved.getSleepBetweenConcurrentPipelines(), is(42));
+    }
+
+    @Test
+    void theConsolidatedPipelineIsOffByDefaultWithThreePipelinesAtATimeAndTenSecondsBetweenBatches(JenkinsRule jenkins)
+            throws Exception {
+        DeliveryPipelineView view = new DeliveryPipelineView("Defaults");
+        jenkins.getInstance().addView(view);
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            HtmlForm form = client.getPage(view, "configure").getFormByName("viewConfig");
+            assertThat(form.getInputByName("_.noOfConcurrentPipelines").getValue(), is("3"));
+            assertThat(form.getInputByName("_.sleepBetweenConcurrentPipelines").getValue(), is("10"));
+            form.getInputByName("_.showConsolidatedPipeline").setChecked(true);
+            form.getInputByName("_.sleepBetweenConcurrentPipelines").setValue("0");
+            jenkins.submit(form);
+        }
+        DeliveryPipelineView saved = (DeliveryPipelineView) jenkins.getInstance().getView("Defaults");
+        assertThat(saved.isShowConsolidatedPipeline(), is(true));
+        assertThat(saved.getNoOfConcurrentPipelines(), is(3));
+        assertThat("no sleep at all is a setting, not a missing one", saved.getSleepBetweenConcurrentPipelines(), is(0));
     }
 
     @Test

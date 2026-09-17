@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import jenkins.model.Jenkins;
+import se.diabol.jenkins.pipeline.consolidated.ConsolidatedCause;
 import se.diabol.jenkins.pipeline.model.Trigger;
 
 /** Describes what started a build. */
@@ -49,6 +50,9 @@ public final class Triggers {
         }
         if (cause instanceof Cause.RemoteCause) {
             return new Trigger(Trigger.REMOTE, "remote trigger");
+        }
+        if (cause instanceof ConsolidatedCause consolidated) {
+            return new Trigger(Trigger.CONSOLIDATED, "run #" + consolidated.getNumber() + " of the consolidated pipeline");
         }
         if (cause instanceof Cause.UpstreamCause.DeeplyNestedUpstreamCause) {
             return new Trigger(Trigger.UPSTREAM, "upstream");
