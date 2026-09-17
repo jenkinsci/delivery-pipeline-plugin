@@ -17,8 +17,21 @@ Release notes are generated on GitHub for every release:
   first job of every pipeline can start and stop a run from the view, or with a POST to `<view>/startConsolidated`
   and `<view>/stopConsolidated`. A run survives a restart and a reconfiguration of its view. See *The consolidated
   pipeline* in the README.
+- The consolidated pipeline tells when its run is expected to end, and between runs how long a run takes. It goes
+  by how long each pipeline took in the last run, or before there was one by the newest instance of the pipeline
+  that ran to a good end: what is left of the current batch, and for every batch to come its slowest pipeline and
+  the sleep before it. A pipeline nothing is known of counts as the average of the others.
 - `components` of `<view>/api/json` gained `consolidated`, null on every component but the consolidated pipeline,
   which comes first with `index` 0. A trigger of `type` `CONSOLIDATED` names the run that started a pipeline.
+
+#### Changed
+
+- The initial and the final job of a component are text boxes that complete and check what is typed, as the job
+  fields of Jenkins itself are, instead of lists of every job of the controller. On a controller with some
+  thousand jobs each list was more than a megabyte and thousands of options, once per field and component, and
+  the form of a view with twenty components took minutes to open. Names are kept as they are typed: relative to
+  the view's folder, full names as Job DSL writes them, or paths from the top with a leading slash. A name that
+  matches no job is reported with the nearest one there is.
 
 Views saved by an earlier 1117+ release load unchanged, with the consolidated pipeline off.
 

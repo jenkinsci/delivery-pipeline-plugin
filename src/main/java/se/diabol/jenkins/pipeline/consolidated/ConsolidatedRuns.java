@@ -99,8 +99,17 @@ public class ConsolidatedRuns implements Saveable {
     private static final ViewSettings TASKS_ONLY = new ViewSettings(1, 1, 5, false, false, false, false, false, false,
             false, false, false, false, false, false, false);
 
-    /** A pipeline a run is started with. */
-    public record Target(String name, String jobFullName, String lastJobFullName) {
+    /**
+     * A pipeline a run is started with.
+     *
+     * @param estimate how long the pipeline took the last time it ran to its end, in milliseconds, or -1; it is what
+     *                 the expected end of the run goes by until the pipeline has been through a run of its own
+     */
+    public record Target(String name, String jobFullName, String lastJobFullName, long estimate) {
+
+        public Target(String name, String jobFullName, String lastJobFullName) {
+            this(name, jobFullName, lastJobFullName, -1);
+        }
     }
 
     private Map<String, ConsolidatedRun> runs = new LinkedHashMap<>();
@@ -152,8 +161,9 @@ public class ConsolidatedRuns implements Saveable {
                 Entry before = last == null ? null : last.entryOf(target.jobFullName());
                 boolean known = before != null && before.getDuration() > 0
                         && (before.getStatus() == StatusType.SUCCESS || before.getStatus() == StatusType.UNSTABLE);
+                // how long it took in the last run, which had the same company on the agents, before anything else
                 entries.add(new Entry(target.name(), target.jobFullName(), target.lastJobFullName(), i / size + 1,
-                        known ? before.getDuration() : -1));
+                        known ? before.getDuration() : target.estimate()));
             }
             long estimate = last != null && last.getState() == State.FINISHED
                     ? last.getFinishedAt() - last.getStartedAt() : -1;

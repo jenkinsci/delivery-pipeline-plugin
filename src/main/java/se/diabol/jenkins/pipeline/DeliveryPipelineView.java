@@ -21,6 +21,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Api;
+import hudson.model.AutoCompletionCandidates;
 import hudson.model.Descriptor;
 import hudson.model.Describable;
 import hudson.model.Item;
@@ -64,6 +65,7 @@ import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.interceptor.RequirePOST;
+import org.springframework.security.access.AccessDeniedException;
 import se.diabol.jenkins.pipeline.cache.ModelCache;
 import se.diabol.jenkins.pipeline.consolidated.ConsolidatedComponent;
 import se.diabol.jenkins.pipeline.consolidated.ConsolidatedRun;
@@ -467,8 +469,9 @@ public class DeliveryPipelineView extends View {
             components = new ArrayList<>(components.subList(0, maxNumberOfVisiblePipelines));
         }
         if (showConsolidatedPipeline) {
-            components.add(0, ConsolidatedComponent.of(ConsolidatedRuns.get().of(getViewUrl()), targets(slots),
-                    getNoOfConcurrentPipelines(), getSleepBetweenConcurrentPipelines(), columnsOf(components)));
+            components.add(0, ConsolidatedComponent.of(ConsolidatedRuns.get().of(getViewUrl()),
+                    targets(slots, durationsOf(components)), getNoOfConcurrentPipelines(),
+                    getSleepBetweenConcurrentPipelines(), columnsOf(components)));
         }
         return components;
     }
@@ -479,7 +482,7 @@ public class DeliveryPipelineView extends View {
      * The pipelines the consolidated pipeline runs: every pipeline of the view whose jobs are found, in the order of
      * the configuration, whatever the sorting and however many the view shows.
      */
-    private List<ConsolidatedRuns.Target> targets(List<Slot> slots) {
+    private List<ConsolidatedRuns.Target> targets(List<Slot> slots, Map<String, Long> durations) {
         List<ConsolidatedRuns.Target> targets = new ArrayList<>();
         for (Slot slot : slots) {
             if (slot.error() != null) {
@@ -488,11 +491,33 @@ public class DeliveryPipelineView extends View {
             Job<?, ?> last = slot.lastJobName() == null || slot.lastJobName().isBlank() ? null
                     : findJob(slot.lastJobName());
             if (last != null || slot.lastJobName() == null || slot.lastJobName().isBlank()) {
-                targets.add(new ConsolidatedRuns.Target(slot.name(), slot.first().getFullName(),
-                        last == null ? null : last.getFullName()));
+                String first = slot.first().getFullName();
+                targets.add(new ConsolidatedRuns.Target(slot.name(), first, last == null ? null : last.getFullName(),
+                        durations.getOrDefault(first, -1L)));
             }
         }
         return targets;
+    }
+
+    /**
+     * How long the newest pipeline instance of each component took that ran to a good end, by the job the component
+     * starts with: what the expected end of a run goes by for a pipeline that was never part of one.
+     */
+    private static Map<String, Long> durationsOf(List<Component> components) {
+        Map<String, Long> durations = new LinkedHashMap<>();
+        for (Component component : components) {
+            if (component.firstJob() == null || component.consolidated() != null) {
+                continue;
+            }
+            for (Pipeline pipeline : component.pipelines()) {
+                long took = ConsolidatedComponent.wallDuration(pipeline);
+                if (took > 0) {
+                    durations.putIfAbsent(component.firstJob().fullName(), took);
+                    break;
+                }
+            }
+        }
+        return durations;
     }
 
     /** How many columns the widest pipeline among the components takes. */
@@ -520,7 +545,9 @@ public class DeliveryPipelineView extends View {
         if (!allowPipelineStart) {
             return HttpResponses.errorWithoutStack(403, "Starting pipelines is not enabled for this view");
         }
-        List<ConsolidatedRuns.Target> targets = targets(slots());
+        // the model the page shows, mostly from the cache, tells how long each pipeline took the last time
+        List<ConsolidatedRuns.Target> targets = targets(slots(),
+                durationsOf(cached(Stapler.getCurrentRequest2()).components()));
         if (targets.isEmpty()) {
             return HttpResponses.errorWithoutStack(400, "The view has no pipelines to run");
         }
@@ -872,27 +899,6 @@ public class DeliveryPipelineView extends View {
         return options;
     }
 
-    /**
-     * An option of a job picker. The item the stored value names is selected and keeps the value as it is stored,
-     * whether a full name or one relative to the folder, so that saving the form unchanged writes it back unchanged.
-     * Every other item is offered by its name relative to the folder.
-     */
-    static ListBoxModel.Option itemOption(Item item, String label, ItemGroup<?> base, Item stored,
-                                          String current) {
-        boolean selected = item == stored;
-        return new ListBoxModel.Option(label, selected ? current : item.getRelativeNameFrom(base), selected);
-    }
-
-    /**
-     * Keeps a stored value that no option carries, marked, at the given position. Without it the browser would
-     * select the first option and a save would silently replace the stored job with it.
-     */
-    static void keepStored(ListBoxModel options, int at, String current) {
-        if (!current.isEmpty() && options.stream().noneMatch(option -> option.selected)) {
-            options.add(at, new ListBoxModel.Option(current + " (not found)", current, true));
-        }
-    }
-
     @Extension
     @Symbol("deliveryPipelineView")
     public static class DescriptorImpl extends ViewDescriptor {
@@ -1031,50 +1037,106 @@ public class DeliveryPipelineView extends View {
                 return "";
             }
 
+            // The initial and the final job are text boxes that complete and check what is typed, as the job fields
+            // of Jenkins itself are. They used to be lists of every job of the controller, one list per field:
+            // with thousands of jobs that is more than a megabyte and thousands of options for each field of each
+            // component, and a view of twenty components took minutes to open its form. A text box also writes back
+            // exactly what is stored, whether a full name, as Job DSL writes it, or one relative to the view's folder.
+
             /**
-             * Lists the jobs the caller may read, as {@code getAllItems} filters them. The form sends the stored
-             * value along; the job it names is selected and keeps that spelling, see {@link #itemOption}.
+             * Completes what is typed to the names of the jobs, and of the folders and multibranch projects around
+             * them: relative to the view's folder, from the top with a leading slash, from the folders above with
+             * "../", and as full names, which is how seed jobs spell them.
              */
             @SuppressWarnings("lgtm[jenkins/csrf]")
-            public ListBoxModel doFillFirstJobItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
-                                                    @AncestorInPath ItemGroup<?> context,
-                                                    @QueryParameter String firstJob) {
+            public AutoCompletionCandidates doAutoCompleteFirstJob(@AncestorInPath View view,
+                                                                   @AncestorInPath ViewGroup owner,
+                                                                   @AncestorInPath ItemGroup<?> context,
+                                                                   @QueryParameter String value) {
                 checkConfigure(view, owner);
+                return candidates(TopLevelItem.class, value, context);
+            }
+
+            /** Completes what is typed to the names of chained jobs, spelled as for the initial job. */
+            @SuppressWarnings("lgtm[jenkins/csrf]")
+            public AutoCompletionCandidates doAutoCompleteLastJob(@AncestorInPath View view,
+                                                                  @AncestorInPath ViewGroup owner,
+                                                                  @AncestorInPath ItemGroup<?> context,
+                                                                  @QueryParameter String value) {
+                checkConfigure(view, owner);
+                return candidates(AbstractProject.class, value, context);
+            }
+
+            private static <T extends Item> AutoCompletionCandidates candidates(Class<T> type, String value,
+                                                                                ItemGroup<?> context) {
+                String typed = value == null ? "" : value;
                 ItemGroup<?> base = context == null ? Jenkins.get() : context;
-                String current = firstJob == null ? "" : firstJob.trim();
-                Item stored = current.isEmpty() ? null : Jenkins.get().getItem(current, base, Item.class);
-                ListBoxModel options = new ListBoxModel();
-                for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
-                    if (isPipelineStart(job)) {
-                        options.add(itemOption(job, job.getFullDisplayName(), base, stored, current));
+                AutoCompletionCandidates candidates = AutoCompletionCandidates.ofJobNames(type, typed, base);
+                if (base != Jenkins.get() && !typed.startsWith("/") && !typed.startsWith(".")) {
+                    // a full name without a leading slash, which the view resolves when nothing in its folder matches
+                    for (String fullName : AutoCompletionCandidates.ofJobNames(type, typed, Jenkins.get()).getValues()) {
+                        if (!candidates.getValues().contains(fullName)) {
+                            candidates.add(fullName);
+                        }
                     }
                 }
-                // a multibranch project or a folder: one pipeline per job inside it
-                for (Item item : Jenkins.get().getAllItems(Item.class)) {
-                    if (item instanceof ItemGroup<?> group && !(item instanceof Job) && !jobsOf(group).isEmpty()) {
-                        options.add(itemOption(item, item.getFullDisplayName() + " (every job in it)", base, stored,
-                                current));
-                    }
+                return candidates;
+            }
+
+            /** The item the view would find under the name, or null; one the caller may not read counts as missing. */
+            private static Item find(String name, ItemGroup<?> context) {
+                try {
+                    return Jenkins.get().getItem(name, context == null ? Jenkins.get() : context, Item.class);
+                } catch (AccessDeniedException e) {
+                    return null;
                 }
-                keepStored(options, 0, current);
-                return options;
+            }
+
+            private static FormValidation missing(String name, Class<? extends Item> type, ItemGroup<?> context) {
+                Item nearest = Items.findNearest(type, name, context == null ? Jenkins.get() : context);
+                return FormValidation.error("No such job: " + name + (nearest == null ? ""
+                        : ". Did you mean " + nearest.getRelativeNameFrom(context == null ? Jenkins.get() : context) + "?"));
             }
 
             @SuppressWarnings("lgtm[jenkins/csrf]")
-            public ListBoxModel doFillLastJobItems(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
-                                                   @AncestorInPath ItemGroup<?> context,
-                                                   @QueryParameter String lastJob) {
+            public FormValidation doCheckFirstJob(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                  @AncestorInPath ItemGroup<?> context,
+                                                  @QueryParameter String value) {
                 checkConfigure(view, owner);
-                ItemGroup<?> base = context == null ? Jenkins.get() : context;
-                String current = lastJob == null ? "" : lastJob.trim();
-                Item stored = current.isEmpty() ? null : Jenkins.get().getItem(current, base, Item.class);
-                ListBoxModel options = new ListBoxModel();
-                options.add(new ListBoxModel.Option("", "", current.isEmpty()));
-                for (AbstractProject<?, ?> job : Jenkins.get().getAllItems(AbstractProject.class)) {
-                    options.add(itemOption(job, job.getFullDisplayName(), base, stored, current));
+                String name = value == null ? "" : value.trim();
+                if (name.isEmpty()) {
+                    return FormValidation.error("Please name the job the pipeline starts with");
                 }
-                keepStored(options, 1, current);
-                return options;
+                Item item = find(name, context);
+                if (item instanceof Job<?, ?> job) {
+                    return isPipelineStart(job) ? FormValidation.ok()
+                            : FormValidation.error("No pipeline can start at " + job.getFullDisplayName() + " ("
+                                    + job.getClass().getSimpleName() + ")");
+                }
+                if (item instanceof ItemGroup<?> group) {
+                    int jobs = jobsOf(group).size();
+                    return jobs == 0 ? FormValidation.warning("No jobs in " + name + " yet")
+                            : FormValidation.ok("One pipeline for each of the " + jobs + " jobs in it");
+                }
+                return missing(name, Job.class, context);
+            }
+
+            @SuppressWarnings("lgtm[jenkins/csrf]")
+            public FormValidation doCheckLastJob(@AncestorInPath View view, @AncestorInPath ViewGroup owner,
+                                                 @AncestorInPath ItemGroup<?> context,
+                                                 @QueryParameter String value) {
+                checkConfigure(view, owner);
+                String name = value == null ? "" : value.trim();
+                if (name.isEmpty()) {
+                    return FormValidation.ok();
+                }
+                Item item = find(name, context);
+                if (item instanceof AbstractProject) {
+                    return FormValidation.ok();
+                }
+                return item == null ? missing(name, AbstractProject.class, context)
+                        : FormValidation.error("Only a chained job can end a pipeline, and " + item.getFullDisplayName()
+                                + " is not one");
             }
 
             @SuppressWarnings("lgtm[jenkins/csrf]")

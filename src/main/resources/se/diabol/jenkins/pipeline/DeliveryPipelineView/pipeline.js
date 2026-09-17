@@ -318,7 +318,7 @@
     /** What must be the same for the page to be left alone: everything but the parts that tick while a build runs. */
     function fingerprint(components) {
         return JSON.stringify(components, function (key, value) {
-            if (key === 'progress' || key === 'duration' || key === 'totalBuildTime') {
+            if (key === 'progress' || key === 'duration' || key === 'totalBuildTime' || key === 'estimatedEnd') {
                 return undefined;
             }
             return value;
@@ -427,8 +427,30 @@
             default:
                 return c.total === 0 ? 'The view has no pipelines to run.'
                     : 'Runs the ' + plural(c.total, 'pipeline') + ' of this view, ' + c.concurrentPipelines
-                    + ' at a time, and sleeps ' + plural(c.sleepSeconds, 'second') + ' between two batches.';
+                    + ' at a time, and sleeps ' + plural(c.sleepSeconds, 'second') + ' between two batches.'
+                    + (c.estimatedDuration ? ' A run takes about ' + roughly(c.estimatedDuration) + '.' : '');
         }
+    }
+
+    /** A length of time in words, "40 minutes" or "2 hours". */
+    function roughly(millis) {
+        return formatRelative(new Date(millis), new Date(0)).replace(/^in /, '');
+    }
+
+    /**
+     * When the run going on is expected to end, on the viewer's clock, or nothing when no run is going or nothing
+     * is known of how long its pipelines take; "now" is on the server's clock, as the expected end is.
+     */
+    function consolidatedEta(c, now) {
+        if (!c.active || !c.estimatedEnd) {
+            return '';
+        }
+        if (c.estimatedEnd - now < 45000) {
+            return 'Expected to finish any moment now';
+        }
+        var end = new Date(c.estimatedEnd - (now - Date.now()));
+        return 'Expected to finish around ' + pad(end.getHours()) + ':' + pad(end.getMinutes()) + ', '
+            + formatRelative(new Date(c.estimatedEnd), new Date(now));
     }
 
     View.prototype.now = function () {
@@ -484,6 +506,10 @@
             consolidatedSummary(c, this.now(), this.settings.showAbsoluteDateTime));
         this.liveTasks.push({element: summary, kind: 'consolidated'});
         section.appendChild(summary);
+        var eta = el('h2', {class: 'pipeline-heading consolidated-eta'}, consolidatedEta(c, this.now()));
+        eta.hidden = !eta.textContent;
+        this.liveTasks.push({element: eta, kind: 'eta'});
+        section.appendChild(eta);
         (component.pipelines || []).forEach(function (pipeline, i) {
             section.appendChild(this.renderPipeline(component, pipeline, i));
         }, this);
@@ -761,6 +787,13 @@
             if (live.kind === 'consolidated') {
                 if (consolidated) {
                     live.element.textContent = consolidatedSummary(consolidated, now, settings.showAbsoluteDateTime);
+                }
+                return;
+            }
+            if (live.kind === 'eta') {
+                if (consolidated) {
+                    live.element.textContent = consolidatedEta(consolidated, now);
+                    live.element.hidden = !live.element.textContent;
                 }
                 return;
             }

@@ -39,7 +39,28 @@ Two things follow from the case and shaped the design:
 | Threads | One lock guards the runs; readers take a published copy and never the lock | The view model is computed inside the model cache's `compute`, and the cache is emptied by queue listeners from inside the queue lock. A reader that waited for the runner, which schedules builds, could close that circle. |
 | The clock | `PeriodicWork` every 2 seconds, free while no run is going | Image builds take minutes; two seconds of latency per transition is nothing, and there is no listener to get wrong. |
 
-## 3. What could come next
+## 3. Two things the first real run showed
+
+The first run on a controller with 4,000 jobs and 1,100 folders ran as designed and turned up two things.
+
+**The form of a view with twenty-one components took minutes to open.** The initial and the final job of a
+component were lists of every job of the controller, as in 1.x: one request of 1.4 MB with 5,388 options and one of
+1.1 MB with 4,262, per component. With one component per view nobody had noticed; with twenty-one the form pulled 52
+MB and built some 200,000 options. They are text boxes now, which complete and check what is typed, the way the job
+fields of Jenkins itself work. Completion offers names relative to the view's folder and full names, because seed
+jobs write full names and the view resolves both. A text box also writes back exactly what is stored, which retires
+the class of bug that the list needed special care for in 1117 (a stored name that matched no option).
+
+**People watching a run want to know when it ends.** The component exports `estimatedEnd` while a run is going and
+`estimatedDuration` for a run started now. The measure is wall-clock time per pipeline, from the start of its first
+build until it was quiet, taken from the last run, where it had the same company on the agents; before there was a
+run, from the newest instance of the pipeline in the view's own model that ran to a good end. A batch takes as long
+as its slowest pipeline, plus the quiet time and the sleep. A failed instance is no measure, since it usually
+stopped early, and a pipeline nothing is known of counts as the average of the others. The estimate is made when the
+model is computed, so it corrects itself as batches finish, and it is left out of what the page compares to decide
+whether to draw again, so a moving estimate does not redraw the board.
+
+## 4. What could come next
 
 The run is deliberately plain: ordered batches, fixed size. Things that would attach without changing its shape:
 

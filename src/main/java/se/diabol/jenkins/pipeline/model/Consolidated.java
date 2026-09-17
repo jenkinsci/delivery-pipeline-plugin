@@ -45,6 +45,11 @@ import org.springframework.security.access.AccessDeniedException;
  * @param nextBatchAt epoch milliseconds at which the next batch starts, while sleeping; null otherwise
  * @param startedAt epoch milliseconds the run started at, or null
  * @param finishedAt epoch milliseconds the run ended at, or null
+ * @param estimatedEnd epoch milliseconds at which the run going on is expected to end: what is left of the current
+ *                     batch, going by how long its pipelines took the last time, and for every batch to come its
+ *                     slowest pipeline and the sleep before it; null when no run is going or nothing is known of
+ *                     how long the pipelines take
+ * @param estimatedDuration milliseconds a run started now is expected to take, by the same reckoning, or null
  * @param startedBy the display name of the user who started the run, or null
  * @param stoppedBy the display name of the user who stopped the run, or null
  * @param jobs the full names of the first jobs a run started now would build, which decide who may start one
@@ -54,6 +59,7 @@ public record Consolidated(@Exported String state, @Exported int number, @Export
                            @Exported int finished, @Exported int failed, @Exported int total,
                            @Exported int concurrentPipelines, @Exported int sleepSeconds,
                            @Exported Long nextBatchAt, @Exported Long startedAt, @Exported Long finishedAt,
+                           @Exported Long estimatedEnd, @Exported Long estimatedDuration,
                            @Exported String startedBy, @Exported String stoppedBy, List<String> jobs) {
 
     public static final String IDLE = "IDLE";

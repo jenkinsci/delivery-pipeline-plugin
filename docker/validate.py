@@ -575,6 +575,8 @@ check([stage['name'] for stage in stages] == ['Batch 1', 'Batch 2', 'Batch 3']
       and [[t['name'] for t in stage['tasks']] for stage in stages] == [ROOTS[0:3], ROOTS[3:6], ROOTS[6:7]],
       'a stage per batch and a task per pipeline, in the order of the configuration')
 check(stages[0]['downstream'] == ['batch-2'] and stages[2]['downstream'] == [], 'every batch leads to the next')
+check(consolidated['estimatedDuration'] is None and consolidated['estimatedEnd'] is None,
+      'nothing is known yet of how long a run takes')
 check(consolidated['permitted'] is True, 'the administrator may run the pipelines')
 viewer_consolidated = json.loads(viewer.get(IMAGES_VIEW + 'api/json')[1])['components'][0]['consolidated']
 check(viewer_consolidated['permitted'] is False, 'the read-only user may not')
@@ -614,10 +616,14 @@ most_active = 0
 early = []
 slept = False
 held = False
+first_estimate = None
+second_started = time.time()
 deadline = time.time() + 900
 while time.time() < deadline:
     _, consolidated, stages = consolidated_component()
     by_batch = statuses_by_batch(stages)
+    if first_estimate is None and consolidated['number'] == 2 and consolidated['estimatedEnd']:
+        first_estimate = consolidated['estimatedEnd'] / 1000 - second_started
     most_active = max(most_active, sum(1 for batch in by_batch for s in batch if s in ('QUEUED', 'RUNNING')))
     for index, batch in enumerate(by_batch):
         if consolidated['number'] == 2 and index + 1 > consolidated['batch'] and any(s != 'IDLE' for s in batch):
@@ -639,6 +645,13 @@ check(most_active == 3, f'never more than three pipelines at a time (saw {most_a
 check(not early, f'no pipeline started before its batch {early[:3]}')
 check(slept, 'the run slept between batches with nothing running')
 check(held, 'prune jobs were held in the queue while the builds of their batch ran')
+# the expected end: the first batch ran before, in the run that was stopped, and the others count as its average
+took = (consolidated['finishedAt'] - consolidated['startedAt']) / 1000
+check(first_estimate is not None and 0.5 * took <= first_estimate <= 2 * took,
+      f'the run was expected to take {first_estimate and round(first_estimate)} s and took {round(took)} s')
+check(consolidated['estimatedEnd'] is None, 'a run that is over has no expected end')
+check(consolidated['estimatedDuration'] is not None and 0.5 * took <= consolidated['estimatedDuration'] / 1000 <= 2 * took,
+      f'the next run is expected to take about as long ({consolidated["estimatedDuration"]} ms)')
 
 
 def tree_jobs(root):

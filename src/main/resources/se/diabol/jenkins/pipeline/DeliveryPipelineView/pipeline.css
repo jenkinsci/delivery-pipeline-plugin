@@ -359,6 +359,16 @@ h2.consolidated-summary {
     margin-top: 0;
 }
 
+/* when the run going on is expected to end: what a wall board is read for */
+h2.consolidated-eta {
+    font-size: 16px;
+    margin-top: 0;
+}
+
+h2.consolidated-eta[hidden] {
+    display: none;
+}
+
 /* room on the left for the arrow that leads on to the next row of batches */
 section.pipeline-consolidated section.pipeline {
     margin-left: 30px;

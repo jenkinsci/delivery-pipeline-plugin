@@ -52,6 +52,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
+import org.jvnet.hudson.test.SleepBuilder;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import se.diabol.jenkins.pipeline.model.Component;
 import se.diabol.jenkins.pipeline.model.Consolidated;
@@ -205,6 +206,29 @@ class ConsolidatedPipelineViewTest {
     }
 
     @Test
+    void theExpectedLengthOfARunGoesByTheLastInstanceOfEachPipelineUntilThereWasARun() throws Exception {
+        DeliveryPipelineView view = view("All", 1, 10, "a", "b");
+        assertThat("nothing ran yet", consolidatedOf(view).consolidated().estimatedDuration(), nullValue());
+
+        FreeStyleProject a = jenkins.getInstance().getItemByFullName("a", FreeStyleProject.class);
+        a.getBuildersList().add(new SleepBuilder(300));
+        jenkins.buildAndAssertSuccess(a);
+        jenkins.waitUntilNoActivity();
+        Consolidated idle = consolidatedOf(view).consolidated();
+        assertThat("a took a while, b counts as the average, and a sleep lies between them",
+                idle.estimatedDuration() >= 2 * 300L + 10_000L, is(true));
+        assertThat(idle.estimatedEnd(), nullValue());
+
+        view.doStartConsolidated();
+        Consolidated running = consolidatedOf(view).consolidated();
+        assertThat(running.estimatedEnd(), notNullValue());
+        assertThat(running.estimatedEnd() > System.currentTimeMillis(), is(true));
+        view.doStopConsolidated();
+        await(view, "the run has stopped", c -> Consolidated.STOPPED.equals(c.state()));
+        assertThat(consolidatedOf(view).consolidated().estimatedEnd(), nullValue());
+    }
+
+    @Test
     void theActionsNeedTheViewToAllowThem() throws Exception {
         DeliveryPipelineView view = view("All", 2, 0, "a");
         view.setAllowPipelineStart(false);
@@ -299,6 +323,8 @@ class ConsolidatedPipelineViewTest {
             assertThat(link.getAttribute("href"), containsString("job/a/1/"));
             assertThat(page.querySelector("button.consolidated-start"), notNullValue());
             assertThat(page.querySelector("button.consolidated-stop"), nullValue());
+            DomElement eta = page.querySelector(".consolidated-eta");
+            assertThat("no run is going, so none is expected to end", eta.hasAttribute("hidden"), is(true));
         }
     }
 
@@ -306,13 +332,19 @@ class ConsolidatedPipelineViewTest {
     void aRunIsStoppedFromThePageAndStoppedAgainToEndItWithoutWaiting() throws Exception {
         DeliveryPipelineView view = view("All", 1, 0, "a", "b");
         FreeStyleProject a = jenkins.getInstance().getItemByFullName("a", FreeStyleProject.class);
-        a.setAssignedLabel(Label.get("nowhere"));  // its build waits in the queue for an agent that never comes
+        a.getBuildersList().add(new SleepBuilder(300));
+        jenkins.buildAndAssertSuccess(a);  // so that there is something to expect the end of the run by
+        jenkins.waitUntilNoActivity();
+        a.setAssignedLabel(Label.get("nowhere"));  // its next build waits in the queue for an agent that never comes
         view.doStartConsolidated();
         try (JenkinsRule.WebClient client = jsClient(jenkins)) {
             HtmlPage page = render(jenkins, client, view.getViewUrl());
             assertThat(page.querySelector("button.consolidated-start"), nullValue());
             assertThat(page.querySelector(".consolidated-summary").asNormalizedText(),
                     containsString("Run #1: batch 1 of 2 is running, 0 of 2 pipelines finished"));
+            DomElement eta = page.querySelector(".consolidated-eta");
+            assertThat(eta.hasAttribute("hidden"), is(false));
+            assertThat(eta.asNormalizedText(), containsString("Expected to finish"));
             HtmlElement stop = page.querySelector("button.consolidated-stop");
             assertThat(stop, notNullValue());
             stop.click();

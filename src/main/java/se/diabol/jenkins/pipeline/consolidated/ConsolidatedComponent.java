@@ -85,6 +85,11 @@ public final class ConsolidatedComponent {
         for (Target target : targets) {
             jobs.add(target.jobFullName());
         }
+        long now = System.currentTimeMillis();
+        long left = active ? remaining(run, now) : -1;
+        // what a run started now would take, going by the plan, which is what the entries are between two runs
+        long whole = expected(active ? planned(run, targets, Math.max(1, concurrentPipelines)) : entries, 1,
+                Math.max(0, sleepSeconds));
         Consolidated consolidated = new Consolidated(run == null ? Consolidated.IDLE : run.getState().name(),
                 run == null ? 0 : run.getNumber(), run == null ? 0 : run.getBatch(),
                 run == null ? batches : run.getBatches(), finished, failed,
@@ -94,6 +99,7 @@ public final class ConsolidatedComponent {
                 run != null && run.getNextBatchAt() > 0 ? run.getNextBatchAt() : null,
                 run == null ? null : run.getStartedAt(),
                 run != null && run.getFinishedAt() > 0 ? run.getFinishedAt() : null,
+                left < 0 ? null : now + left, whole < 0 ? null : whole,
                 run == null ? null : run.getStartedBy(), run == null ? null : run.getStoppedBy(),
                 active ? run.jobs() : jobs);
         Pipeline pipeline = new Pipeline("consolidated", run == null ? null : "#" + run.getNumber(),
@@ -111,7 +117,8 @@ public final class ConsolidatedComponent {
         for (int i = 0; i < targets.size(); i++) {
             Target target = targets.get(i);
             Entry before = last == null ? null : last.entryOf(target.jobFullName());
-            Entry entry = new Entry(target.name(), target.jobFullName(), target.lastJobFullName(), i / size + 1, -1);
+            Entry entry = new Entry(target.name(), target.jobFullName(), target.lastJobFullName(), i / size + 1,
+                    took(before) > 0 ? took(before) : target.estimate());
             if (before != null && before.isOver()) {
                 if (before.getBuildNumber() != null) {
                     entry.running(before.getBuildNumber(), before.getSince());
@@ -121,6 +128,109 @@ public final class ConsolidatedComponent {
             entries.add(entry);
         }
         return entries;
+    }
+
+    /* ------------------------------------------------------------------ how long a run takes */
+
+    /** How long the pipeline took in the run, when it ran to a good end there; otherwise -1. */
+    private static long took(Entry entry) {
+        boolean good = entry != null
+                && (entry.getStatus() == StatusType.SUCCESS || entry.getStatus() == StatusType.UNSTABLE);
+        return good && entry.getDuration() > 0 ? entry.getDuration() : -1;
+    }
+
+    /**
+     * How long a pipeline instance took from its start to the end of its last task, waiting included, in
+     * milliseconds; -1 for one that is still going, that failed or was aborted, which usually means it stopped
+     * early, or that never ran. A view hands this over for the newest instance of each of its pipelines, so that the
+     * first run of its consolidated pipeline has something to go by.
+     */
+    public static long wallDuration(Pipeline pipeline) {
+        if (pipeline.aggregated() || pipeline.timestamp() <= 0) {
+            return -1;
+        }
+        long end = 0;
+        for (Stage stage : pipeline.stages()) {
+            for (Task task : stage.tasks()) {
+                StatusType type = task.status().type();
+                if (type == StatusType.QUEUED || type.isActive() || type == StatusType.FAILED
+                        || type == StatusType.CANCELLED) {
+                    return -1;
+                }
+                if (type == StatusType.SUCCESS || type == StatusType.UNSTABLE) {
+                    end = Math.max(end, task.status().timestamp() + task.status().duration());
+                }
+            }
+        }
+        return end > pipeline.timestamp() ? end - pipeline.timestamp() : -1;
+    }
+
+    /**
+     * Milliseconds the batches from the given one on are expected to take: for each its slowest pipeline and the
+     * quiet time that ends it, and the sleep between two of them. A pipeline nothing is known of counts as the
+     * average of the others; -1 when nothing is known of any.
+     */
+    private static long expected(List<Entry> entries, int fromBatch, int sleepSeconds) {
+        long fallback = average(entries);
+        if (fallback < 0) {
+            return -1;
+        }
+        int last = 0;
+        for (Entry entry : entries) {
+            last = Math.max(last, entry.getBatch());
+        }
+        long total = 0;
+        for (int batch = fromBatch; batch <= last; batch++) {
+            long slowest = 0;
+            for (Entry entry : entries) {
+                if (entry.getBatch() == batch) {
+                    slowest = Math.max(slowest, entry.getEstimate() > 0 ? entry.getEstimate() : fallback);
+                }
+            }
+            total += slowest + ConsolidatedRuns.settleMillis() + (batch < last ? 1000L * sleepSeconds : 0);
+        }
+        return total;
+    }
+
+    private static long average(List<Entry> entries) {
+        long sum = 0;
+        int known = 0;
+        for (Entry entry : entries) {
+            if (entry.getEstimate() > 0) {
+                sum += entry.getEstimate();
+                known++;
+            }
+        }
+        return known == 0 ? -1 : sum / known;
+    }
+
+    /** Milliseconds until the run going on is expected to end, or -1 when nothing is known of its pipelines. */
+    private static long remaining(ConsolidatedRun run, long now) {
+        List<Entry> entries = run.getEntries();
+        long fallback = average(entries);
+        if (fallback < 0) {
+            return -1;
+        }
+        boolean stopping = run.getState() == ConsolidatedRun.State.STOPPING;
+        long later = stopping ? 0 : expected(entries, run.getBatch() + 1, run.getSleepSeconds());
+        if (run.getState() == ConsolidatedRun.State.SLEEPING) {
+            return Math.max(0, run.getNextBatchAt() - now) + later;
+        }
+        long current = 0;
+        boolean going = false;
+        for (Entry entry : entries) {
+            if (entry.getBatch() != run.getBatch() || entry.isOver()) {
+                continue;
+            }
+            going = true;
+            long estimate = entry.getEstimate() > 0 ? entry.getEstimate() : fallback;
+            // a pipeline in the queue has all of its time before it; one that is overdue may end any moment
+            long spent = entry.getStatus() == StatusType.RUNNING ? now - entry.getSince() : 0;
+            current = Math.max(current, Math.max(0, estimate - spent));
+        }
+        boolean more = !stopping && run.getBatch() < run.getBatches();
+        return current + (going ? ConsolidatedRuns.settleMillis() : 0) + (more ? 1000L * run.getSleepSeconds() : 0)
+                + later;
     }
 
     private static long elapsed(ConsolidatedRun run) {

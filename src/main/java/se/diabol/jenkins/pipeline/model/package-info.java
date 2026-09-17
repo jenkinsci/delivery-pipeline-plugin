@@ -31,7 +31,7 @@ If not, see <http://www.gnu.org/licenses/>.
  *     "paging": { "page", "pageSize", "total", "pages" } | null,
  *     "consolidated": { "state", "active", "permitted", "number", "batch", "batches", "finished", "failed", "total",
  *                       "concurrentPipelines", "sleepSeconds", "nextBatchAt", "startedAt", "finishedAt",
- *                       "startedBy", "stoppedBy" } | null,
+ *                       "estimatedEnd", "estimatedDuration", "startedBy", "stoppedBy" } | null,
  *     "pipelines": [ {
  *       "id", "version", "timestamp", "aggregated", "jobFullName", "buildNumber", "rebuildable", "commits",
  *       "totalBuildTime", "status": { "type", "timestamp", "duration", "progress" },
@@ -86,7 +86,10 @@ If not, see <http://www.gnu.org/licenses/>.
  * {@code RUNNING}, {@code SLEEPING} until {@code nextBatchAt}, {@code STOPPING}, and at last {@code FINISHED} or
  * {@code STOPPED}, which stay until the next run; {@code active} tells the first three apart from the rest. While a
  * run is going the numbers and the tasks are those of the run, afterwards the tasks are what a run started now would
- * do, each with the outcome it had in the last run. {@code permitted} says whether the caller may post to
+ * do, each with the outcome it had in the last run. {@code estimatedEnd} is when the run going on is expected to
+ * end and {@code estimatedDuration} how long a run started now would take, going by how long the pipelines took the
+ * last time; either is null when nothing is known, and the first moves with every computation of the model, so the
+ * page leaves it out of what it compares to decide whether to draw again. {@code permitted} says whether the caller may post to
  * {@code startConsolidated} and {@code stopConsolidated}. A pipeline that such a run started lists a trigger of type
  * {@code CONSOLIDATED}.
  * <p>A pipeline's {@code status} is that of its own run and a stage's {@code status} that of the whole stage block of a

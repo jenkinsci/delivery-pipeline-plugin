@@ -51,6 +51,7 @@ import se.diabol.jenkins.pipeline.PipelineException;
 import se.diabol.jenkins.pipeline.consolidated.ConsolidatedRun.Entry;
 import se.diabol.jenkins.pipeline.consolidated.ConsolidatedRun.State;
 import se.diabol.jenkins.pipeline.consolidated.ConsolidatedRuns.Target;
+import se.diabol.jenkins.pipeline.model.Consolidated;
 import se.diabol.jenkins.pipeline.model.StatusType;
 
 /** Runs of the consolidated pipeline: batches, what counts as the end of a pipeline, sleeping, stopping, keeping. */
@@ -321,6 +322,41 @@ class ConsolidatedRunsTest {
         assertThat(read.getEntries().get(1).getStatus(), is(StatusType.IDLE));
         assertThat(read.getEntries().get(1).getJobFullName(), is("b"));
         runs.stop(VIEW, "tester");
+    }
+
+    @Test
+    void theExpectedEndGoesByHowLongThePipelinesTookTheLastTime() throws Exception {
+        for (String name : List.of("a", "b", "c")) {
+            chain(name).setAssignedLabel(Label.get("nowhere"));  // in the queue nothing of the estimate is spent
+        }
+        List<Target> targets = List.of(new Target("a", "a", null, 60_000), new Target("b", "b", null, 120_000),
+                new Target("c", "c", null));
+        assertThat("nothing to go by", ConsolidatedComponent.of(null, targets("a", "b"), 2, 10, 1).consolidated()
+                .estimatedDuration(), nullValue());
+
+        // two batches: the slower of a and b, the sleep, and c, which counts as the average of the others
+        Consolidated idle = ConsolidatedComponent.of(null, targets, 2, 10, 1).consolidated();
+        assertThat(idle.estimatedDuration(), is(120_000L + 10_000L + 90_000L));
+        assertThat("no run, no end", idle.estimatedEnd(), nullValue());
+
+        runs.start(VIEW, "All", targets, 2, 10, null, "tester");
+        long before = System.currentTimeMillis();
+        Consolidated running = ConsolidatedComponent.of(runs.of(VIEW), targets, 2, 10, 1).consolidated();
+        long after = System.currentTimeMillis();
+        assertThat(running.estimatedEnd() >= before + 220_000L && running.estimatedEnd() <= after + 220_000L, is(true));
+        assertThat(running.estimatedDuration(), is(220_000L));
+
+        runs.stop(VIEW, "tester");
+        before = System.currentTimeMillis();
+        Consolidated stopping = ConsolidatedComponent.of(runs.of(VIEW), targets, 2, 10, 1).consolidated();
+        assertThat("only the batch that is going is waited for", stopping.estimatedEnd() >= before + 120_000L
+                && stopping.estimatedEnd() <= System.currentTimeMillis() + 120_000L, is(true));
+
+        runs.stop(VIEW, "tester");
+        assertThat(ConsolidatedComponent.of(runs.of(VIEW), targets, 2, 10, 1).consolidated().estimatedEnd(), nullValue());
+        for (String name : List.of("a", "b")) {
+            jenkins.getInstance().getQueue().cancel(jenkins.getInstance().getItemByFullName(name, FreeStyleProject.class));
+        }
     }
 
     @Test

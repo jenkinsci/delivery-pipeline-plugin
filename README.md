@@ -170,7 +170,9 @@ Configuring a view
 Create a view of type `Delivery Pipeline View`. Under *Pipelines*, add a component per pipeline: a name and the
 initial job. For a chain of jobs the view follows the downstream dependencies of the initial job (build triggers,
 parameterized triggers, promotions); an optional final job stops the chain there. Alternatively a regular expression
-over job names creates one component per match, named by the expression's capture group.
+over job names creates one component per match, named by the expression's capture group. Job names are typed, with
+suggestions as you type and a check of what you typed, rather than picked from a list of every job, so that the form
+opens at once on a controller with thousands of jobs too.
 
 Jobs are grouped into stages by the *Delivery Pipeline configuration* property of each job: jobs with the same
 stage name share a stage, and the task name is what the job's box says. Without the property, the job's display name
@@ -268,6 +270,14 @@ ends it at once, which is the way out when a pipeline can never end, such as one
 an agent that is gone. Between runs the component
 shows what a run started now would do, each pipeline with the outcome it had in the last run. The builds a run
 starts name it as their cause, and so do the pipelines in the view.
+
+While a run is going the component says when it is expected to end, and between runs how long a run takes. It goes
+by how long each pipeline took in the last run, from the start of its first build until nothing of it was running
+or queued any more, which includes the waiting that comes with the company it had on the agents. Before a pipeline
+has been through a run, the newest instance of it that ran to a good end counts instead, and a pipeline nothing is
+known of counts as the average of the others. The expected end is what is left of the current batch, going by its
+slowest pipeline, and for every batch to come its slowest pipeline and the sleep before it; the first run of a view
+tends to be expected too early, because pipelines that ran alone were not held up by others.
 
 Job DSL has no methods for these options yet; a `configure` block sets the view's fields:
 
