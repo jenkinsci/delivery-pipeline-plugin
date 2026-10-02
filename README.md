@@ -11,10 +11,10 @@ In Continuous Delivery, fast feedback and visualisation of the delivery process 
 
 Project wiki page can be found here: [Delivery Pipeline Plugin - Wiki](https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin).
 
-We use the official Jenkins [issue tracker](https://issues.jenkins-ci.org/secure/IssueNavigator.jspa?mode=hide&reset=true&jqlQuery=project+%3D+JENKINS+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27delivery-pipeline-plugin%27) for bugs, improvements and new features. Please report any issues on component [delivery-pipeline-plugin](https://issues.jenkins-ci.org/browse/JENKINS/component/18134).
+We once used the official Jenkins [issue tracker](https://issues.jenkins-ci.org/secure/IssueNavigator.jspa?mode=hide&reset=true&jqlQuery=project+%3D+JENKINS+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27delivery-pipeline-plugin%27) for bugs, improvements and new features, but it is closed now. 
+Please report any issues in the official GitHub [issue tracker](https://github.com/jenkinsci/delivery-pipeline-plugin/issues).
 
 This plugin has been contributed to the community by [Diabol AB](https://www.diabol.se).
-
 
 ---
 
