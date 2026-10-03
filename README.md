@@ -20,7 +20,7 @@ Bugs and feature requests go to the [GitHub issue tracker](https://github.com/je
 
 This plugin was contributed to the community by [Diabol AB](https://www.diabol.se).
 
-🤖 Version 1116+ generated with [Claude Code](https://claude.com/claude-code) Fable 5.1 September 2026
+🤖 Version 1117+ generated with [Claude Code](https://claude.com/claude-code) Fable 5.1 September 2026
 
 ![A chain of jobs on a Delivery Pipeline view](docs/dpp_screenshot.png)
 
@@ -64,10 +64,10 @@ in turn:
 The same boards in the dark theme: [large](docs/dpp_large_dark.png), [shapes](docs/dpp_shapes_dark.png),
 [diamond](docs/dpp_diamond_dark.png), [chain of runs](docs/dpp_chain_of_runs_dark.png).
 
-Version 1116+
------------
+Version 1117+
+-------------
 
-1116+ is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
+1117+ is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
 scripts keep working; what changed is underneath and around them.
 
 **What stays the same**
