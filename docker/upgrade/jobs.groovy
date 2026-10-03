@@ -1,5 +1,5 @@
 // A 1.x-era configuration: a chain with a Build Pipeline manual trigger, a Pipeline job, and a Delivery Pipeline
-// view that sets every option 1.4.2 had, including the ones 2.0 removed. The Pipeline-only view type of 1.x is
+// view that sets every option 1.4.2 had, including the ones 1117+ removed. The Pipeline-only view type of 1.x is
 // added by docker/upgrade.sh over the REST API, because Job DSL never had a method for it.
 
 folder('legacy') {

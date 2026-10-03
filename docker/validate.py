@@ -451,7 +451,7 @@ check(len(adjuncts) == 2 and all(admin.get(a)[0] == 200 for a in adjuncts), 'scr
 status, html = admin.get(DEMO + 'view/Simple/?fullscreen=true')
 check(status == 200 and 'dpp-fullscreen' in html and 'side-panel' not in html, 'full screen page is bare')
 status, html = admin.get(DEMO + 'view/Simple/configure')
-check(status == 200 and 'noOfPipelines' in html and 'showAvatars' not in html, 'configure page shows the 2.0 options')
+check(status == 200 and 'noOfPipelines' in html and 'showAvatars' not in html, 'configure page shows the 1117+ options')
 status, html = admin.get('administrativeMonitor/OldData/manage')
 check(status == 200 and 'diabol' not in html, 'old data monitor has nothing from the plugin')
 status, log = admin.get('log/all')

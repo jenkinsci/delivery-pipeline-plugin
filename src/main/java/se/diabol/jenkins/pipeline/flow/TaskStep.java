@@ -36,7 +36,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * its block so that the view shows the block as a task of its stage, as 1.x did, and prints a reminder that a
  * nested {@code stage} does the same without this plugin.
  *
- * @deprecated since 2.0; use a nested {@code stage} block instead.
+ * @deprecated since 1117; use a nested {@code stage} block instead.
  */
 @Deprecated
 public class TaskStep extends Step {

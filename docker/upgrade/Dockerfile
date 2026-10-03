@@ -1,5 +1,5 @@
 # The test controller as it was with Delivery Pipeline 1.4.2 from the update center, used to write a
-# configuration that the 2.0 image then has to load from the same Jenkins home. See docker/upgrade.sh.
+# configuration that the 1117+ image then has to load from the same Jenkins home. See docker/upgrade.sh.
 ARG JENKINS_VERSION=2.568.3
 FROM jenkins/jenkins:${JENKINS_VERSION}-lts-jdk21
 

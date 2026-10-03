@@ -107,7 +107,7 @@ public class DeliveryPipelineView extends View {
     private boolean allowRebuild;
     private boolean allowAbort;
 
-    // Options of 1.x that 2.0 does not have. Jenkins reads transient fields from disk, so old configurations still
+    // Options of 1.x that 1117+ does not have. Jenkins reads transient fields from disk, so old configurations still
     // load; they are never written back. The description used to be kept twice and is moved to the view's own.
     private transient String description;
     private transient boolean showAvatars;

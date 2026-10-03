@@ -1,5 +1,5 @@
-# Overlay for docker/upgrade.sh: a controller with Delivery Pipeline 1.4.2 and the 2.0 controller sharing one
-# Jenkins home, so that what 1.4.2 wrote is what 2.0 has to load.
+# Overlay for docker/upgrade.sh: a controller with Delivery Pipeline 1.4.2 and the 1117+ controller sharing one
+# Jenkins home, so that what 1.4.2 wrote is what 1117+ has to load.
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.upgrade.yml ...
 services:
   jenkins-legacy:

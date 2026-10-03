@@ -6,18 +6,17 @@ Delivery Pipeline Plugin
   <img alt="Delivery Pipeline plugin for Jenkins" src="docs/dpp_logo.png" width="846">
 </picture>
 
-[![docker-suite](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml/badge.svg?branch=rewrite-2.0)](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml)
+[![docker-suite](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/docker-suite.yml/badge.svg)](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/docker-suite.yml)
 [![Build Status](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/cd.yaml/badge.svg)](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/cd.yaml)
 
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/delivery-pipeline-plugin.svg)](https://plugins.jenkins.io/delivery-pipeline-plugin/)
 
 The Delivery Pipeline plugin visualizes delivery pipelines in Jenkins: chains of jobs with upstream/downstream
 dependencies, and Pipeline (Jenkinsfile) jobs. It is made for information radiators (there is a full screen page)
-and for everyday use next to the jobs. Version 2.0 gained full support for both Declarative and Scripted Pipeline syntax.
+and for everyday use next to the jobs. Version 1117 gained full support for both Declarative and Scripted Pipeline syntax.
 
 Plugin documentation: [plugins.jenkins.io/delivery-pipeline-plugin](https://plugins.jenkins.io/delivery-pipeline-plugin/).
-Bugs and feature requests go to the [Jenkins issue tracker](https://issues.jenkins.io/issues/?jql=component%20%3D%20delivery-pipeline-plugin),
-component `delivery-pipeline-plugin`.
+Bugs and feature requests go to the [GitHub issue tracker](https://github.com/jenkinsci/delivery-pipeline-plugin/issues).
 
 This plugin was contributed to the community by [Diabol AB](https://www.diabol.se).
 
@@ -149,7 +148,7 @@ scripts keep working; what changed is underneath and around them.
 A component can also name a multibranch project, or any folder: it becomes one pipeline per job inside, named
 "component / branch", the primary branch first. A regular expression such as `app/(.*)` still picks branches by name.
 
-**What was removed** (settings of 1.x that 2.0 ignores when loading an old view)
+**What was removed** (settings of 1.x that 1117+ ignores when loading an old view)
 
 - Custom CSS URLs (`embeddedCss`, `fullScreenCss`) and themes: the view follows the Jenkins theme instead.
 - `showAvatars`, `linkRelative` and `linkToConsoleLog`: links are always relative to the Jenkins root and running
@@ -160,7 +159,7 @@ A component can also name a multibranch project, or any folder: it becomes one p
 Requirements
 ------------
 
-Delivery Pipeline plugin 2.0 requires Jenkins 2.555.3 or later and Java 21.
+Delivery Pipeline plugin 1117+ requires Jenkins 2.555.3 or later and Java 21.
 
 Delivery Pipeline plugin 1.5 and 1.6 require Java 17 and Jenkins 2.541.2 or later; 1.4.0 and later require Java 8
 and Jenkins 2.164 or later.

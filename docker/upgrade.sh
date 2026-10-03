@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Upgrades a controller from Delivery Pipeline 1.4.2 to the 2.0 in this checkout on one Jenkins home:
-# 1.4.2 (from the update center) writes its configuration, then the 2.0 image starts on the same home and
+# Upgrades a controller from Delivery Pipeline 1.4.2 to the 1117+ in this checkout on one Jenkins home:
+# 1.4.2 (from the update center) writes its configuration, then the 1117+ image starts on the same home and
 # docker/upgrade_check.py checks what loaded. Needs target/delivery-pipeline-plugin.hpi (docker/run.sh build).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,7 +16,7 @@ echo "== phase 1: Delivery Pipeline 1.4.2"
 python3 docker/upgrade_check.py legacy
 "${COMPOSE[@]}" stop jenkins-legacy
 "${COMPOSE[@]}" rm -f jenkins-legacy >/dev/null
-echo "== phase 2: Delivery Pipeline 2.0 on the same home"
+echo "== phase 2: Delivery Pipeline 1117+ on the same home"
 "${COMPOSE[@]}" up -d --wait jenkins
 status=0
 python3 docker/upgrade_check.py new || status=$?

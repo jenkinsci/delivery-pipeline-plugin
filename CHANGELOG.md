@@ -4,12 +4,12 @@ Release notes are generated on GitHub for every release:
 
 <https://github.com/jenkinsci/delivery-pipeline-plugin/releases/>
 
-### 2.0.0
+### Version 1117+
 
-2.0 is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
+1117 is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
 scripts keep working. Two changes can affect description templates, scripts and wall boards; read those first.
 
-#### Behaviour changes
+#### Behavior changes
 
 **Task descriptions go through the markup formatter.** Descriptions produced by the *Delivery Pipeline
 configuration* templates are rendered by the markup formatter configured under *Manage Jenkins → Security*, exactly
@@ -127,4 +127,4 @@ Install the new version; no configuration change is needed. Then check descripti
 above) and update anything that reads the view's JSON. Upgrades from 1.4.2 and from 1.6 were exercised; the Docker
 test controller under `docker/` reproduces the 1.4.2 exercise with `docker/upgrade.sh`.
 
-Releases before 2.0 are listed on the GitHub releases page.
+Releases before 1117 are listed on the GitHub releases page.

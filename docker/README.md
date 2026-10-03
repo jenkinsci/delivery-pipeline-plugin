@@ -73,7 +73,7 @@ the password with every request would cost Jenkins about 80 ms of hashing per re
 
 builds a controller with Delivery Pipeline 1.4.2 from the update center, lets it write a configuration that uses
 every 1.x option including the removed ones and the old Pipeline-only view type, builds the chain, then starts the
-2.0 image on the same Jenkins home and checks with `docker/upgrade_check.py` that the views loaded, kept their
-options, migrated the old view type, recognise the manual step, show no old-data warning and render. `KEEP=1`
+1117+ image on the same Jenkins home and checks with `docker/upgrade_check.py` that the views loaded, kept their
+options, migrated the old view type, recognize the manual step, show no old-data warning and render. `KEEP=1`
 leaves the upgraded controller running for a look.
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Checks of the upgrade exercise (docker/upgrade.sh): the 1.4.2 phase writes a configuration, the 2.0 phase loads it.
+"""Checks of the upgrade exercise (docker/upgrade.sh): the 1.4.2 phase writes a configuration, the 1117+ phase loads it.
 
     python3 docker/upgrade_check.py legacy   # with the 1.4.2 controller running: create the old view type, build, snapshot
-    python3 docker/upgrade_check.py new      # with the 2.0 controller running on the same home: check what loaded
+    python3 docker/upgrade_check.py new      # with the 1117+ controller running on the same home: check what loaded
 """
 import base64
 import http.cookiejar
@@ -139,7 +139,7 @@ if phase == 'legacy':
     check('<showAvatars>true</showAvatars>' in cfg and 'WorkflowPipelineView' in cfg and 'embeddedCss' in cfg,
           '1.4.2 wrote the removed options and the old view type to the folder configuration')
 else:
-    check(p is not None and p['version'].startswith('2.0') and p['active'], 'Delivery Pipeline 2.0 is active')
+    check(p is not None and not '1.4.2' in p['version'] and p['active'], 'Delivery Pipeline 1.4.2 is still active')
     v = views()
     check(v.get('Chain') == 'se.diabol.jenkins.pipeline.DeliveryPipelineView', f'the 1.4.2 view loaded as a Delivery Pipeline View ({v.get("Chain")})')
     check(v.get('Flows') == 'se.diabol.jenkins.pipeline.DeliveryPipelineView', f'the Pipeline-only view became a Delivery Pipeline View ({v.get("Flows")})')
@@ -178,13 +178,13 @@ else:
     check(not lines, f'no plugin lines in the system log {lines[:3]}')
     for name in ('Chain', 'Flows'):
         status, html = request(FOLDER + 'view/' + name + '/')
-        check(status == 200 and 'dpp-view' in html, f'the {name} page renders with 2.0')
+        check(status == 200 and 'dpp-view' in html, f'the {name} page still renders')
     status, cfg = request(FOLDER + 'view/Chain/config.xml')
     request(FOLDER + 'view/Chain/config.xml', 'POST', cfg.encode(), 'application/xml')
     status, saved = request(FOLDER + 'view/Chain/config.xml')
-    open(os.path.join(OUT, 'legacy-chain-view-config-2.0.xml'), 'w').write(saved)
+    open(os.path.join(OUT, 'legacy-chain-view-config-1117.xml'), 'w').write(saved)
     check('showAvatars' not in saved and 'embeddedCss' not in saved and 'aggregatedChangesGroupingPattern' not in saved,
-          'after a save under 2.0 the removed options are gone from the configuration')
+          'after a save the removed options are gone from the configuration')
     check('<sorting>se.diabol.jenkins.pipeline.sort.NameComparator</sorting>' in saved, 'the sorting id 1.4.2 wrote is kept')
 
 print(f'== {len(failures)} failures')
