@@ -7,6 +7,8 @@ Delivery Pipeline Plugin
 </picture>
 
 [![docker-suite](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml/badge.svg?branch=rewrite-2.0)](https://github.com/bignay2000/delivery-pipeline-plugin-1/actions/workflows/docker-suite.yml)
+[![Build Status](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/cd.yaml/badge.svg)](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/cd.yaml)
+
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/delivery-pipeline-plugin.svg)](https://plugins.jenkins.io/delivery-pipeline-plugin/)
 
 The Delivery Pipeline plugin visualizes delivery pipelines in Jenkins: chains of jobs with upstream/downstream
@@ -19,7 +21,7 @@ component `delivery-pipeline-plugin`.
 
 This plugin was contributed to the community by [Diabol AB](https://www.diabol.se).
 
-🤖 Version 2 generated with [Claude Code](https://claude.com/claude-code) Fable 5.1 September 2026
+🤖 Version 1116+ generated with [Claude Code](https://claude.com/claude-code) Fable 5.1 September 2026
 
 ![A chain of jobs on a Delivery Pipeline view](docs/dpp_screenshot.png)
 
@@ -63,10 +65,10 @@ in turn:
 The same boards in the dark theme: [large](docs/dpp_large_dark.png), [shapes](docs/dpp_shapes_dark.png),
 [diamond](docs/dpp_diamond_dark.png), [chain of runs](docs/dpp_chain_of_runs_dark.png).
 
-Version 2.0
+Version 1116+
 -----------
 
-2.0 is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
+1116+ is a rewrite of the plugin on the Jenkins 2.555 LTS baseline and Java 21. Existing views, jobs and Job DSL
 scripts keep working; what changed is underneath and around them.
 
 **What stays the same**
