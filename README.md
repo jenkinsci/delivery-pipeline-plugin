@@ -1,28 +1,25 @@
 Delivery Pipeline Plugin
 ========================
 
-![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_logo.png)
+![Delivery Pipeline Plugin Logo](https://raw.githubusercontent.com/jenkinsci/delivery-pipeline-plugin/master/docs/dpp_logo.png)
 
-[![Build Status](https://travis-ci.org/Diabol/delivery-pipeline-plugin.png)](https://travis-ci.org/Diabol/delivery-pipeline-plugin)
+[![Build Status](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/cd.yaml/badge.svg)](https://github.com/jenkinsci/delivery-pipeline-plugin/actions/workflows/cd.yaml)
 
 The purpose of the Delivery Pipeline plugin is to provide visualisation of delivery/build pipelines in Jenkins. The plugin is perfect for Continuous Delivery pipeline visualisation on information radiators.
 
 In Continuous Delivery, fast feedback and visualisation of the delivery process is one of the most important aspects. When using Jenkins as a build server it is now possible to visualise one or more delivery pipelines in the same view (even in full screen!) using the Delivery Pipeline plugin. You can install the Delivery Pipeline plugin using the Jenkins plugin management.
 
-Project wiki page can be found here: [Delivery Pipeline Plugin - Wiki](https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin).
-
-We once used the official Jenkins [issue tracker](https://issues.jenkins-ci.org/secure/IssueNavigator.jspa?mode=hide&reset=true&jqlQuery=project+%3D+JENKINS+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27delivery-pipeline-plugin%27) for bugs, improvements and new features, but it is closed now. 
 Please report any issues in the official GitHub [issue tracker](https://github.com/jenkinsci/delivery-pipeline-plugin/issues).
 
 This plugin has been contributed to the community by [Diabol AB](https://www.diabol.se).
 
 ---
 
-![alt tag](https://raw.githubusercontent.com/Diabol/delivery-pipeline-plugin/master/docs/dpp_screenshot.png)
+![alt tag](https://raw.githubusercontent.com/jenkinsci/delivery-pipeline-plugin/master/docs/dpp_screenshot.png)
 
 Recent Changes
 ---
-- **1.5.0**: Version bump; continued modernization and dependency maintenance.
+- **1116.v779f62511800**: Version bump; continued modernization and dependency maintenance.
 - **Plugin modernized** — updated build tooling, POM structure, and CI configuration to current Jenkins plugin standards.
 - **Functional tests restored** — integration test suite re-enabled after prior removal.
 - **JDK 25 support** — build and CI updated to support Java 25.
@@ -31,7 +28,7 @@ Recent Changes
 
 Requirements
 ---
-Delivery Pipeline plugin 1.5.0 and later requires Java 11 and Jenkins core 2.541.2 or later (Java 25 supported for plugin development).
+Delivery Pipeline plugin 1116.v779f62511800 and later requires Java 11 and Jenkins core 2.541.2 or later (Java 25 supported for plugin development).
 
 Delivery Pipeline plugin 1.4.0 and later requires Java 8 and Jenkins core 2.164 or later (Java 11 required for plugin development).
 
