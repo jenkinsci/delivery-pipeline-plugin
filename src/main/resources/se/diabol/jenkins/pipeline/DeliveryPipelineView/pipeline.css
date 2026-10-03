@@ -1,0 +1,594 @@
+/* Delivery Pipeline view. Colours come from the Jenkins theme variables so that dark themes work; the full screen
+   page sets its own dark palette at the end of this file. */
+
+.dpp-view {
+    position: relative;
+    padding: 10px;
+    overflow-x: auto;
+    --dpp-line: color-mix(in srgb, var(--text-color, #333333) 22%, transparent);
+    --dpp-fill: color-mix(in srgb, var(--text-color, #333333) 7%, transparent);
+    --dpp-fill-light: color-mix(in srgb, var(--text-color, #333333) 3%, transparent);
+    --dpp-connector: #767676;
+}
+
+/* Columns are at least as wide as their widest pipeline, so a wide pipeline scrolls the view instead of
+   drawing over its neighbour; spare width is shared equally. The script sets the column count. */
+.dpp-columns {
+    display: grid;
+    grid-template-columns: minmax(max-content, 1fr);
+    column-gap: 30px;
+    align-items: start;
+}
+
+.dpp-column {
+    min-width: 0;
+}
+
+.dpp-error {
+    background-color: #c9302c;
+    color: #ffffff;
+    font-size: 16px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.dpp-message {
+    font-size: 15px;
+}
+
+.dpp-spinner {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border: 3px solid var(--dpp-line);
+    border-top-color: var(--link-color, #0072bc);
+    border-radius: 50%;
+    animation: dpp-spin 0.9s linear infinite;
+}
+
+@keyframes dpp-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+section.pipeline-component {
+    margin-bottom: 2em;
+}
+
+h1.pipeline-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0 0 0.5em;
+}
+
+h2.pipeline-heading {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0.8em 0 0.4em;
+}
+
+h2.pipeline-heading button.dpp-button {
+    vertical-align: middle;
+}
+
+h3.total-build-time {
+    font-size: 13px;
+    font-weight: normal;
+    margin: 0 0 0.4em;
+}
+
+/* Test and warning counts that belong to a Pipeline run as a whole */
+div.pipeline-tests div.infoPanelOuter,
+div.pipeline-analysis div.infoPanelOuter {
+    display: inline-block;
+    margin: 0 0 8px 10px;
+}
+
+.pipeline-error {
+    color: #c9302c;
+    font-weight: bold;
+}
+
+.dpp-empty {
+    color: var(--text-color-secondary, #6b6b6b);
+}
+
+/* Build-now clock in the component heading */
+a.task-icon-link {
+    color: inherit;
+    text-decoration: none;
+    line-height: 0;
+}
+
+a.task-icon-link svg {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    color: var(--text-color, #333333);
+    opacity: 0.75;
+}
+
+a.task-icon-link:hover svg,
+a.task-icon-link:focus svg {
+    color: var(--link-color, #0072bc);
+    opacity: 1;
+}
+
+/* The grid */
+section.pipeline {
+    display: table;
+    border-collapse: separate;
+    margin-bottom: 0.5em;
+}
+
+div.pipeline-row {
+    display: table-row;
+}
+
+div.pipeline-cell {
+    display: table-cell;
+    vertical-align: top;
+    padding-bottom: 30px;
+}
+
+div.stage {
+    margin-right: 60px;
+    min-width: 180px;
+    border: solid 1px var(--dpp-line);
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+div.stage.hide {
+    visibility: hidden;
+}
+
+div.stage a {
+    text-decoration: none;
+    color: inherit;
+}
+
+div.stage a:hover {
+    text-decoration: underline;
+}
+
+div.stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    background: var(--dpp-fill);
+    font-size: 13px;
+    font-weight: bold;
+    white-space: nowrap;
+    border-radius: 4px 4px 0 0;
+}
+
+.stage-name {
+    padding: 8px;
+}
+
+.stage-version {
+    padding: 8px;
+    font-weight: normal;
+}
+
+/* A stage whose own steps ended worse than any of its tasks carries the status class on its header; a run that
+   ended worse than any of its stages gets a badge in its heading. */
+span.pipeline-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-left: 0;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+/* Tasks */
+div.stage-task {
+    position: relative;
+    white-space: nowrap;
+    margin: 2px;
+    min-height: 42px;
+}
+
+div.task-progress {
+    min-height: 42px;
+    box-sizing: border-box;
+}
+
+div.task-progress-running {
+    animation: dpp-pulse 1s infinite;
+}
+
+@keyframes dpp-pulse {
+    0% {
+        background-color: #0197fe;
+    }
+    50% {
+        background-color: #2daebf;
+    }
+    100% {
+        background-color: #0197fe;
+    }
+}
+
+div.task-content {
+    padding: 3px;
+}
+
+div.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+
+div.taskname {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+div.task-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+button.dpp-button,
+a.dpp-button {
+    display: inline-block;
+    background: none;
+    border: 0;
+    padding: 2px;
+    margin: 0;
+    line-height: 0;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    border-radius: 3px;
+}
+
+button.dpp-button:hover,
+button.dpp-button:focus,
+a.dpp-button:hover,
+a.dpp-button:focus {
+    opacity: 1;
+    background-color: var(--dpp-fill);
+}
+
+button.dpp-button:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+div.task-details {
+    display: flex;
+    gap: 20px;
+    font-size: 9px;
+    padding-top: 2px;
+}
+
+/* Statuses */
+.IDLE {
+    border-left: 6px solid #d3d3d3;
+}
+
+.QUEUED {
+    border-left: 6px solid #2e6e9e;
+}
+
+.RUNNING {
+    border-left: 6px solid #0092ef;
+}
+
+/* Greys come from the theme's text colour, so that they are light on a light board and dark on a dark one */
+.PAUSED_PENDING_INPUT {
+    border-left: 6px solid lightskyblue;
+    animation: dpp-pulse-grey 1s infinite;
+}
+
+@keyframes dpp-pulse-grey {
+    0% {
+        background-color: color-mix(in srgb, var(--text-color, #333333) 12%, transparent);
+    }
+    50% {
+        background-color: color-mix(in srgb, #0092ef 35%, transparent);
+    }
+    100% {
+        background-color: color-mix(in srgb, var(--text-color, #333333) 12%, transparent);
+    }
+}
+
+.SUCCESS {
+    border-left: 6px solid #228b22;
+}
+
+.UNSTABLE {
+    border-left: 6px solid #fcae3f;
+    background-color: #fad42e;
+    color: #1f1f1f;
+    font-weight: bold;
+}
+
+.FAILED {
+    border-left: 6px solid #8b0000;
+    background-color: #ff6347;
+    color: #1f1f1f;
+}
+
+.CANCELLED,
+.NOT_BUILT {
+    border-left: 6px solid #8b8989;
+    background-color: color-mix(in srgb, var(--text-color, #333333) 18%, transparent);
+    color: var(--text-color, #333333);
+    font-weight: bold;
+}
+
+.DISABLED {
+    border-left: 6px solid transparent;
+    color: var(--text-color-secondary, #a9a9a9);
+}
+
+div.stage-task.manual {
+    border-right: 6px solid #ffe4e1;
+}
+
+/* Arrows between stages */
+svg.pipeline-connectors {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 0;
+}
+
+svg.pipeline-connectors path.relation {
+    fill: none;
+    stroke: var(--dpp-connector);
+    stroke-width: 2;
+}
+
+svg.pipeline-connectors marker path {
+    fill: var(--dpp-connector);
+}
+
+/* Change log */
+div.changes {
+    display: table;
+    margin: 0 0 10px 10px;
+}
+
+div.changes h3 {
+    font-size: 12px;
+    margin: 0 0 5px;
+}
+
+div.change {
+    display: table-row;
+}
+
+div.change-author,
+div.change-commit,
+div.change-message {
+    display: table-cell;
+    vertical-align: top;
+    padding-right: 10px;
+}
+
+div.change-author {
+    min-width: 75px;
+}
+
+div.change-commit {
+    font-family: monospace;
+}
+
+/* Details below a task */
+div.infoPanelOuter {
+    margin: 4px 2px 4px 4px;
+    border: 1px solid var(--dpp-line);
+    background-color: var(--dpp-fill-light);
+    white-space: normal;
+}
+
+div.infoPanelInner {
+    padding: 6px 4px;
+    overflow: hidden;
+    font-size: 12px;
+}
+
+div.infoPanelInner a {
+    font-weight: bold;
+}
+
+table.dpp-table {
+    border-collapse: collapse;
+    margin-top: 4px;
+}
+
+table.dpp-table th,
+table.dpp-table td {
+    padding: 2px 8px;
+    text-align: center;
+    border: 1px solid var(--dpp-line);
+}
+
+table.dpp-table th {
+    font-size: smaller;
+    font-weight: normal;
+}
+
+table.dpp-table td.failed {
+    color: #c9302c;
+    font-weight: bold;
+}
+
+table.dpp-table td:first-child {
+    text-align: left;
+}
+
+.promo-icon {
+    vertical-align: middle;
+}
+
+.promo-name {
+    padding-left: 6px;
+}
+
+.promo-user {
+    padding-left: 4px;
+}
+
+.promo-time {
+    padding-left: 12px;
+}
+
+/* Paging */
+nav.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    margin: 0.5em 0 1em;
+}
+
+nav.pagination a,
+nav.pagination .active_link a {
+    display: inline-block;
+    min-width: 22px;
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--text-color, #333333) 10%, transparent);
+    border-radius: 3px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--link-color, #0072bc);
+    background-color: var(--dpp-fill-light);
+}
+
+nav.pagination a:hover {
+    background-color: color-mix(in srgb, var(--link-color, #0072bc) 15%, transparent);
+}
+
+nav.pagination .active_link a {
+    border-color: color-mix(in srgb, var(--link-color, #0072bc) 30%, transparent);
+    background-color: color-mix(in srgb, var(--link-color, #0072bc) 15%, transparent);
+    cursor: default;
+}
+
+nav.pagination .pagination-total {
+    margin-left: 8px;
+    color: var(--text-color-secondary, #6b6b6b);
+}
+
+/* The full screen (wall board) page */
+body.dpp-fullscreen {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    background: #000000;
+    color: #fefefe;
+}
+
+.dpp-fullscreen .dpp-view {
+    --dpp-line: #404040;
+    --dpp-fill: #808080;
+    --dpp-fill-light: #646060;
+    --dpp-connector: #fefefe;
+    padding: 20px;
+}
+
+.dpp-fullscreen h1.pipeline-title {
+    font-size: 38px;
+}
+
+.dpp-fullscreen h2.pipeline-heading {
+    font-size: 24px;
+}
+
+.dpp-fullscreen h3.total-build-time {
+    font-size: 16px;
+}
+
+.dpp-fullscreen div.stage {
+    border-radius: 0;
+    background: #404040;
+}
+
+.dpp-fullscreen div.stage-header {
+    border-radius: 0;
+}
+
+.dpp-fullscreen .stage-name,
+.dpp-fullscreen .stage-version {
+    padding: 10px;
+}
+
+.dpp-fullscreen div.stage-task,
+.dpp-fullscreen div.task-progress {
+    min-height: 36px;
+}
+
+.dpp-fullscreen div.task-details {
+    font-size: 12px;
+}
+
+.dpp-fullscreen div.taskname {
+    font-size: 16px;
+}
+
+.dpp-fullscreen a.task-icon-link svg {
+    color: #fefefe;
+}
+
+.dpp-fullscreen .dpp-message {
+    font-size: 24px;
+}
+
+.dpp-fullscreen .FAILED {
+    border-left-color: #c20000;
+    background-color: #ff0000;
+    color: #ffffff;
+}
+
+.dpp-fullscreen .UNSTABLE {
+    border-left-color: #ec8b04;
+    background-color: #fcae3f;
+    color: #000000;
+}
+
+.dpp-fullscreen .SUCCESS {
+    background-color: rgba(68, 239, 11, 0.7);
+}
+
+.dpp-fullscreen .CANCELLED,
+.dpp-fullscreen .NOT_BUILT {
+    background-color: inherit;
+    color: inherit;
+}
+
+.dpp-fullscreen .DISABLED {
+    color: #a9a9a9;
+}
+
+.dpp-fullscreen svg.pipeline-connectors path.relation {
+    stroke-width: 3;
+}
+
+.dpp-fullscreen div.infoPanelOuter {
+    color: #fefefe;
+    border-color: darkgray;
+}
+
+.dpp-fullscreen nav.pagination {
+    display: none;
+}

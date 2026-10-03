@@ -1,0 +1,31 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    },
+    "Trigger": {
+      "basic": "SUCCESS",
+      "plain": "SUCCESS"
+    },
+    "Report": {
+      "Report": "SUCCESS"
+    },
+    "declarative-basic: Build": {
+      "Build": "SUCCESS"
+    },
+    "declarative-basic: Deploy": {
+      "Deploy": "SUCCESS"
+    },
+    "scripted-plain-steps": {
+      "scripted-plain-steps": ["UNSTABLE", "RUNNING", "QUEUED"]
+    }
+  },
+  "downstream": {
+    "Trigger": ["Report", "declarative-basic: Build", "scripted-plain-steps"]
+  },
+  "positions": {
+    "Trigger": [0, 1],
+    "Report": [0, 2]
+  }
+}

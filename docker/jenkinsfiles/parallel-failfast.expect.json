@@ -1,0 +1,15 @@
+{
+  "result": "FAILURE",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    },
+    "Test": {
+      "slow": [
+        "CANCELLED",
+        "FAILED"
+      ],
+      "broken": "FAILED"
+    }
+  }
+}

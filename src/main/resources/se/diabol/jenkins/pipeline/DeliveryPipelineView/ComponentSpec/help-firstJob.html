@@ -1,4 +1,1 @@
-<div>
-    First job in the pipeline. Usually the build/compile job.
-    The build number/build display name will be used as the version in later tasks or stages.
-</div>
+<div>The job the pipeline starts with. For a chained job, every job downstream of it becomes a task, grouped into stages by the Delivery Pipeline configuration of each job, and a Pipeline job the chain triggers is followed into its runs. For a Pipeline (Jenkinsfile) job, each run is a pipeline instance and each top-level stage a stage; stages nested in a stage and parallel branches become its tasks, and the runs it starts with the build step, or by triggering other jobs, follow as further stages. A multibranch project or a folder gives one pipeline per job inside it, named after the component and the job (the branch, for a multibranch project), the primary branch first.</div>

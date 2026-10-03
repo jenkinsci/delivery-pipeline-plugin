@@ -1,6 +1,6 @@
 <?jelly escape-by-default='true'?>
 <div>
-    Continuous Delivery pipelines, perfect for visualization on information radiators.
-    Shows one or more delivery pipeline instances, based on traditional Jenkins jobs
-    with upstream/downstream dependencies.
+    Continuous delivery pipelines, perfect for information radiators. Shows one or more pipelines built from
+    chained jobs with upstream/downstream dependencies, from Pipeline (Jenkinsfile) jobs, or from every job of a
+    multibranch project or folder.
 </div>

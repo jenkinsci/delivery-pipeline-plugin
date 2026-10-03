@@ -23,8 +23,8 @@ import hudson.model.TaskListener;
 import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 
+/** The {@code ${PIPELINE_VERSION}} token: the version the pipeline's first build was given. */
 @Extension
-@SuppressWarnings("UnusedDeclaration")
 public class PipelineVersionTokenMacro extends DataBoundTokenMacro {
 
     @Override
@@ -33,7 +33,7 @@ public class PipelineVersionTokenMacro extends DataBoundTokenMacro {
         String version = PipelineVersionContributor.getVersion(context);
         if (version == null) {
             throw new MacroEvaluationException("Could not find " + PipelineVersionContributor.VERSION_PARAMETER
-                    + " parameter on this build!");
+                    + " on this build");
         }
         return version;
     }

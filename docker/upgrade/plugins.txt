@@ -1,0 +1,10 @@
+configuration-as-code
+job-dsl
+matrix-auth
+antisamy-markup-formatter
+cloudbees-folder
+workflow-aggregator
+build-pipeline-plugin
+parameterized-trigger
+# the last 1.x release, with whatever it depends on
+delivery-pipeline-plugin:1.4.2

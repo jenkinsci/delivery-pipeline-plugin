@@ -1,72 +1,25 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
-
-    <st:bind var="view" value="${it}"/>
-    <j:set var="fullscreen" value='${request.getParameter("fullscreen") == "true" ? "true" : "false"}'/>
-
-    <j:set var="page" value='${request.getParameter("page") == null ? 1 : request.getParameter("page")}'/>
-
-    <j:set var="component" value='${request.getParameter("component") == null ? 1 : request.getParameter("component")}'/>
-
-    <link rel="stylesheet" href="${resURL}/plugin/delivery-pipeline-plugin/themes/default/pipeline-common.css"/>
-    <j:switch on="${fullscreen}">
-        <j:case value="true">
-            <link rel="stylesheet" href="${resURL}/plugin/delivery-pipeline-plugin/themes/default/pipeline-fullscreen.css"/>
-            <j:if test="${it.fullScreenCss != null}">
-                <link rel="stylesheet" href="${it.fullScreenCss}"/>
-            </j:if>
-        </j:case>
-        <j:default>
-            <link rel="stylesheet" href="${resURL}/plugin/delivery-pipeline-plugin/themes/default/pipeline.css"/>
-            <j:if test="${it.embeddedCss != null}">
-                <link rel="stylesheet" href="${it.embeddedCss}"/>
-            </j:if>
-            <j:set var="views" value="${it.owner.views}"/>
-            <j:set var="currentView" value="${it}"/>
-            <j:if test="${!it.isPortletView}">
-                <j:choose>
-                    <j:when test="${it.owner.class.name=='hudson.model.MyViewsProperty'}">
-                        <st:include page="myViewTabs.jelly" it="${it.owner.myViewsTabBar}"/>
-                    </j:when>
-                    <j:otherwise>
-                        <st:include page="viewTabs.jelly" it="${it.owner.viewsTabBar}"/>
-                    </j:otherwise>
-                </j:choose>
-            </j:if>
-        </j:default>
-    </j:switch>
-
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/moment.min.js"/>
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/pipe-compat.js"/>
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/jquery.jsPlumb-1.3.16-all-min.js"/>
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/pipe.js"/>
-    <script type="text/javascript" src="${resURL}/plugin/delivery-pipeline-plugin/main-behaviour.js"/>
-
-    <div class="pane-frame">
-        <div id="pipeline-main-${it.id == null ? 0 : it.id}" class="pipeline-main">
-
-            <div class="pipeline-logo"/>
-
-            <div id="taskDetails" class="popover">
-            </div>
-
-            <div id="pipelineerror-${it.id == null ? 0 : it.id}" class="pipelineerror"/>
-            <div id="pipeline-message-${it.id == null ? 0 : it.id}" class="pipeline-message">
-                <div class="pipeline-loading-icon"></div>
-            </div>
-
-            <j:forEach begin="1" end="${it.noOfColumns}" indexVar="i">
-                <div id="pipelines-${i}-${it.id == null ? 0 : it.id}" class="left" style="width: ${100/it.noOfColumns}%;"></div>
-            </j:forEach>
-            <div class="clear"></div>
-
-            <span class="dpv-data-holder" data-it-id="${it.id == null ? 0 : it.id}" data-number-of-columns="${it.noOfColumns}"
-                  data-show-changes="${it.isShowChanges()}" data-view-url="${it.getViewUrl()}"
-                  data-aggregated-changes-grouping-pattern="${it.getAggregatedChangesGroupingPattern()}"
-                  data-update-interval="${it.updateInterval}"
-                  data-fullscreen="${fullscreen}" data-page="${page}" data-component="${component}"/>
-        </div>
+    <j:set var="fullscreen" value='${request.getParameter("fullscreen") == "true"}'/>
+    <st:adjunct includes="se.diabol.jenkins.pipeline.DeliveryPipelineView.pipeline"/>
+    <j:if test="${!fullscreen}">
+        <j:set var="views" value="${it.owner.views}"/>
+        <j:set var="currentView" value="${it}"/>
+        <j:choose>
+            <j:when test="${it.owner.class.name == 'hudson.model.MyViewsProperty'}">
+                <st:include page="myViewTabs.jelly" it="${it.owner.myViewsTabBar}"/>
+            </j:when>
+            <j:otherwise>
+                <st:include page="viewTabs.jelly" it="${it.owner.viewsTabBar}"/>
+            </j:otherwise>
+        </j:choose>
+    </j:if>
+    <!-- Everything the page script needs travels as data attributes; it never relies on page globals. -->
+    <div class="dpp-view" data-view-url="${it.viewUrl}" data-root-url="${rootURL}"
+         data-fullscreen="${fullscreen}"
+         data-crumb-field="${h.getCrumbRequestField()}" data-crumb-value="${h.getCrumb(request)}">
+        <div class="dpp-error" role="alert" hidden="hidden"></div>
+        <div class="dpp-message"><span class="dpp-spinner" aria-label="Loading"></span></div>
+        <div class="dpp-columns"></div>
     </div>
-    <!--<st:include page="legend.jelly"/>-->
-
 </j:jelly>

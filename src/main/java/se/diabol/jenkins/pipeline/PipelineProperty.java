@@ -17,39 +17,39 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.AutoCompletionCandidates;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
 import hudson.util.FormValidation;
+import java.util.TreeSet;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.export.Exported;
-import se.diabol.jenkins.pipeline.util.JenkinsUtil;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import jakarta.annotation.Nonnull;
-
+/**
+ * Names a job's task and stage in the pipeline and gives its task a description template. Without it, the job's
+ * display name is used for both.
+ */
 public class PipelineProperty extends JobProperty<AbstractProject<?, ?>> {
 
-    private String taskName = null;
-    private String stageName = null;
-    private String descriptionTemplate = null;
-
-    public PipelineProperty() {
-    }
+    private String taskName;
+    private String stageName;
+    private String descriptionTemplate;
 
     @DataBoundConstructor
     public PipelineProperty(String taskName, String stageName, String descriptionTemplate) {
-        setStageName(stageName);
-        setTaskName(taskName);
-        setDescriptionTemplate(descriptionTemplate);
+        this.taskName = nullIfBlank(taskName);
+        this.stageName = nullIfBlank(stageName);
+        this.descriptionTemplate = nullIfBlank(descriptionTemplate);
     }
 
     @Exported
@@ -67,99 +67,92 @@ public class PipelineProperty extends JobProperty<AbstractProject<?, ?>> {
         return descriptionTemplate;
     }
 
-    public final void setTaskName(String taskName) {
-        this.taskName = taskName;
+    public void setTaskName(String taskName) {
+        this.taskName = nullIfBlank(taskName);
     }
 
-    public final void setStageName(String stageName) {
-        this.stageName = stageName;
+    public void setStageName(String stageName) {
+        this.stageName = nullIfBlank(stageName);
     }
 
     public void setDescriptionTemplate(String descriptionTemplate) {
-        this.descriptionTemplate = descriptionTemplate;
+        this.descriptionTemplate = nullIfBlank(descriptionTemplate);
     }
 
-    public static Set<String> getStageNames() {
-        List<AbstractProject> projects = JenkinsUtil.getInstance().getAllItems(AbstractProject.class);
-        Set<String> result = new HashSet<>();
-        for (AbstractProject project : projects) {
-            PipelineProperty property = (PipelineProperty) project.getProperty(PipelineProperty.class);
-            if (property != null && property.getStageName() != null) {
-                result.add(property.getStageName());
-            }
-
-        }
-        return result;
+    private static String nullIfBlank(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
 
+        @NonNull
         @Override
         public String getDisplayName() {
-            return "Pipeline description";
+            return "Delivery Pipeline configuration";
         }
 
         @Override
         public boolean isApplicable(Class<? extends Job> jobType) {
-            return true;
+            return AbstractProject.class.isAssignableFrom(jobType);
         }
 
-        public AutoCompletionCandidates doAutoCompleteStageName(@QueryParameter String value) {
-            if (value != null) {
-                AutoCompletionCandidates candidates = new AutoCompletionCandidates();
-                Set<String> stages = getStageNames();
-
-                for (String stage : stages) {
-                    if (stage.toLowerCase().startsWith(value.toLowerCase())) {
-                        candidates.add(stage);
-                    }
-                }
-                return candidates;
+        /** Only whoever may configure the job gets to validate its form; the checks are cheap and reveal nothing. */
+        static void checkConfigure(Item item) {
+            if (item != null) {
+                item.checkPermission(Item.CONFIGURE);
             } else {
-                return new AutoCompletionCandidates();
+                Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             }
         }
 
-        public FormValidation doCheckStageName(@QueryParameter String value) {
-            return checkValue(value);
-        }
-
-        public FormValidation doCheckTaskName(@QueryParameter String value) {
-            return checkValue(value);
-        }
-
-        protected FormValidation checkValue(String value) {
-            if (value == null || "".equals(value)) {
-                return FormValidation.ok();
+        /** Stage names that other jobs the caller may read already use. */
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public AutoCompletionCandidates doAutoCompleteStageName(@AncestorInPath Item item, @QueryParameter String value) {
+            checkConfigure(item);
+            AutoCompletionCandidates candidates = new AutoCompletionCandidates();
+            if (value == null) {
+                return candidates;
             }
-            if ("".equals(value.trim())) {
-                return FormValidation.error("Value needs to be empty or include characters and/or numbers");
+            TreeSet<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+            for (AbstractProject<?, ?> project : Jenkins.get().getAllItems(AbstractProject.class)) {
+                PipelineProperty property = project.getProperty(PipelineProperty.class);
+                if (property != null && property.getStageName() != null
+                        && property.getStageName().toLowerCase().startsWith(value.toLowerCase())) {
+                    names.add(property.getStageName());
+                }
+            }
+            names.forEach(candidates::add);
+            return candidates;
+        }
+
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public FormValidation doCheckStageName(@AncestorInPath Item item, @QueryParameter String value) {
+            checkConfigure(item);
+            return checkName(value);
+        }
+
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public FormValidation doCheckTaskName(@AncestorInPath Item item, @QueryParameter String value) {
+            checkConfigure(item);
+            return checkName(value);
+        }
+
+        private static FormValidation checkName(String value) {
+            if (value != null && !value.isEmpty() && value.isBlank()) {
+                return FormValidation.error("The name must be empty or contain letters or digits");
             }
             return FormValidation.ok();
         }
 
         @Override
-        public PipelineProperty newInstance(@Nonnull StaplerRequest sr, JSONObject formData) throws FormException {
-            boolean configEnabled = sr.getParameter("enabled") != null;
-            if (!configEnabled) {
+        public PipelineProperty newInstance(StaplerRequest2 req, JSONObject formData) throws FormException {
+            if (formData == null || !formData.optBoolean("enabled", false)) {
                 return null;
             }
-            String task = nullIfEmpty(sr.getParameter("taskName"));
-            String stage = nullIfEmpty(sr.getParameter("stageName"));
-            String description = nullIfEmpty(sr.getParameter("descriptionTemplate"));
-            if (task == null && stage == null) {
-                return null;
-            }
-            return new PipelineProperty(task, stage, description);
-        }
-
-        private static String nullIfEmpty(String string) {
-            if ("".equals(string)) {
-                return null;
-            } else {
-                return string;
-            }
+            PipelineProperty property = new PipelineProperty(formData.optString("taskName"),
+                    formData.optString("stageName"), formData.optString("descriptionTemplate"));
+            return property.getTaskName() == null && property.getStageName() == null ? null : property;
         }
     }
 }

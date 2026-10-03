@@ -1,0 +1,18 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    }
+  },
+  "tasks_contain": {
+    "Test": [
+      "OS = 'linux', BROWSER = 'chrome'",
+      "OS = 'linux', BROWSER = 'firefox'",
+      "OS = 'mac', BROWSER = 'chrome'"
+    ]
+  },
+  "task_count": {
+    "Test": 3
+  }
+}

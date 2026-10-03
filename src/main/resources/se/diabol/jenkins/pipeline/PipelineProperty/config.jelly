@@ -1,18 +1,14 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-
-    <f:optionalBlock name="enabled" title="Delivery Pipeline configuration" inline="true" checked="${instance != null}">
-            <f:entry title="Stage Name" field="stageName">
-                <f:textbox name="stageName" value="${instance.getStageName()}"/>
-            </f:entry>
-
-            <f:entry title="Task Name" field="taskName">
-                <f:textbox name="taskName" value="${instance.getTaskName()}"/>
-            </f:entry>
-
-            <f:entry title="Customize Task Description Template" field="descriptionTemplate">
-                <f:textarea name="descriptionTemplate" value="${instance.getDescriptionTemplate()}"/>
-            </f:entry>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:optionalBlock name="enabled" title="${%Delivery Pipeline configuration}" inline="true" checked="${instance != null}">
+        <f:entry title="${%Stage name}" field="stageName">
+            <f:textbox/>
+        </f:entry>
+        <f:entry title="${%Task name}" field="taskName">
+            <f:textbox/>
+        </f:entry>
+        <f:entry title="${%Task description template}" field="descriptionTemplate">
+            <f:textarea/>
+        </f:entry>
     </f:optionalBlock>
 </j:jelly>

@@ -1,0 +1,16 @@
+{
+  "result": "UNSTABLE",
+  "stages": {
+    "scripted-plain-steps": {
+      "scripted-plain-steps": "UNSTABLE"
+    }
+  },
+  "task_count": {
+    "scripted-plain-steps": 1
+  },
+  "tests": {
+    "scripted-plain-steps": {
+      "scripted-plain-steps": [2, 1, 0]
+    }
+  }
+}

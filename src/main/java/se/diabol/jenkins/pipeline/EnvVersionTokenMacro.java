@@ -17,36 +17,31 @@ If not, see <http://www.gnu.org/licenses/>.
 */
 package se.diabol.jenkins.pipeline;
 
+import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.TaskListener;
-import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
-import org.jenkinsci.plugins.variant.OptionalExtension;
-
 import java.io.IOException;
 import java.util.Map;
+import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 
-@OptionalExtension
+/** The {@code ${ENV_VERSION}} token: the {@code ENV_VERSION} environment variable, optionally without -SNAPSHOT. */
+@Extension
 public class EnvVersionTokenMacro extends DataBoundTokenMacro {
 
     private static final String NAME = "ENV_VERSION";
-    public static final Class<DataBoundTokenMacro> clazz = DataBoundTokenMacro.class;
 
-    @DataBoundTokenMacro.Parameter(required = false)
-    public boolean stripSnapshot = false;
+    @Parameter(required = false)
+    public boolean stripSnapshot;
 
     @Override
     public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName)
             throws IOException, InterruptedException {
         Map<String, String> env = context.getEnvironment(listener);
-        if (env.containsKey(NAME)) {
-            if (stripSnapshot) {
-                String version = env.get(NAME);
-                return version.replace("-SNAPSHOT", "");
-            } else {
-                return env.get(NAME);
-            }
+        String version = env.get(NAME);
+        if (version == null) {
+            return "";
         }
-        return "";
+        return stripSnapshot ? version.replace("-SNAPSHOT", "") : version;
     }
 
     @Override

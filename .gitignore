@@ -14,5 +14,8 @@ work
 .classpath
 .project
 
+# macOS Finder metadata
+.DS_Store
+
 # VS Code project files
 .vscode

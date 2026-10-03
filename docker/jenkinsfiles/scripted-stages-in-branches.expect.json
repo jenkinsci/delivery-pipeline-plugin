@@ -1,0 +1,17 @@
+{
+  "result": "SUCCESS",
+  "stages": {
+    "Build": {
+      "Build": "SUCCESS"
+    },
+    "Test": {
+      "linux: Compile": "SUCCESS",
+      "linux: Unit": "SUCCESS",
+      "windows: Compile": "SUCCESS",
+      "windows: Unit": "SUCCESS"
+    }
+  },
+  "task_count": {
+    "Test": 4
+  }
+}
