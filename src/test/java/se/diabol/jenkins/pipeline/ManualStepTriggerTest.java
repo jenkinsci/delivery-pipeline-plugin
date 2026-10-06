@@ -111,7 +111,7 @@ class ManualStepTriggerTest {
             assertThat(manual.getAttribute("data-upstream"), is("build"));
             assertThat(manual.getAttribute("data-build"), is("1"));
             manual.click();
-            client.waitForBackgroundJavaScript(5000);
+            PageTestSupport.waitFor(() -> deploy.getLastBuild() != null || !jenkins.getInstance().getQueue().isEmpty());
             assertThat(PageTestSupport.errorText(page), not(containsString("Could not")));
         }
         jenkins.waitUntilNoActivity();

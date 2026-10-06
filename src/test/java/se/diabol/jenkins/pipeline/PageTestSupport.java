@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import org.htmlunit.Page;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlPage;
@@ -59,12 +60,29 @@ final class PageTestSupport {
         return client;
     }
 
-    /** Opens the page, lets the script poll and render, and checks that no error is shown. */
+    /** How long a page or a click gets to do what the test waits for. */
+    private static final long WAIT_MILLIS = 15000;
+
+    /**
+     * Opens the page, waits until the script's first poll has rendered or shown an error, and checks that no error
+     * is shown. The page keeps polling on a timer, so waiting for all background JavaScript to finish would always
+     * run the whole timeout. Instead: wait until the first render has begun, then for the script running now, but
+     * not for the next poll, which is seconds away.
+     */
     static HtmlPage render(JenkinsRule jenkins, JenkinsRule.WebClient client, String relativeUrl) throws Exception {
         HtmlPage page = client.getPage(new URL(jenkins.getURL(), relativeUrl));
-        client.waitForBackgroundJavaScript(15000);
+        waitFor(() -> page.querySelector(".dpp-column") != null || !errorText(page).isEmpty());
+        client.waitForBackgroundJavaScriptStartingBefore(500);
         assertThat(errorText(page), not(containsString("Error")));
         return page;
+    }
+
+    /** Waits until the condition holds or the timeout passes, whichever is first; the caller asserts the outcome. */
+    static void waitFor(BooleanSupplier condition) throws InterruptedException {
+        long end = System.currentTimeMillis() + WAIT_MILLIS;
+        while (!condition.getAsBoolean() && System.currentTimeMillis() < end) {
+            Thread.sleep(50);
+        }
     }
 
     static String errorText(HtmlPage page) {

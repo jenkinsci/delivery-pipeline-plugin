@@ -36,6 +36,7 @@ import static se.diabol.jenkins.pipeline.PageTestSupport.staticClient;
 import static se.diabol.jenkins.pipeline.PageTestSupport.taskNames;
 import static se.diabol.jenkins.pipeline.PageTestSupport.texts;
 import static se.diabol.jenkins.pipeline.PageTestSupport.view;
+import static se.diabol.jenkins.pipeline.PageTestSupport.waitFor;
 
 import au.com.centrumsystems.hudson.plugin.buildpipeline.trigger.BuildPipelineTrigger;
 import com.cloudbees.hudson.plugins.folder.Folder;
@@ -176,7 +177,7 @@ class DeliveryPipelineViewPageTest {
             assertThat("two builds, one pipeline per page: a link to page 2", link, notNullValue());
             assertThat(page.querySelector(".pagination-total").asNormalizedText(), is("2 pipelines"));
             link.click();
-            client.waitForBackgroundJavaScript(10000);
+            waitFor(() -> page.querySelector(".pipeline-heading").asNormalizedText().contains("#1"));
             assertThat("the second page shows the older build", page.querySelector(".pipeline-heading").asNormalizedText(),
                     containsString("#1"));
             assertThat(page.querySelectorAll(".pagination .active_link a").get(0).asNormalizedText(), is("2"));
@@ -214,7 +215,7 @@ class DeliveryPipelineViewPageTest {
             assertThat(rebuild.getAttribute("data-project"), is("deploy"));
             assertThat("the first job cannot be rebuilt", page.querySelectorAll(".task-rebuild").size(), is(1));
             rebuild.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> deploy.getBuilds().size() > deployBuilds || !jenkins.getInstance().getQueue().isEmpty());
         }
         jenkins.waitUntilNoActivity();
         assertThat("clicking rebuild queued a new build of deploy", deploy.getBuilds().size(), is(deployBuilds + 1));
@@ -231,7 +232,7 @@ class DeliveryPipelineViewPageTest {
             HtmlElement start = page.querySelector(".task-trigger-build");
             assertThat(start, notNullValue());
             start.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> build.getBuilds().size() > builds || !jenkins.getInstance().getQueue().isEmpty());
         }
         jenkins.waitUntilNoActivity();
         assertThat("clicking Build now queued a new build", build.getBuilds().size(), is(builds + 1));
@@ -256,7 +257,7 @@ class DeliveryPipelineViewPageTest {
             assertThat(manual.getAttribute("data-upstream"), is("build"));
             assertThat(page.querySelector(".stage-task.manual"), notNullValue());
             manual.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> !deploy.getBuilds().isEmpty() || !jenkins.getInstance().getQueue().isEmpty());
         }
         jenkins.waitUntilNoActivity();
         assertThat("clicking the manual trigger built deploy", deploy.getBuilds().size(), is(1));
@@ -316,7 +317,7 @@ class DeliveryPipelineViewPageTest {
             assertThat("the paused Deploy stage offers the input button", input, notNullValue());
             assertThat(input.getAttribute("data-project"), is("gate"));
             input.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> !run.isBuilding());
         }
         jenkins.waitUntilNoActivity();
         jenkins.assertBuildStatusSuccess(run);
@@ -341,7 +342,7 @@ class DeliveryPipelineViewPageTest {
                     page.<DomElement>querySelector(".stage-task .taskname a").getAttribute("href"), endsWith("/job/slow/1/console"));
             assertThat(abort.getAttribute("data-project"), is("slow"));
             abort.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> !run.isBuilding());
             assertThat(PageTestSupport.errorText(page), not(containsString("Could not")));
         }
         jenkins.waitUntilNoActivity();
@@ -531,7 +532,7 @@ class DeliveryPipelineViewPageTest {
             assertThat(rebuild.getAttribute("data-project"), is("parameterized"));
             assertThat(rebuild.getAttribute("data-build"), is("1"));
             rebuild.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> flow.getLastBuild().getNumber() > 1 || !jenkins.getInstance().getQueue().isEmpty());
         }
         jenkins.waitUntilNoActivity();
         WorkflowRun again = flow.getBuildByNumber(2);
@@ -564,7 +565,7 @@ class DeliveryPipelineViewPageTest {
             assertThat(restart.getAttribute("data-stage"), is("Deploy"));
             assertThat(restart.getAttribute("title"), is("Restart from stage Deploy"));
             restart.click();
-            client.waitForBackgroundJavaScript(5000);
+            waitFor(() -> flow.getLastBuild().getNumber() > 1 || !jenkins.getInstance().getQueue().isEmpty());
         }
         jenkins.waitUntilNoActivity();
         WorkflowRun restarted = flow.getBuildByNumber(2);
