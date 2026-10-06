@@ -175,7 +175,7 @@ public final class ConsolidatedRun {
         }
     }
 
-    private final String viewKey;
+    private final String viewUrl;
     private final String viewName;
     private final int number;
     private final int concurrentPipelines;
@@ -191,9 +191,9 @@ public final class ConsolidatedRun {
     private long finishedAt;
     private String stoppedBy;
 
-    ConsolidatedRun(String viewKey, String viewName, int number, int concurrentPipelines, int sleepSeconds,
+    ConsolidatedRun(String viewUrl, String viewName, int number, int concurrentPipelines, int sleepSeconds,
                     String startedById, String startedBy, long startedAt, long estimate, List<Entry> entries) {
-        this.viewKey = viewKey;
+        this.viewUrl = viewUrl;
         this.viewName = viewName;
         this.number = number;
         this.concurrentPipelines = concurrentPipelines;
@@ -211,7 +211,7 @@ public final class ConsolidatedRun {
         for (Entry entry : getEntries()) {
             copies.add(new Entry(entry));
         }
-        ConsolidatedRun copy = new ConsolidatedRun(viewKey, viewName, number, concurrentPipelines, sleepSeconds,
+        ConsolidatedRun copy = new ConsolidatedRun(viewUrl, viewName, number, concurrentPipelines, sleepSeconds,
                 startedById, startedBy, startedAt, estimate, copies);
         copy.state = state;
         copy.batch = batch;
@@ -222,8 +222,8 @@ public final class ConsolidatedRun {
     }
 
     /** What identifies the view: the URL of the view relative to the Jenkins root. */
-    public String getViewKey() {
-        return viewKey;
+    public String getViewUrl() {
+        return viewUrl;
     }
 
     public String getViewName() {

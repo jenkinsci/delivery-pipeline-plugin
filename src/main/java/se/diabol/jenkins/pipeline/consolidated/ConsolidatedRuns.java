@@ -86,6 +86,12 @@ public class ConsolidatedRuns implements Saveable {
 
     private static final Logger LOG = Logger.getLogger(ConsolidatedRuns.class.getName());
 
+    static {
+        // The field was named viewKey before; keep reading and writing that element, so the runs a
+        // controller has already saved load unchanged.
+        Jenkins.XSTREAM2.aliasField("viewKey", ConsolidatedRun.class, "viewUrl");
+    }
+
     static final String SETTLE_SECONDS_PROPERTY = ConsolidatedRuns.class.getName() + ".settleSeconds";
     static final long TICK_MILLIS = 2000;
 
@@ -471,7 +477,7 @@ public class ConsolidatedRuns implements Saveable {
 
     private ConsolidatedRun publish(ConsolidatedRun run) {
         ConsolidatedRun copy = run.copy();
-        published.put(run.getViewKey(), copy);
+        published.put(run.getViewUrl(), copy);
         return copy;
     }
 

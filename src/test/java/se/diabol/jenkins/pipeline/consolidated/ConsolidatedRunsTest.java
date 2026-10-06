@@ -321,6 +321,12 @@ class ConsolidatedRunsTest {
         assertThat(read.getEntries().get(0).getBuildNumber(), is(1));
         assertThat(read.getEntries().get(1).getStatus(), is(StatusType.IDLE));
         assertThat(read.getEntries().get(1).getJobFullName(), is("b"));
+        assertThat(read.getViewUrl(), is(VIEW));
+        // The file keeps the element the field had before it was renamed, so runs saved by then still load.
+        String saved = new String(java.nio.file.Files.readAllBytes(
+                new java.io.File(jenkins.jenkins.getRootDir(), ConsolidatedRuns.class.getName() + ".xml").toPath()),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(saved, containsString("<viewKey>" + VIEW + "</viewKey>"));
         runs.stop(VIEW, "tester");
     }
 
