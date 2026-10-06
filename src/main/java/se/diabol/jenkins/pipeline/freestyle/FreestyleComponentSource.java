@@ -176,7 +176,13 @@ public class FreestyleComponentSource extends ComponentSource {
             stages.add(new TemplateStage(id, entry.getValue().row(), entry.getValue().column(), byStage.get(id),
                     edges.get(id)));
         }
-        return new Chain(graph, stages, new BuildIndex(first));
+        // The node ids are the chain's job full names - NOT `ids` above, which are stage names and would
+        // end every upstream walk at once. BuildIndex stops its walk when a cause leaves this set.
+        Set<String> jobs = new LinkedHashSet<>();
+        for (ChainGraph.Node node : graph.nodes()) {
+            jobs.add(node.id());
+        }
+        return new Chain(graph, stages, new BuildIndex(first, jobs));
     }
 
     /** The projects without upstream projects that the chain leading to the project starts from. */

@@ -194,4 +194,64 @@ class FreestyleChainTest {
         assertThat(components.get(0).pipelines(), hasSize(0));
         assertThat(components.get(1).firstJob(), nullValue());
     }
+
+    /** The task for the job, wherever the layout put it. */
+    private static Task taskOf(Pipeline pipeline, String jobFullName) {
+        for (Stage stage : pipeline.stages()) {
+            for (Task task : stage.tasks()) {
+                if (jobFullName.equals(task.jobFullName())) {
+                    return task;
+                }
+            }
+        }
+        throw new AssertionError("no task for " + jobFullName + " in " + pipeline.id());
+    }
+
+    /**
+     * BuildIndex stops scanning a job's builds once it is past the moment the pipeline started, and stops walking
+     * upstream causes once they leave the chain. Both are how a long chain stays cheap, and both are wrong if they
+     * cut off a build that does belong - so: a job behind a failure is idle for that pipeline and only that one, and
+     * a build the job ran for its own reasons is attributed to no pipeline at all.
+     */
+    @Test
+    void aJobBehindAFailureIsIdleForThatPipelineOnly() throws Exception {
+        FreeStyleProject build = jenkins.createFreeStyleProject("build");
+        FreeStyleProject test = chain("build", "test");
+        FreeStyleProject deploy = chain("test", "deploy");
+
+        // Pipeline #1 stops at test, so deploy never runs in it.
+        test.getBuildersList().add(new FailureBuilder());
+        build.scheduleBuild2(0).get();
+        jenkins.waitUntilNoActivity();
+
+        // deploy#1: the job's own build, nothing to do with the chain. It is newer than pipeline #1, so the scan
+        // reaches it, and it must still not be counted as pipeline #1's deploy.
+        jenkins.buildAndAssertSuccess(deploy);
+        jenkins.waitUntilNoActivity();
+
+        // Pipeline #2 runs all the way through, giving deploy#2.
+        test.getBuildersList().clear();
+        jenkins.buildAndAssertSuccess(build);
+        jenkins.waitUntilNoActivity();
+
+        Component component = resolve("Comp", build, null, false, settings(2, true), 1);
+        assertThat(component.pipelines(), hasSize(3));
+
+        Pipeline aggregated = component.pipelines().get(0);
+        assertThat(aggregated.aggregated(), is(true));
+        assertThat("the aggregate finds deploy's chain build, not its own",
+                taskOf(aggregated, "deploy").buildNumber(), is(2));
+
+        Pipeline second = component.pipelines().get(1);
+        assertThat(second.version(), is("#2"));
+        assertThat(taskOf(second, "deploy").buildNumber(), is(2));
+        assertThat(taskOf(second, "deploy").status().type(), is(StatusType.SUCCESS));
+
+        Pipeline first = component.pipelines().get(2);
+        assertThat(first.version(), is("#1"));
+        assertThat(taskOf(first, "test").status().type(), is(StatusType.FAILED));
+        assertThat("deploy's own build belongs to no pipeline",
+                taskOf(first, "deploy").buildNumber(), nullValue());
+        assertThat(taskOf(first, "deploy").status().type(), is(StatusType.IDLE));
+    }
 }
