@@ -302,6 +302,12 @@ def pipelineView(String path, Closure components, Map options = [:]) {
         pipelines(components)
         configure { view ->
             view / 'allowAbort'(true)
+            // Job DSL has no methods for the consolidated pipeline yet; these are the view's own fields
+            if (options.consolidated) {
+                view / 'showConsolidatedPipeline'(true)
+                view / 'noOfConcurrentPipelines'(options.consolidated.concurrent)
+                view / 'sleepBetweenConcurrentPipelines'(options.consolidated.sleep)
+            }
         }
     }
 }
@@ -382,6 +388,49 @@ pipelineView('zoo/Branches', { component('App', 'app') }, [instances: 1, aggrega
 pipelineView('zoo/Jenkinsfiles', {
     zooFiles.each { file -> component(file.name - '.groovy', file.name - '.groovy') }
 }, [instances: 1, aggregated: false, columns: 2])
+
+// ---------------------------------------------------------------- images: trees of container images behind a consolidated pipeline
+// Every image is built, pushed and pruned, and a pushed image starts the builds of the images made from it. The
+// prune jobs wait, through the Build Blocker plugin, until no build or push is running, as clean-up jobs on a shared
+// agent do: start every tree at once and the prunes are held until the last build is over. The consolidated pipeline
+// of the view runs the trees three at a time, and a batch only ends when its prunes have run.
+folder('images') {
+    displayName('Image trees')
+    description('Trees of container images whose clean-up waits for every build, run by a consolidated pipeline')
+}
+def imageTrees = [alpine: ['golang', 'node'], debian: [], nginx: [], postgres: [], python: ['flask'], redis: [], busybox: []]
+def imageJobs
+imageJobs = { String image, List children, int depth ->
+    job("images/build_${image}") {
+        deliveryPipelineConfiguration("${depth} ${image}", "build ${image}")
+        quietPeriod(0)
+        blockOn(['.*prune_.*']) { blockLevel('GLOBAL') }
+        steps { shell('echo building; sleep 4') }
+        publishers { downstream("images/push_${image}", 'SUCCESS') }
+    }
+    job("images/push_${image}") {
+        deliveryPipelineConfiguration("${depth} ${image}", "push ${image}")
+        quietPeriod(0)
+        steps { shell('echo pushing; sleep 2') }
+        publishers {
+            downstream("images/prune_${image}", 'SUCCESS')
+            if (children) {
+                downstream(children.collect { "images/build_${it}" }.join(', '), 'SUCCESS')
+            }
+        }
+    }
+    job("images/prune_${image}") {
+        deliveryPipelineConfiguration("${depth} ${image}", "prune ${image}")
+        quietPeriod(0)
+        blockOn(['.*prune_.*', '.*build_.*', '.*push_.*']) { blockLevel('GLOBAL') }
+        steps { shell('echo pruning; sleep 1') }
+    }
+    children.each { child -> imageJobs(child, [], depth + 1) }
+}
+imageTrees.each { image, children -> imageJobs(image, children, 0) }
+pipelineView('images/All images', {
+    imageTrees.keySet().each { image -> component(image, "build_${image}") }
+}, [instances: 1, aggregated: false, consolidated: [concurrent: 3, sleep: 5]])
 
 // ---------------------------------------------------------------- perf: a large board for the load test (docker/run.sh perf)
 int perfChains = (System.getenv('PERF_CHAINS') ?: '20') as int

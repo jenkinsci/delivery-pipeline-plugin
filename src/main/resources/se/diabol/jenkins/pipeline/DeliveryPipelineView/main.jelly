@@ -20,6 +20,8 @@
          data-crumb-field="${h.getCrumbRequestField()}" data-crumb-value="${h.getCrumb(request)}">
         <div class="dpp-error" role="alert" hidden="hidden"></div>
         <div class="dpp-message"><span class="dpp-spinner" aria-label="Loading"></span></div>
+        <!-- The consolidated pipeline spans the view, above the columns of components. -->
+        <div class="dpp-consolidated"></div>
         <div class="dpp-columns"></div>
     </div>
 </j:jelly>

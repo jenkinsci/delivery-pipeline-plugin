@@ -21,6 +21,8 @@ workflow-multibranch
 git
 pipeline-model-definition
 pipeline-graph-view
+# Holds the clean-up jobs of the image trees back while a build is running, which the consolidated pipeline waits out
+build-blocker-plugin
 # Job types and optional integrations the plugin recognises when present
 matrix-project
 parameterized-trigger

@@ -44,6 +44,20 @@ zoo view in both themes.
 To add a shape, drop a `name.groovy` with a one-line comment on top (it becomes the job description) and a
 `name.expect.json` beside it, then run `docker/run.sh all`.
 
+## The image trees and the consolidated pipeline
+
+The *Image trees* folder holds seven trees of container images, two of them with child images. Every image has a
+`build`, a `push` and a `prune` job, and the prune jobs are blocked, through the Build Blocker plugin, while any build
+or push of the folder is running, the way clean-up jobs on a shared agent are. The *All images* view shows the trees
+under a consolidated pipeline of three at a time with five seconds between batches.
+
+`validate.py` checks the component, who may start and stop a run, and then runs it twice: once stopped in its first
+batch, which must finish that batch and start nothing else, and once to the end. While the second run goes it
+samples the view and the queue every second: never more than three pipelines at a time, no pipeline before its batch,
+prune jobs seen held in the queue while their batch ran, the run seen sleeping with nothing running. Afterwards the
+build times must show that every job of a batch, prunes and child images included, ended five seconds or more before
+the first build of the next batch started.
+
 ## Load test
 
     docker/run.sh up

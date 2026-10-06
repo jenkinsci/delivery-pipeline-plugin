@@ -28,5 +28,7 @@ public record Trigger(@Exported String type, @Exported String description) {
     public static final String SCM = "SCM";
     public static final String TIMER = "TIMER";
     public static final String REMOTE = "REMOTE";
+    /** The consolidated pipeline of a view ran the pipeline. */
+    public static final String CONSOLIDATED = "CONSOLIDATED";
     public static final String UNKNOWN = "UNKNOWN";
 }

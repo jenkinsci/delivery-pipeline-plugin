@@ -170,7 +170,9 @@ Configuring a view
 Create a view of type `Delivery Pipeline View`. Under *Pipelines*, add a component per pipeline: a name and the
 initial job. For a chain of jobs the view follows the downstream dependencies of the initial job (build triggers,
 parameterized triggers, promotions); an optional final job stops the chain there. Alternatively a regular expression
-over job names creates one component per match, named by the expression's capture group.
+over job names creates one component per match, named by the expression's capture group. Job names are typed, with
+suggestions as you type and a check of what you typed, rather than picked from a list of every job, so that the form
+opens at once on a controller with thousands of jobs too.
 
 Jobs are grouped into stages by the *Delivery Pipeline configuration* property of each job: jobs with the same
 stage name share a stage, and the task name is what the job's box says. Without the property, the job's display name
@@ -225,6 +227,78 @@ job('build') {
 Jobs listed in the [Build Pipeline plugin](https://plugins.jenkins.io/build-pipeline-plugin/)'s *Build other
 projects (manual step)* action are recognised in the same way when that plugin is installed. Pipeline runs waiting
 at an `input` step show a button that lets them proceed.
+
+The consolidated pipeline
+-------------------------
+
+A view with many pipelines can get one parent above them, the *consolidated pipeline*, which runs them all, a few
+at a time. Switch on *Show the consolidated pipeline* in the view's configuration and set:
+
+- *Number of concurrent pipelines* (default 3): how many pipelines a batch holds, and so the most that ever run side
+  by side.
+- *Sleep time between concurrent pipelines* (default 10 seconds): the pause after a batch has finished, before the
+  next one starts.
+
+The view then shows a component named *Consolidated pipeline* first, across the whole width: a stage per batch,
+each leading to the next, and a task per pipeline with the status of that pipeline as a whole. With *Allow
+starting a pipeline* on, users who may build the first job of every pipeline get a button that runs them all and,
+while a run is going, one that stops it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/dpp_consolidated_dark.png">
+  <img alt="The consolidated pipeline of seven image trees after a run of three batches" src="docs/dpp_consolidated.png" width="702">
+</picture>
+
+A run takes the pipelines in the order the view is configured in, whatever the sorting and however many components
+the view shows, and cuts them into batches. It builds the first job of every pipeline of a batch (a job with
+parameters gets their defaults), waits until all of them have come to an end, sleeps, and goes on with the next
+batch, whatever the outcome of the last one. A pipeline has come to an end when none of its tasks is running or
+waiting in the queue any more, blocked queue items included, and that has been so for three seconds: the whole
+chain downstream of the first build counts, or for a Pipeline job the run with the runs it started. A Pipeline run
+waiting at an `input` step holds its batch until someone answers; a manual step that nobody triggers does not.
+
+That is the point of batches over simply starting everything. Take image builds that share an agent, where the
+clean-up job of each image is blocked while any build is running: started all at once, the builds keep the clean-ups
+in the queue until the last build is over, and the agent's disk fills up first. Run three at a time, the clean-ups
+of each batch get their turn before the next three builds start.
+
+The run is planned when it starts: reconfiguring the view, or a seed job replacing it, does not change a run that is
+going. Runs are kept in `$JENKINS_HOME/se.diabol.jenkins.pipeline.consolidated.ConsolidatedRuns.xml`, so a run goes
+on after a restart, and no new batch starts while Jenkins is preparing to shut down. Stopping a run starts no
+further batch; the pipelines that are running go on, and the run ends when they have. Stopping it a second time
+ends it at once, which is the way out when a pipeline can never end, such as one whose job waits in the queue for
+an agent that is gone. Between runs the component
+shows what a run started now would do, each pipeline with the outcome it had in the last run. The builds a run
+starts name it as their cause, and so do the pipelines in the view.
+
+While a run is going the component says when it is expected to end, and between runs how long a run takes. It goes
+by how long each pipeline took in the last run, from the start of its first build until nothing of it was running
+or queued any more, which includes the waiting that comes with the company it had on the agents. Before a pipeline
+has been through a run, the newest instance of it that ran to a good end counts instead, and a pipeline nothing is
+known of counts as the average of the others. The expected end is what is left of the current batch, going by its
+slowest pipeline, and for every batch to come its slowest pipeline and the sleep before it; the first run of a view
+tends to be expected too early, because pipelines that ran alone were not held up by others.
+
+Job DSL has no methods for these options yet; a `configure` block sets the view's fields:
+
+```groovy
+deliveryPipelineView('Ancestry_Automated/all pipelines') {
+    pipelineInstances(1)
+    allowPipelineStart()
+    pipelines {
+        component('hivealpine', 'Ancestry_Automated/0/build_hivealpine_master')
+        component('hivegolang', 'Ancestry_Automated/0/build_hivegolang_master')
+    }
+    configure { view ->
+        view / 'showConsolidatedPipeline'(true)
+        view / 'noOfConcurrentPipelines'(3)
+        view / 'sleepBetweenConcurrentPipelines'(10)
+    }
+}
+```
+
+Scripts can start and stop a run with a POST to `<view>/startConsolidated` and `<view>/stopConsolidated`, which
+answer 403 to a user who may not build every pipeline and 409 when a run is going already, or none is.
 
 The JSON API
 ------------

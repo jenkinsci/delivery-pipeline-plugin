@@ -89,6 +89,12 @@ public class FlowComponentSource extends ComponentSource {
         return new Component(request.name(), request.index(), JobRef.of(job), paging, pipelines, null);
     }
 
+    @Override
+    public Pipeline instance(Job<?, ?> firstJob, Job<?, ?> lastJob, int buildNumber, ViewSettings settings) {
+        WorkflowRun run = ((WorkflowJob) firstJob).getBuildByNumber(buildNumber);
+        return run == null ? null : FlowChain.of(run, settings).forSettings(settings);
+    }
+
     /**
      * Runs the Pipeline again with the parameters of the given run, or when a stage is named, restarts that run
      * from the stage through the {@link StageRestart} that supports it.

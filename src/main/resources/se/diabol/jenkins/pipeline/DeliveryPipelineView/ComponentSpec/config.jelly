@@ -3,11 +3,13 @@
     <f:entry title="${%Name}" field="name">
         <f:textbox/>
     </f:entry>
+    <!-- Text boxes that complete and check what is typed, not lists: a list of every job of a large controller,
+         once per field and component, made the form take minutes to open. -->
     <f:entry title="${%Initial job}" field="firstJob">
-        <f:select/>
+        <f:textbox/>
     </f:entry>
     <f:entry title="${%Final job (optional)}" field="lastJob">
-        <f:select/>
+        <f:textbox/>
     </f:entry>
     <f:entry title="${%Show upstream}" field="showUpstream">
         <f:checkbox/>
