@@ -20,11 +20,15 @@ package se.diabol.jenkins.pipeline;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+import hudson.Functions;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.model.TaskListener;
+import hudson.tasks.BatchFile;
 import hudson.tasks.BuildTrigger;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -48,5 +52,26 @@ class PipelineVersionContributorTest {
         assertThat(PipelineVersionContributor.getVersion(downstream), is("1.0.1"));
         assertThat(TokenMacro.expandAll(downstream, TaskListener.NULL, "${PIPELINE_VERSION}"), is("1.0.1"));
         assertThat(downstream.getBuildVariables().get(PipelineVersionContributor.VERSION_PARAMETER), is("1.0.1"));
+    }
+
+    /** JENKINS-59651: a shell or batch step of the first job and of a downstream job reads the version. */
+    @Test
+    void theVersionIsInTheEnvironmentOfAShellStep(JenkinsRule jenkins) throws Exception {
+        FreeStyleProject build = jenkins.createFreeStyleProject("build");
+        FreeStyleProject deploy = jenkins.createFreeStyleProject("deploy");
+        build.getBuildWrappersList().add(new PipelineVersionContributor(false, "2.0.${BUILD_NUMBER}"));
+        build.getBuildersList().add(printVersion());
+        deploy.getBuildersList().add(printVersion());
+        build.getPublishersList().add(new BuildTrigger(deploy.getName(), Result.SUCCESS));
+        jenkins.getInstance().rebuildDependencyGraph();
+        FreeStyleBuild first = jenkins.buildAndAssertSuccess(build);
+        jenkins.waitUntilNoActivity();
+        jenkins.assertLogContains("version=[2.0.1]", first);
+        jenkins.assertLogContains("version=[2.0.1]", deploy.getLastBuild());
+    }
+
+    private static Builder printVersion() {
+        return Functions.isWindows() ? new BatchFile("echo version=[%PIPELINE_VERSION%]")
+                : new Shell("echo \"version=[$PIPELINE_VERSION]\"");
     }
 }

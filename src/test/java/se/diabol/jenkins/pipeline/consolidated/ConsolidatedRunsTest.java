@@ -207,6 +207,10 @@ class ConsolidatedRunsTest {
         ConsolidatedRun next = runs.start(VIEW, "All", targets("a"), 1, 0, null, "tester");
         assertThat("runs of a view are numbered", next.getNumber(), is(2));
         assertThat("and remember how long a pipeline took", next.getEntries().get(0).getEstimate() >= 0, is(true));
+        // let the second run's build finish before the controller is torn down: on Windows a build still writing
+        // its files keeps the home directory from being deleted
+        await("the second run has finished", run -> run.getState() == State.FINISHED);
+        jenkins.waitUntilNoActivity();
     }
 
     @Test

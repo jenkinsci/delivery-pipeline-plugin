@@ -50,6 +50,7 @@ services:
       JENKINS_PASSWORD: ${ADMIN_PASSWORD:-admin}
     volumes:
       - ./screenshots.py:/work/screenshots.py:ro
+      - ./layout.py:/work/layout.py:ro
       - ./out:/out
     # the image ships the browsers; the Python package is installed at start (pinned to the image's version)
     command: ["sh", "-c", "pip install -q --break-system-packages playwright==1.59.0 && python3 /work/screenshots.py"]

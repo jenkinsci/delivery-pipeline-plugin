@@ -10,7 +10,9 @@ with chains of eight jobs and four Declarative Pipelines behind one board, the D
   storm       the same viewers poll without any pause for PERF_STORM seconds, on the board at rest again, and ask
               for full responses every time, to find the export ceiling rather than the 304 one
 
-Every viewer logs in once through the login form and polls with its session cookie, keeps one connection open and
+Every viewer logs in once through the login form, before the first phase and one after another (fifty logins of one
+user at the same moment drop other sessions of that user to anonymous for a request, which no set of tabs does), and
+polls with its session cookie in every phase, keeps one connection open and
 accepts compressed responses, like a browser tab (PERF_GZIP=0 asks for plain ones), so the size column is bytes on
 the wire. Sending the password with every request instead would have Jenkins hash it every time, which costs more
 than the board does. The report lists requests, throughput, latency percentiles,
@@ -19,6 +21,7 @@ run fails on any error, or on a p95 above PERF_P95_MAX_MS during the deployment.
 JENKINS_URL, JENKINS_USER and JENKINS_PASSWORD (or ADMIN_PASSWORD).
 """
 import base64
+import gzip
 import http.client
 import http.cookiejar
 import json
@@ -127,8 +130,9 @@ def session_cookie():
 class Viewer(threading.Thread):
     """One browser tab: polls the board's JSON over a kept-alive connection every interval seconds, or without pause."""
 
-    def __init__(self, interval, stop_at, samples, errors, conditional):
+    def __init__(self, cookie, interval, stop_at, samples, errors, conditional):
         super().__init__(daemon=True)
+        self.cookie = cookie
         self.interval = interval
         self.stop_at = stop_at
         self.samples = samples
@@ -139,11 +143,7 @@ class Viewer(threading.Thread):
     def run(self):
         connection = None
         time.sleep(random.uniform(0, min(self.interval, 5)))  # tabs are not opened in the same second
-        try:
-            cookie = session_cookie()
-        except Exception as e:  # noqa: BLE001
-            self.errors.append(f'login: {str(e)[:80]}')
-            return
+        cookie = self.cookie
         while time.time() < self.stop_at:
             if connection is None:
                 kind = http.client.HTTPSConnection if ORIGIN.scheme == 'https' else http.client.HTTPConnection
@@ -166,6 +166,13 @@ class Viewer(threading.Thread):
                     self.samples.append((elapsed, 0, True))
                 else:
                     self.errors.append(f'HTTP {response.status}')
+                    if response.getheader('Content-Encoding') == 'gzip':
+                        body = gzip.decompress(body)
+                    # who Jenkins took the viewer for, and what it said, so that a lone error can be told apart
+                    print(f'HTTP {response.status} at {time.strftime("%H:%M:%S")}: authenticated as '
+                          f'{response.getheader("X-You-Are-Authenticated-As")!r}, needs '
+                          f'{response.getheader("X-Required-Permission")!r}: '
+                          f'{body[:200].decode("utf-8", "replace")!r}', file=sys.stderr)
             except Exception as e:  # noqa: BLE001 - every failure is a finding
                 elapsed = time.perf_counter() - started
                 self.errors.append(f'{type(e).__name__}: {str(e)[:80]}')
@@ -212,14 +219,16 @@ class CpuSampler(threading.Thread):
 
 
 class Phase:
-    def __init__(self, name, viewers, interval, conditional=True):
-        self.name, self.viewers, self.interval, self.conditional = name, viewers, interval, conditional and CONDITIONAL
+    def __init__(self, name, cookies, interval, conditional=True):
+        self.name, self.cookies, self.interval, self.conditional = name, cookies, interval, conditional and CONDITIONAL
+        self.viewers = len(cookies)
         self.samples, self.errors = [], []
         self.started = self.ended = 0
 
     def run(self, seconds, until=None, min_seconds=30):
         stop_at = time.time() + seconds
-        threads = [Viewer(self.interval, stop_at, self.samples, self.errors, self.conditional) for _ in range(self.viewers)]
+        threads = [Viewer(cookie, self.interval, stop_at, self.samples, self.errors, self.conditional)
+                   for cookie in self.cookies]
         self.started = time.time()
         for thread in threads:
             thread.start()
@@ -270,10 +279,15 @@ def main():
     print(f'== {VIEWERS} viewers every {INTERVAL:g} s, deployment capped at {DURATION} s, storm {STORM} s, '
           f'{"compressed" if GZIP else "plain"} responses, ETags {"sent back" if CONDITIONAL else "ignored"}, '
           f'a session cookie per viewer')
+    try:
+        cookies = [session_cookie() for _ in range(VIEWERS)]
+    except Exception as e:  # noqa: BLE001
+        print(f'login: {e}', file=sys.stderr)
+        return 2
     cpu = CpuSampler()
     cpu.start()
 
-    baseline = Phase('baseline', 1, 1).run(20)
+    baseline = Phase('baseline', cookies[:1], 1).run(20)
 
     started_at_ms = int(time.time() * 1000) - 1000
     for n in chains:
@@ -291,9 +305,9 @@ def main():
         return all(j.get('lastBuild') and j['lastBuild']['timestamp'] >= started_at_ms and not j['lastBuild']['building']
                    for j in ends)
 
-    deployment = Phase('deployment', VIEWERS, INTERVAL).run(DURATION, until=deployment_done)
+    deployment = Phase('deployment', cookies, INTERVAL).run(DURATION, until=deployment_done)
     finished = deployment_done()
-    storm = Phase('storm', VIEWERS, 0, conditional=False).run(STORM)
+    storm = Phase('storm', cookies, 0, conditional=False).run(STORM)
     cpu.stopped = True
 
     print()
