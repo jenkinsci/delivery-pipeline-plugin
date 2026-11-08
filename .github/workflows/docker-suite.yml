@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: docker/.m2
           key: docker-m2-${{ hashFiles('pom.xml') }}
@@ -42,7 +42,7 @@ jobs:
       - name: Controller log
         if: always()
         run: docker compose -f docker/docker-compose.yml logs jenkins > docker/out/jenkins.log 2>&1 || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: docker-validate
@@ -86,7 +86,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: docker/.m2
           key: docker-m2-${{ hashFiles('pom.xml') }}
@@ -95,7 +95,7 @@ jobs:
         run: docker/run.sh build
       - name: Upgrade a 1.4.2 controller to this build and check what loaded
         run: docker/upgrade.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: docker-upgrade
