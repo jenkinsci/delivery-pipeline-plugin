@@ -427,7 +427,8 @@ div.change-commit {
 
 /* Details below a task */
 div.infoPanelOuter {
-    margin: 4px 2px 4px 4px;
+    /* the task's own side margins, so the panel is centred in the stage and lines up with its task (JENKINS-62159) */
+    margin: 4px 2px;
     border: 1px solid var(--dpp-line);
     background-color: var(--dpp-fill-light);
     white-space: normal;

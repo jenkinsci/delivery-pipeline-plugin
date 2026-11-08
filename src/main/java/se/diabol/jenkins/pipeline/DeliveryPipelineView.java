@@ -388,7 +388,11 @@ public class DeliveryPipelineView extends View {
         return cached(Stapler.getCurrentRequest2()).components();
     }
 
-    /** The cached model for the request's paging parameters, with the version that conditional requests compare. */
+    /**
+     * The cached model for the request's paging parameters and the current user, with the version that conditional
+     * requests compare. The model is built with the permissions of the user it is for, who sees only the jobs they
+     * may read, so it is kept per user: a model built for one user is never served to another (JENKINS-34493).
+     */
     ModelCache.Cached cached(StaplerRequest2 request) {
         int page = Math.max(1, intParameter(request, "page", 1));
         int pagedComponent = intParameter(request, "component", 1);
@@ -415,7 +419,7 @@ public class DeliveryPipelineView extends View {
                 + getRegexpFirstJobs().hashCode() + "|" + sorting + "|" + maxNumberOfVisiblePipelines + "|"
                 + (showConsolidatedPipeline ? getNoOfConcurrentPipelines() + "x" + getSleepBetweenConcurrentPipelines()
                         : "-") + "|"
-                + (paging ? pagedComponent + "/" + page : "-");
+                + (paging ? pagedComponent + "/" + page : "-") + "|" + Jenkins.getAuthentication2().getName();
     }
 
     /**

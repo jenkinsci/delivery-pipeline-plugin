@@ -8,6 +8,7 @@
 #   docker/run.sh up           start the controller (http://localhost:8080, admin/admin)
 #   docker/run.sh validate     run docker/validate.py against it
 #   docker/run.sh screenshots  capture docker/out/*.png with Playwright
+#   docker/run.sh layout       check the boards' geometry in Chromium (docker/layout.py), after validate
 #   docker/run.sh perf         load test: PERF_VIEWERS (50) viewers polling the Performance board through a deployment
 #   docker/run.sh down         stop and remove the controller
 # LOCAL_MAVEN=1 uses a Maven on the PATH instead of the container.
@@ -41,6 +42,10 @@ screenshots() {
   mkdir -p docker/out
   "${COMPOSE[@]}" run --rm screenshots
 }
+layout() {
+  "${COMPOSE[@]}" run --rm screenshots sh -c \
+    'pip install -q --break-system-packages playwright==1.59.0 && python3 /work/layout.py'
+}
 perf() {
   python3 docker/perf.py
 }
@@ -54,9 +59,10 @@ case "${1:-all}" in
   up) up ;;
   validate) validate ;;
   screenshots) screenshots ;;
+  layout) layout ;;
   perf) perf ;;
   down) down ;;
   logs) "${COMPOSE[@]}" logs -f jenkins ;;
-  all) build; up; validate; screenshots ;;
-  *) echo "usage: $0 {all|build|test|mvn ...|up|validate|screenshots|perf|down|logs}" >&2; exit 2 ;;
+  all) build; up; validate; layout; screenshots ;;
+  *) echo "usage: $0 {all|build|test|mvn ...|up|validate|layout|screenshots|perf|down|logs}" >&2; exit 2 ;;
 esac
