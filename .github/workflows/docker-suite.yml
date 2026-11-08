@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: docker/.m2
           key: docker-m2-${{ hashFiles('pom.xml') }}
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: docker/.m2
           key: docker-m2-${{ hashFiles('pom.xml') }}
